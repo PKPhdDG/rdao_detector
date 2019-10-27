@@ -12,7 +12,3 @@ class TimeUnit(UserList):
     def __init__(self, number):
         super(TimeUnit, self).__init__()
         self.__number = number
-
-    # def __repr__(self):
-    #     val = super(TimeUnit, self).__repr__()
-    #     return f"{val}".format(val)

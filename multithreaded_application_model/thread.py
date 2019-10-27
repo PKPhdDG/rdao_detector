@@ -3,7 +3,7 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.1"
 
-
+from multithreaded_application_model.operation import Operation
 from pycparser.c_ast import ExprList
 
 
@@ -18,9 +18,16 @@ class Thread:
         self.__name = expr_list.exprs[0].expr.name if expr_list is not None else "t0"
         self.__args = expr_list
         self.__time_unit = time_unit
+        self.__operations = list()
 
-    def __repr__(self):
+    def add_operation(self, operation: Operation):
+        self.__operations.append(operation)
+
+    def num_of_operations(self) -> int:
+        return len(self.__operations)
+
+    def __repr__(self) -> str:
         return self.__name
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.__name == other.__name
