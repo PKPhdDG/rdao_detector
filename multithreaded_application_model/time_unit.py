@@ -12,3 +12,9 @@ class TimeUnit(UserList):
     def __init__(self, number):
         super(TimeUnit, self).__init__()
         self.__number = number
+
+    def __eq__(self, other):
+        return self.__number == other.__number
+
+    def __add__(self, other):
+        return self.__number + other
