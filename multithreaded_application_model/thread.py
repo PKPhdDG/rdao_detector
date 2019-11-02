@@ -4,13 +4,14 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.1"
 
 from multithreaded_application_model.operation import Operation
+from multithreaded_application_model.time_unit import TimeUnit
 from pycparser.c_ast import ExprList
 
 
 class Thread:
     """Thread representation object
     """
-    def __init__(self, expr_list: ExprList, time_unit: int):
+    def __init__(self, expr_list: ExprList, time_unit: TimeUnit):
         """C'tor
         :param name: Thread name
         :param expr_list: ExprList object

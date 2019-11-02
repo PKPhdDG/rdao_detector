@@ -5,6 +5,7 @@ __version__ = "0.1"
 
 import unittest
 
+from tests.multithreaded_application_model_tests.create_mam_test import CreateMamTest
 from tests.multithreaded_application_model_tests.multithreaded_application_model_test import MultithreadedApplicationModelTest
 
 if "__main__" == __name__:
