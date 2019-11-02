@@ -21,7 +21,6 @@ class Thread:
         self.__time_unit = time_unit
         self.__operations = list()
 
-
     def add_operation(self, operation: Operation):
         self.__operations.append(operation)
 

@@ -17,3 +17,6 @@ class Operation:
 
     def __repr__(self):
         return "o{},{}".format(str(self.__thread)[1:], self.__operation_number)
+
+    def __lt__(self, other):
+        return self.__operation_number < other.__operation_number
