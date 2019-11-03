@@ -116,7 +116,8 @@ def __parse_assignment(mam, node: Assignment, functions_definition: dict, thread
     __add_edge_to_mam(mam, Edge(operation, resource))
 
 
-def __parse_do_while_statement(mam, node: DoWhile, functions_definition: dict, thread: Thread, time_unit: TimeUnit):
+def __parse_do_while_loop(mam, node: DoWhile, functions_definition: dict, thread: Thread, time_unit: TimeUnit)\
+        -> Node:
     """Function parsing Assignment node
     :param mam: MultithreadedApplicationModel object
     :param node: Assignment object
@@ -133,8 +134,30 @@ def __parse_do_while_statement(mam, node: DoWhile, functions_definition: dict, t
     return functions_call
 
 
+def __parse_for_loop(mam, node: For, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> Node:
+    """Function parsing Assignment node
+    :param mam: MultithreadedApplicationModel object
+    :param node: Assignment object
+    :param functions_definition: dict with user functions definition
+    :param thread: Thread object
+    :param time_unit: TimeUnit object
+    """
+    functions_call = deque()
+    for child in node:
+        print(child)
+    return functions_call
+
+
 def __parse_function_call(mam, function_to_parse: Function, functions_definition: dict, thread: Thread,
                           time_unit: TimeUnit) -> deque:
+    """Function parsing FuncCall node
+    :param mam: MultithreadedApplicationModel object
+    :param function_to_parse: Function object
+    :param functions_definition: dict with user functions definition
+    :param thread: Thread object
+    :param time_unit: TimeUnit object
+    :return: deque object with functions to parse
+    """
     global __new_time_unit
     functions_call = deque()
     functions_call.extend(__parse_statement(mam, function_to_parse.body, functions_definition, thread, time_unit))
@@ -289,7 +312,9 @@ def __parse_statement(mam, node: Compound, functions_definition: dict, thread: T
         elif isinstance(child, Assignment):
             __parse_assignment(mam, child, functions_definition, thread, time_unit)
         elif isinstance(child, DoWhile):
-            __parse_do_while_statement(mam, child, functions_definition, thread, time_unit)
+            __parse_do_while_loop(mam, child, functions_definition, thread, time_unit)
+        elif isinstance(child, For):
+            __parse_for_loop(mam, child, functions_definition, thread, time_unit)
         elif isinstance(child, ignored_types):
             pass
         else:
