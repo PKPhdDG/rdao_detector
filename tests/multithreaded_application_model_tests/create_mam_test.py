@@ -35,8 +35,7 @@ class CreateMamTest(unittest.TestCase):
     def test_single_thread_global_variable_while_loop(self):
         expected_mam = "MultithreadedApplicationModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], resource=[r1]," \
                        " operations=[o0,1, o0,2, o1,1, o1,2, o1,3], mutexes=[q1], edges=[(o0,1, o0,2), (o1,1, o1,2)," \
-                       " (o1,2, r1), (o1,1, o1,3), (o1,2, o1,3)])"
-        # TODO Check why there is no back edge from last element of loop
+                       " (o1,2, r1), (o1,2, o1,1), (o1,1, o1,3), (o1,2, o1,3)])"
         file_to_parse = "single_thread_global_variable_while_loop.c.pure"
         ast = parse_file(join(self.test_source_path_prefix, file_to_parse), use_cpp=False)
         result = create_mam(deque([ast]))

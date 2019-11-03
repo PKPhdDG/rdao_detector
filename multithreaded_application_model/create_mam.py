@@ -345,6 +345,7 @@ def __parse_while_loop(mam, node: While, functions_definition: dict, thread: Thr
     functions_call = __parse_statement(mam, node.cond, functions_definition, thread, time_unit)
     operation = __add_operation_and_edge(mam, node, thread)
     functions_call.extend(__parse_statement(mam, node.stmt, functions_definition, thread, time_unit))
+    __add_edge_to_mam(mam, Edge(mam.o[-1], operation))
     __wait_for_operation = operation
     return functions_call
 
