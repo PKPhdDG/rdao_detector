@@ -131,14 +131,17 @@ def __parse_for_loop(mam, node: For, functions_definition: dict, thread: Thread,
     """
     global __wait_for_operation
     functions_call = deque()
+    operation = __add_operation_and_edge(mam, node, thread)
     functions_call.extend(__parse_statement(mam, node.init, functions_definition, thread, time_unit))
     functions_call.extend(__parse_statement(mam, node.cond, functions_definition, thread, time_unit))
-    operation = __add_operation_and_edge(mam, node, thread)
     functions_call.extend(__parse_statement(mam, node.stmt, functions_definition, thread, time_unit))
     functions_call.extend(__parse_statement(mam, node.next, functions_definition, thread, time_unit))
     # For loop with empty body return to itself
     if isinstance(node.stmt, EmptyStatement):
         __add_edge_to_mam(mam, Edge(operation, operation))
+    else:
+        __add_edge_to_mam(mam, Edge(mam.o[-1], operation))  # Add return loop edge
+        __wait_for_operation = operation
     return functions_call
 
 
@@ -313,6 +316,10 @@ def __parse_statement(mam, node: Compound, functions_definition: dict, thread: T
                     mam.u[-1].insert(len(mam.u) - 2, thread)
                 __add_operation_and_edge(mam, child, thread)
         elif isinstance(child, expected_operation):
+            if isinstance(child, Decl) and isinstance(child.init, FuncCall):
+                fcall_name = child.init.name.name
+                functions_call.extend(__parse_function_call(mam, functions_definition[fcall_name], functions_definition,
+                                                            thread, time_unit))
             __add_operation_and_edge(mam, child, thread)
         elif isinstance(child, If):
             __parse_if_statement(mam, child, functions_definition, thread, time_unit)
@@ -345,7 +352,7 @@ def __parse_while_loop(mam, node: While, functions_definition: dict, thread: Thr
     functions_call = __parse_statement(mam, node.cond, functions_definition, thread, time_unit)
     operation = __add_operation_and_edge(mam, node, thread)
     functions_call.extend(__parse_statement(mam, node.stmt, functions_definition, thread, time_unit))
-    __add_edge_to_mam(mam, Edge(mam.o[-1], operation))
+    __add_edge_to_mam(mam, Edge(mam.o[-1], operation))  # Add return loop edge
     __wait_for_operation = operation
     return functions_call
 
