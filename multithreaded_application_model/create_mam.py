@@ -79,41 +79,28 @@ def __add_resource_to_mam(mam, node) -> None:
     mam.r.append(r)
 
 
-def __parse_assignment(mam, node: Assignment, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> None:
+def __parse_assignment(mam, node: Assignment, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> deque:
     """Function parsing Assignment node
     :param mam: MultithreadedApplicationModel object
     :param node: Assignment object
     :param functions_definition: dict with user functions definition
     :param thread: Thread object
     :param time_unit: TimeUnit object
+    :return: deque object with functions to parse
     """
+    functions_call = deque()
     resource_name = node.lvalue.name
     resource = None
     for shared_resource in mam.r:
         if resource_name in shared_resource:
             resource = shared_resource
-    # TODO Need check loop below cannot be put into __parse_statement
-    for child in node.rvalue:
-        if isinstance(child, FuncCall) and (child.name.name in functions_definition.keys()):
-            fcall_name = child.name.name
-            functions_call = deque([functions_definition[fcall_name]])
-            while functions_call:
-                to_call = list()
-                for function in functions_call:
-                    result = __parse_function_call(mam, function, functions_definition, thread, time_unit)
-                    to_call.extend(result)
-        elif isinstance(child, FuncCall) or isinstance(child, UnaryOp):
-            __add_operation_and_edge(mam, child, thread)
-        elif isinstance(child, ID) or isinstance(child, ExprList):
-            pass
-        else:
-            print("Not expected node:", child, file=sys.stderr)
-
+    functions_call.extend(__parse_statement(mam, node.rvalue, functions_definition, thread, TimeUnit))
     if resource is None:
         __add_operation_and_edge(mam, node, thread)
-        return
+        return functions_call
     operation = __add_operation_and_edge(mam, node, thread)
     __add_edge_to_mam(mam, Edge(operation, resource))
+    return functions_call
 
 
 def __parse_do_while_loop(mam, node: DoWhile, functions_definition: dict, thread: Thread, time_unit: TimeUnit)\
