@@ -142,9 +142,16 @@ def __parse_for_loop(mam, node: For, functions_definition: dict, thread: Thread,
     :param thread: Thread object
     :param time_unit: TimeUnit object
     """
+    global __wait_for_operation
     functions_call = deque()
-    for child in node:
-        print(child)
+    functions_call.extend(__parse_statement(mam, node.init, functions_definition, thread, time_unit))
+    functions_call.extend(__parse_statement(mam, node.cond, functions_definition, thread, time_unit))
+    operation = __add_operation_and_edge(mam, node, thread)
+    functions_call.extend(__parse_statement(mam, node.stmt, functions_definition, thread, time_unit))
+    functions_call.extend(__parse_statement(mam, node.next, functions_definition, thread, time_unit))
+    # For loop with empty body return to itself
+    if isinstance(node.stmt, EmptyStatement):
+        __add_edge_to_mam(mam, Edge(operation, operation))
     return functions_call
 
 
@@ -233,7 +240,7 @@ def __parse_pthread_mutex_create(mam, node: FuncCall, time_unit: TimeUnit, func:
     mam.t.append(new_thread)
     mam.u[-1].append(new_thread)
 
-    return mam.u[-1] + 1, new_thread, func
+    return mam.u[-1], new_thread, func
 
 
 def __parse_pthread_mutex_lock(mam, node: FuncCall, thread: Thread) -> Operation:
@@ -283,7 +290,17 @@ def __parse_pthread_mutex_unlock(mam, node: FuncCall, thread: Thread) -> Operati
 
 
 def __parse_statement(mam, node: Compound, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> deque:
+    """Function parsing Compode type node with functions/loops/if's body
+    :param mam: MultithreadedApplicationModel object
+    :param node: If object
+    :param functions_definition: dict with user functions
+    :param thread: Thread object
+    :param time_unit: TimeUnit object
+    :return: deque with function calls
+    """
     functions_call = deque()
+    if not node:
+        return functions_call
     for child in node:
         if isinstance(child, FuncCall):
             fcall_name = child.name.name
@@ -291,6 +308,7 @@ def __parse_statement(mam, node: Compound, functions_definition: dict, thread: T
                 threadf_name = child.args.exprs[2].name
                 result = __parse_pthread_mutex_create(mam, child, time_unit, functions_definition[threadf_name])
                 functions_call.append(result)
+                time_unit, *_ = result
             elif fcall_name == "pthread_join":
                 mam.__new_time_unit = True
             elif fcall_name == "pthread_mutex_lock":
@@ -302,6 +320,10 @@ def __parse_statement(mam, node: Compound, functions_definition: dict, thread: T
                                                time_unit)
                 functions_call.extend(result)
             else:
+                # If there are some operation between create and join pthread
+                if thread.time_unit != time_unit:
+                    thread.time_unit = time_unit
+                    mam.u[-1].insert(len(mam.u) - 2, thread)
                 __add_operation_and_edge(mam, child, thread)
         elif isinstance(child, expected_operation):
             __add_operation_and_edge(mam, child, thread)

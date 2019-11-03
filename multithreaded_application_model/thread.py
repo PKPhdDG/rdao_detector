@@ -27,6 +27,14 @@ class Thread:
     def num_of_operations(self) -> int:
         return len(self.__operations)
 
+    @property
+    def time_unit(self):
+        return self.__time_unit
+
+    @time_unit.setter
+    def time_unit(self, new_time_unit):
+        self.__time_unit = new_time_unit
+
     def __repr__(self) -> str:
         return self.__name
 
