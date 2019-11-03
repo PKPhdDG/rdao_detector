@@ -258,8 +258,7 @@ def __parse_pthread_mutex_unlock(mam, node: FuncCall, thread: Thread) -> Operati
             lock = m
     if lock is None:
         raise RuntimeError(f"Cannot find mutex: {mutex_name}")
-    __add_operation_and_edge(mam, node, thread)
-    operation = Operation(node, thread)
+    operation = __add_operation_and_edge(mam, node, thread)
     __add_edge_to_mam(mam, Edge(operation, lock))
     return operation
 
