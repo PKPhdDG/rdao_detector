@@ -1,7 +1,7 @@
-# 1 "tests/example_c_sources/single_thread_global_variable_while_statement.c"
+# 1 "tests/example_c_sources/single_thread_do_while_loop.c"
 # 1 "<built-in>"
 # 1 "<command-line>"
-# 1 "tests/example_c_sources/single_thread_global_variable_while_statement.c"
+# 1 "tests/example_c_sources/single_thread_do_while_loop.c"
 # 1 "./utils/fake_libc_include/pthread.h" 1
 # 1 "./utils/fake_libc_include/_fake_defines.h" 1
 # 2 "./utils/fake_libc_include/pthread.h" 2
@@ -177,24 +177,27 @@ typedef struct xcb_connection_t xcb_connection_t;
 typedef uint32_t xcb_window_t;
 typedef uint32_t xcb_visualid_t;
 # 2 "./utils/fake_libc_include/pthread.h" 2
-# 2 "tests/example_c_sources/single_thread_global_variable_while_statement.c" 2
+# 2 "tests/example_c_sources/single_thread_do_while_loop.c" 2
 
-int shared_variable = 0;
+int shared_variable = 100;
 pthread_mutex_t m;
 
-void *thread_test(void *args)
+void *tread(void *args)
 {
-    while (shared_variable < 5)
+ pthread_mutex_lock(&m);
+    do
     {
-        shared_variable += 1;
+        shared_variable -= 1;
     }
+ while(shared_variable);
+ pthread_mutex_unlock(&m);
     return (void*)0;
 }
 
 int main()
 {
     pthread_t t1;
-    pthread_create(&t1, 0, thread_test, 0);
+    pthread_create(&t1, 0, tread, 0);
     pthread_join(t1, 0);
     return 0;
 }
