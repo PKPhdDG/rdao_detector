@@ -328,7 +328,7 @@ def __parse_statement(mam, node: Compound, functions_definition: dict, thread: T
                             continue
                         for shared_resource in mam.r:
                             if printf_resource.name in shared_resource:
-                                __add_edge_to_mam(mam, Edge(operation, shared_resource))
+                                __add_edge_to_mam(mam, Edge(shared_resource, operation))
 
         elif isinstance(child, expected_operation):
             if isinstance(child, Decl) and isinstance(child.init, FuncCall):
