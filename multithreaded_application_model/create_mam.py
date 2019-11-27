@@ -135,10 +135,10 @@ def __parse_for_loop(mam, node: For, functions_definition: dict, thread: Thread,
     global __wait_for_operation
     functions_call = deque()
     operation = __add_operation_and_edge(mam, node, thread)
-    functions_call.extend(__parse_statement(mam, node.init, functions_definition, thread, time_unit))
-    functions_call.extend(__parse_statement(mam, node.cond, functions_definition, thread, time_unit))
+    # functions_call.extend(__parse_statement(mam, node.init, functions_definition, thread, time_unit))
+    # functions_call.extend(__parse_statement(mam, node.cond, functions_definition, thread, time_unit))
     functions_call.extend(__parse_statement(mam, node.stmt, functions_definition, thread, time_unit))
-    functions_call.extend(__parse_statement(mam, node.next, functions_definition, thread, time_unit))
+    # functions_call.extend(__parse_statement(mam, node.next, functions_definition, thread, time_unit))
     # For loop with empty body return to itself
     if isinstance(node.stmt, EmptyStatement):
         __add_edge_to_mam(mam, Edge(operation, operation))
