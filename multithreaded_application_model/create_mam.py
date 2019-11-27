@@ -19,6 +19,7 @@ __new_time_unit = True
 __wait_for_operation = None
 main_function_name = "main"
 expected_operation = (BinaryOp, Decl, Return)
+expected_unary_operations = ("++", "--")
 ignored_types = (Constant, ID)
 
 
@@ -39,7 +40,7 @@ def __add_mutex_to_mam(mam, node) -> None:
 
 
 def __add_operation_and_edge(mam, node, thread) -> Operation:
-    """Wrapper for adding operation and edge beetwen operation and last operation.
+    """Wrapper for adding operation and edge between operation and last operation.
     Function return Operation object created from given node
 
     :param mam: MultithreadedApplicationModel object
@@ -94,7 +95,7 @@ def __parse_assignment(mam, node: Assignment, functions_definition: dict, thread
     for shared_resource in mam.r:
         if resource_name in shared_resource:
             resource = shared_resource
-    functions_call.extend(__parse_statement(mam, node.rvalue, functions_definition, thread, TimeUnit))
+    functions_call.extend(__parse_statement(mam, node.rvalue, functions_definition, thread, time_unit))
     if resource is None:
         __add_operation_and_edge(mam, node, thread)
         return functions_call
@@ -104,13 +105,14 @@ def __parse_assignment(mam, node: Assignment, functions_definition: dict, thread
 
 
 def __parse_do_while_loop(mam, node: DoWhile, functions_definition: dict, thread: Thread, time_unit: TimeUnit)\
-        -> Node:
+        -> deque:
     """Function parsing Assignment node
     :param mam: MultithreadedApplicationModel object
     :param node: Assignment object
     :param functions_definition: dict with user functions definition
     :param thread: Thread object
     :param time_unit: TimeUnit object
+    :return: deque with function calls
     """
     functions_call = deque()
     do_operation = __add_operation_and_edge(mam, node, thread)
@@ -121,13 +123,14 @@ def __parse_do_while_loop(mam, node: DoWhile, functions_definition: dict, thread
     return functions_call
 
 
-def __parse_for_loop(mam, node: For, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> Node:
+def __parse_for_loop(mam, node: For, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> deque:
     """Function parsing Assignment node
     :param mam: MultithreadedApplicationModel object
     :param node: Assignment object
     :param functions_definition: dict with user functions definition
     :param thread: Thread object
     :param time_unit: TimeUnit object
+    :return: deque with function calls
     """
     global __wait_for_operation
     functions_call = deque()
@@ -153,7 +156,7 @@ def __parse_function_call(mam, function_to_parse: Function, functions_definition
     :param functions_definition: dict with user functions definition
     :param thread: Thread object
     :param time_unit: TimeUnit object
-    :return: deque object with functions to parse
+    :return: deque with function calls
     """
     global __new_time_unit
     functions_call = deque()
@@ -314,7 +317,18 @@ def __parse_statement(mam, node: Compound, functions_definition: dict, thread: T
                 if thread.time_unit != time_unit:
                     thread.time_unit = time_unit
                     mam.u[-1].insert(len(mam.u) - 2, thread)
-                __add_operation_and_edge(mam, child, thread)
+
+                operation: Operation = __add_operation_and_edge(mam, child, thread)
+                # TODO This should be done in other function
+                # This should cover other stdlib functions too
+                if child.name.name == "printf":
+                    for printf_resource in child.args.exprs:
+                        if not isinstance(printf_resource, ID):
+                            continue
+                        for shared_resource in mam.r:
+                            if printf_resource.name in shared_resource:
+                                __add_edge_to_mam(mam, Edge(operation, shared_resource))
+
         elif isinstance(child, expected_operation):
             if isinstance(child, Decl) and isinstance(child.init, FuncCall):
                 fcall_name = child.init.name.name
@@ -331,12 +345,32 @@ def __parse_statement(mam, node: Compound, functions_definition: dict, thread: T
             __parse_do_while_loop(mam, child, functions_definition, thread, time_unit)
         elif isinstance(child, For):
             __parse_for_loop(mam, child, functions_definition, thread, time_unit)
+        elif isinstance(child, UnaryOp) and (child.op in expected_unary_operations):
+            __parse_unary_operator(mam, child, functions_definition, thread, time_unit)
         elif isinstance(child, ignored_types):
             pass
         else:
             print("Not expected node:", child, file=sys.stderr)
 
     return functions_call
+
+
+def __parse_unary_operator(mam, node: UnaryOp, functions_definition: dict, thread: Thread, time_unit: TimeUnit)\
+        -> None:
+    """Function parsing UnaryOp node
+    :param mam: MultithreadedApplicationModel object
+    :param node: Assignment object
+    :param functions_definition: dict with user functions definition
+    :param thread: Thread object
+    :param time_unit: TimeUnit object
+    """
+    resource_name = node.expr.name
+    resource = None
+    for shared_resource in mam.r:
+        if resource_name in shared_resource:
+            resource = shared_resource
+    operation = __add_operation_and_edge(mam, node, thread)
+    __add_edge_to_mam(mam, Edge(operation, resource))
 
 
 def __parse_while_loop(mam, node: While, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> deque:

@@ -26,7 +26,7 @@ def create_ast(path: str) -> CParser:
     raise NotImplementedError("Target is not a file")
 
 
-def create_mam(asts: list) -> MultithreadedApplicationModel:
+def create_mam(asts: deque) -> MultithreadedApplicationModel:
     """ Function convert AST's into MAM
     :param asts: AST's list
     :return: MAM object

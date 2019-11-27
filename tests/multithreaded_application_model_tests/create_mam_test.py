@@ -11,7 +11,7 @@ import unittest
 
 
 class CreateMamTest(unittest.TestCase):
-    test_source_path_prefix = "example_c_sources"
+    test_source_path_prefix = "tests\example_c_sources"
 
     def test_single_thread_global_variable_if_statement(self):
         expected_mam = "MultithreadedApplicationModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], resource=[r1]," \
@@ -65,8 +65,8 @@ class CreateMamTest(unittest.TestCase):
     def test_single_thread_operation_in_main_thread_for_loop_without_body(self):
         expected_mam = "MultithreadedApplicationModel(threads=[t0, t1], time_units=[[t0], [t0, t1], [t0]], " \
                        "resource=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4], mutexes=[q1], " \
-                       "edges=[(o0,1, o0,2), (o0,2, o0,3), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,2), (o1,2, o1,3), " \
-                       "(o1,3, q1), (o1,3, o1,4)])"
+                       "edges=[(o0,1, o0,2), (o0,2, r1), (o0,2, o0,3), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,2)," \
+                       " (o1,2, o1,3), (o1,3, q1), (o1,3, o1,4)])"
         file_to_parse = "single_thread_operation_in_main_thread_for_loop_without_body.c.pure"
         ast = parse_file(join(self.test_source_path_prefix, file_to_parse), use_cpp=False)
         result = create_mam(deque([ast]))
