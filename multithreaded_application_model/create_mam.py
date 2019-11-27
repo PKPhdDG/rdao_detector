@@ -291,6 +291,7 @@ def __parse_statement(mam, node: Compound, functions_definition: dict, thread: T
     :param time_unit: TimeUnit object
     :return: deque with function calls
     """
+    global __new_time_unit
     functions_call = deque()
     if not node:
         return functions_call
@@ -303,7 +304,7 @@ def __parse_statement(mam, node: Compound, functions_definition: dict, thread: T
                 functions_call.append(result)
                 time_unit, *_ = result
             elif fcall_name == "pthread_join":
-                mam.__new_time_unit = True
+                __new_time_unit = True
             elif fcall_name == "pthread_mutex_lock":
                 __parse_pthread_mutex_lock(mam, child, thread)
             elif fcall_name == "pthread_mutex_unlock":
@@ -314,7 +315,7 @@ def __parse_statement(mam, node: Compound, functions_definition: dict, thread: T
                 functions_call.extend(result)
             else:
                 # If there are some operation between create and join pthread
-                if thread.time_unit != time_unit:
+                if not __new_time_unit and (thread.time_unit != time_unit):
                     thread.time_unit = time_unit
                     mam.u[-1].insert(len(mam.u) - 2, thread)
 
