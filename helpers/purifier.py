@@ -6,7 +6,9 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.1"
 
 from contextlib import contextmanager
-import os
+from os import remove
+from os.path import dirname, exists, isfile, join
+from pathlib import Path
 from subprocess import run
 
 
@@ -15,17 +17,19 @@ def purify_file(path: str) -> str:
     :param path: Path to C file
     :return:  Path to pure C file
     """
-    if not os.path.exists(path):
+    if not exists(path):
         raise FileNotFoundError(f"Given path does not exists: '{path}'")
-    if not os.path.isfile(path):
+    if not isfile(path):
         raise IsADirectoryError(f"Given path is not a file: '{path}'")
+    dir_path = Path(dirname(__file__)).parent
     output_file: str = f"{path}.pure"
-    command: list = ["gcc.exe", "-Wall", "-I../utils/fake_libc_include", "-E", path, ">", output_file]
-    cp = run(command, check=True, shell=True)
+    command: list = ["gcc.exe", "-Wall", "-I", join(dir_path, "utils/fake_libc_include"), "-E", path, ">", output_file]
+    run(command, check=True, shell=True)
     return output_file
+
 
 @contextmanager
 def purify(path: str) -> str:
     pure_file_path = purify_file(path)
     yield pure_file_path
-    os.remove(pure_file_path)
+    remove(pure_file_path)

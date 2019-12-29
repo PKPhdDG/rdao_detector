@@ -13,7 +13,7 @@ import os
 from pycparser import parse_file
 from pycparser.c_parser import CParser
 
-parser = argparse.ArgumentParser(description='Process AST to MAM')
+parser = argparse.ArgumentParser(description='Process AST to MASCM')
 parser.add_argument('paths', type=str, nargs='+', help="Paths to source code")
 
 
@@ -23,23 +23,15 @@ def create_ast(path: str) -> CParser:
     :return: CParser object
     """
     try:
-        return parse_file(path, use_cpp=False)
+        return parse_file(purify_file(path), use_cpp=False)
     except IsADirectoryError:
         raise NotImplementedError("Target is not a file")
 
 
-def create_mam(asts: deque) -> MultithreadedApplicationSourceCodeModel:
-    """ Function convert AST's into MAM
-    :param asts: AST's list
-    :return: MAM object
-    """
-    return create_mascm(asts)
-
-
 def main():
     args = parser.parse_args()
-    mam = create_mam(deque((create_ast(path) for path in args.paths)))
-    print(mam)
+    mascm = create_mascm(deque((create_ast(path) for path in args.paths)))
+    print(mascm)
 
 
 if "__main__" == __name__:

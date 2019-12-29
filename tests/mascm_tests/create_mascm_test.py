@@ -4,15 +4,19 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.1"
 
 from collections import deque
+from helpers.path import get_project_path
 from helpers.purifier import purify
 from mascm import create_mascm as create_mam
-from os.path import join
+from os.path import join, dirname
+from pathlib import Path
 from pycparser import parse_file
 import unittest
 
 
 class CreateMamTest(unittest.TestCase):
-    test_source_path_prefix = "example_c_sources"
+    project_dir = get_project_path()
+    test_source_path_prefix = join(project_dir, "tests\example_c_sources")
+    test_multiple_files_app_path_prefix = join(test_source_path_prefix, "multiple_files_apps")
 
     def test_single_thread_global_variable_if_statement(self):
         expected_mam = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], " \
@@ -100,4 +104,3 @@ class CreateMamTest(unittest.TestCase):
 
 if "__main__" == __name__:
     unittest.main()
-
