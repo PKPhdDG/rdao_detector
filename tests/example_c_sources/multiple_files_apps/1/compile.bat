@@ -1,1 +1,1 @@
-gcc main.c threads.h threads.c -I. -o main.exe
+gcc main.c threads.h threads.c -Wall -I. -o main.exe

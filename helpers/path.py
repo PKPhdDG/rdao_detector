@@ -16,7 +16,6 @@ def get_project_path() -> str:
 
 def collect_c_project_files(dir_path: str, extensions: list = ("c", "h")) -> str:
     dir_path = Path(dir_path)
-    for file in dir_path.iterdir():
-        *_, extension = str(file).split(".")
-        if extension in extensions:
+    for extension in extensions:
+        for file in dir_path.glob(f"**/*.{extension}"):
             yield file
