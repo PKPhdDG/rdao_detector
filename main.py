@@ -26,11 +26,12 @@ def create_ast(path: str) -> deque:
         ast.append(parse_file(purify_file(path), use_cpp=False))
         return ast
     except IsADirectoryError:
-        pure_files = purify_files(collect_c_project_files(path))
-        ast = deque()
-        for file in pure_files:
-            ast.append(parse_file(file))
-        return ast
+        pass
+    pure_files = purify_files(collect_c_project_files(path))
+    ast = deque()
+    for file in pure_files:
+        ast.append(parse_file(file))
+    return ast
 
 
 def main():

@@ -22,7 +22,8 @@ main_function_name = "main"
 expected_operation = (BinaryOp, Decl, Return)
 expected_unary_operations = ("++", "--")
 ignored_types = (Constant, ID)
-expected_definitions = set()
+expected_definitions = list()
+ignored_c_functions = ("fscanf", "printf")
 
 
 def __add_edge_to_mascm(mascm, edge: Edge) -> None:
@@ -92,7 +93,7 @@ def __parse_assignment(mascm, node: Assignment, functions_definition: dict, thre
     :return: deque object with functions to parse
     """
     functions_call = deque()
-    resource_name = node.lvalue.name
+    resource_name = node.lvalue.name if isinstance(node.lvalue, ID) else node.lvalue.expr.name
     resource = None
     for shared_resource in mascm.r:
         if resource_name in shared_resource:
@@ -191,7 +192,7 @@ def __parse_global_trees(mascm, asts: deque) -> dict:
                     and isinstance(node.type.type, IdentifierType):
                 __add_resource_to_mascm(mascm, node)
             elif isinstance(node, Decl) and isinstance(node.type, FuncDecl):
-                expected_definitions.add(node)
+                expected_definitions.append(node)
             else:
                 print(node, "is not expected", file=sys.stderr)
     return functions_definition
@@ -306,7 +307,12 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
         if isinstance(child, FuncCall):
             fcall_name = child.name.name
             if fcall_name == "pthread_create":
-                threadf_name = child.args.exprs[2].name
+                thread_func = child.args.exprs[2]
+                threadf_name = None
+                if isinstance(thread_func, ID):
+                    threadf_name = thread_func.name
+                elif isinstance(thread_func, UnaryOp):
+                    threadf_name = thread_func.expr.name
                 result = __parse_pthread_mutex_create(mascm, child, time_unit, functions_definition[threadf_name])
                 functions_call.append(result)
                 time_unit, *_ = result
@@ -340,6 +346,8 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
         elif isinstance(child, expected_operation):
             if isinstance(child, Decl) and isinstance(child.init, FuncCall):
                 fcall_name = child.init.name.name
+                if fcall_name in ignored_c_functions:
+                    continue
                 functions_call.extend(__parse_function_call(mascm, functions_definition[fcall_name], functions_definition,
                                                             thread, time_unit))
             __add_operation_and_edge(mascm, child, thread)

@@ -43,9 +43,9 @@ def purify_files(paths: Iterable[str], header_extensions: tuple = ("h",)) -> deq
     for file in paths:
         *_, extension = str(file).split(".")
         if extension in header_extensions:
-            headers_dirs.add(Path(file).parent)
+            headers_dirs.add(str(Path(file).absolute().parent))
         else:
-            source_files.append(file)
+            source_files.append(str(Path(file).absolute()))
     for file in source_files:
         pure_files.append(purify_file(file, headers_dirs))
     return pure_files

@@ -16,7 +16,7 @@ class HelpersTest(unittest.TestCase):
     multiple_files_app_path_prefix = join(source_path_prefix, "multiple_files_apps")
 
     def test_purify_file_with_path_to_file(self):
-        expected_file_size: int = 5336
+        expected_file_size: int = 5371
         file_to_parse: str = "single_thread_for_loop.c"
         file_path: str = join(self.source_path_prefix, file_to_parse)
         pure_file_path: str = purify_file(file_path)
@@ -26,7 +26,7 @@ class HelpersTest(unittest.TestCase):
         remove(pure_file_path)
 
     def test_purify_with_path_to_file(self):
-        expected_file_size: int = 5336
+        expected_file_size: int = 5371
         file_to_parse: str = "single_thread_for_loop.c"
         file_path: str = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
@@ -35,24 +35,20 @@ class HelpersTest(unittest.TestCase):
             self.assertEqual(expected_file_size, file_size)
 
     def test_purify_file_with_path_to_dir(self):
-        expected_file_size: int = 5336
         file_to_parse: str = "multiple_files_apps"
         file_path: str = join(self.source_path_prefix, file_to_parse)
         with self.assertRaises(IsADirectoryError):
             purify_file(file_path)
 
     def test_purify_file_with_path_to_non_exist_file(self):
-        expected_file_size: int = 5336
         file_to_parse: str = "single_thread.c"
         file_path: str = join(self.source_path_prefix, file_to_parse)
         with self.assertRaises(FileNotFoundError):
             purify_file(file_path)
 
     def test_collect_c_files_from_dir(self):
-        dir_path: str = "1"
         dir_path = join(self.multiple_files_app_path_prefix, "1")
         self.assertEqual(3, len(list(collect_c_project_files(dir_path))))
-
 
 
 if "__main__" == __name__:
