@@ -8,7 +8,7 @@ __version__ = "0.1"
 import argparse
 from collections import deque
 from helpers.purifier import purify_file
-from multithreaded_application_model import create_multithreaded_application_model, MultithreadedApplicationModel
+from mascm import create_mascm, MultithreadedApplicationSourceCodeModel
 import os
 from pycparser import parse_file
 from pycparser.c_parser import CParser
@@ -28,12 +28,12 @@ def create_ast(path: str) -> CParser:
         raise NotImplementedError("Target is not a file")
 
 
-def create_mam(asts: deque) -> MultithreadedApplicationModel:
+def create_mam(asts: deque) -> MultithreadedApplicationSourceCodeModel:
     """ Function convert AST's into MAM
     :param asts: AST's list
     :return: MAM object
     """
-    return create_multithreaded_application_model(asts)
+    return create_mascm(asts)
 
 
 def main():
