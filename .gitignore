@@ -47,4 +47,5 @@ _deps
 __pycache__/
 .idea/
 venv/
+for_articles/
 *.pure
