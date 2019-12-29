@@ -6,7 +6,7 @@ __version__ = "0.1"
 import unittest
 
 from tests.mascm_tests.create_mascm_test import CreateMamTest
-from tests.mascm_tests.multithreaded_application_model_test import MultithreadedApplicationSourceCodeModelTest
+from tests.mascm_tests.mascm_test import MultithreadedApplicationSourceCodeModelTest
 
 if "__main__" == __name__:
     unittest.main()
