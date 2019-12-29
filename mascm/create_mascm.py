@@ -14,6 +14,7 @@ from mascm.time_unit import TimeUnit
 from parsing_utils import Function
 from pycparser.c_ast import *
 import sys
+import warnings
 
 __new_time_unit = True
 __wait_for_operation = None
@@ -21,10 +22,11 @@ main_function_name = "main"
 expected_operation = (BinaryOp, Decl, Return)
 expected_unary_operations = ("++", "--")
 ignored_types = (Constant, ID)
+expected_definitions = set()
 
 
 def __add_edge_to_mascm(mascm, edge: Edge) -> None:
-    """Function add edge to MAM
+    """Function add edge to MASCM
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param edge: Edge object
     """
@@ -32,7 +34,7 @@ def __add_edge_to_mascm(mascm, edge: Edge) -> None:
 
 
 def __add_mutex_to_mascm(mascm, node) -> None:
-    """Add Lock object into MAM's Q set
+    """Add Lock object into MASCM's Q set
     :param node: AST Node
     """
     l = Lock(node, len(mascm.q) + 1)
@@ -73,7 +75,7 @@ def __add_operation_to_mascm(mascm, op: Operation) -> None:
 
 
 def __add_resource_to_mascm(mascm, node) -> None:
-    """Add Reasource object into MAM's R set
+    """Add Reasource object into MASCM's R set
     :param node: AST Node
     """
     r = Resource(node, len(mascm.r) + 1, node.name)
@@ -176,15 +178,20 @@ def __parse_global_trees(mascm, asts: deque) -> dict:
     functions_definition = dict()
     for ast in asts:
         for node in ast:
-            if isinstance(node, Typedef) or isinstance(node, FuncDecl):
+            if isinstance(node, Typedef) or isinstance(node, FuncDecl) \
+                    or (hasattr(node, 'storage') and "extern" in node.storage):
                 continue
-            elif isinstance(node, Decl) and ("pthread_mutex_t" in node.type.type.names):
+            elif isinstance(node, Decl) and isinstance(node.type.type, IdentifierType)\
+                    and ("pthread_mutex_t" in node.type.type.names):
                 __add_mutex_to_mascm(mascm, node)
             elif isinstance(node, FuncDef):
                 func = Function(node)
                 functions_definition[func.name] = func
-            elif isinstance(node, Decl):
+            elif isinstance(node, Decl) and isinstance(node.type, TypeDecl)\
+                    and isinstance(node.type.type, IdentifierType):
                 __add_resource_to_mascm(mascm, node)
+            elif isinstance(node, Decl) and isinstance(node.type, FuncDecl):
+                expected_definitions.add(node)
             else:
                 print(node, "is not expected", file=sys.stderr)
     return functions_definition
@@ -393,7 +400,7 @@ def __parse_while_loop(mascm, node: While, functions_definition: dict, thread: T
 
 
 def __put_main_thread_to_model(mascm) -> None:
-    """Add to MAM t0 as first/last thread in time units
+    """Add to MASCM t0 as first/last thread in time units
     :param mascm: MultithreadedApplicationSourceCodeModel object
     """
     unit = TimeUnit(len(mascm.u))
@@ -414,6 +421,25 @@ def __restore_global_variable() -> None:
     __wait_for_operation = None
 
 
+def __unexpected_declarations(defined_functions: dict):
+    """ Function check there is some function declaration without definition
+    :param defined_functions: List of defined function
+    """
+    to_remove = list()
+    for name, func in defined_functions.items():
+        if any(name == decl.name for decl in expected_definitions):
+            for decl in expected_definitions:
+                if name == decl.name and func.node.decl.quals == decl.quals and func.node.decl.storage == decl.storage\
+                        and func.node.decl.funcspec == decl.funcspec:
+                    to_remove.append(decl)
+
+    for el in to_remove:
+        expected_definitions.remove(el)
+    if expected_definitions:
+        warnings.warn(f"Cannot find definition of functions: {', '.join(decl.name for decl in expected_definitions)}",
+                      UserWarning)
+
+
 def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
     """Function create MultithreadedApplicationSourceCodeModel
     :param asts: AST's deque
@@ -423,8 +449,10 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
     __put_main_thread_to_model(mascm)
 
     functions_definition = __parse_global_trees(mascm, asts)
+    __unexpected_declarations(functions_definition)
     functions = __parse_function_call(mascm, functions_definition[main_function_name], functions_definition, mascm.t[-1],
                                       mascm.u[-1])
+
     while functions:
         new_functions = list()
         for time_unit, thread, func in functions:

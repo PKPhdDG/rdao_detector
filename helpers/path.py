@@ -12,3 +12,11 @@ def get_project_path() -> str:
     :return: String with path
     """
     return Path(dirname(__file__)).parent
+
+
+def collect_c_project_files(dir_path: str, extensions: list = ("c", "h")) -> str:
+    dir_path = Path(dir_path)
+    for file in dir_path.iterdir():
+        *_, extension = str(file).split(".")
+        if extension in extensions:
+            yield file

@@ -11,6 +11,10 @@ class Function:
         self.__node = node
 
     @property
+    def node(self):
+        return self.__node
+
+    @property
     def body(self):
         return self.__node.body
 
