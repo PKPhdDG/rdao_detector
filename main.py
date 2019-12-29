@@ -7,39 +7,36 @@ __version__ = "0.1"
 
 import argparse
 from collections import deque
-from helpers.purifier import purify_file
-from multithreaded_application_model import create_multithreaded_application_model, MultithreadedApplicationModel
-import os
+from helpers.path import collect_c_project_files
+from helpers.purifier import purify_file, purify_files
+from mascm import create_mascm
 from pycparser import parse_file
-from pycparser.c_parser import CParser
 
-parser = argparse.ArgumentParser(description='Process AST to MAM')
-parser.add_argument('paths', type=str, nargs='+', help="Paths to source code")
+parser = argparse.ArgumentParser(description='Process AST to MASCM')
+parser.add_argument('path', type=str, help="Paths to source code")
 
 
-def create_ast(path: str) -> CParser:
+def create_ast(path: str) -> deque:
     """Function converting C code to AST
     :param path: Path to source code
     :return: CParser object
     """
     try:
-        return parse_file(path, use_cpp=False)
+        ast = deque()
+        ast.append(parse_file(purify_file(path), use_cpp=False))
+        return ast
     except IsADirectoryError:
-        raise NotImplementedError("Target is not a file")
-
-
-def create_mam(asts: deque) -> MultithreadedApplicationModel:
-    """ Function convert AST's into MAM
-    :param asts: AST's list
-    :return: MAM object
-    """
-    return create_multithreaded_application_model(asts)
+        pure_files = purify_files(collect_c_project_files(path))
+        ast = deque()
+        for file in pure_files:
+            ast.append(parse_file(file))
+        return ast
 
 
 def main():
     args = parser.parse_args()
-    mam = create_mam(deque((create_ast(path) for path in args.paths)))
-    print(mam)
+    mascm = create_mascm(create_ast(args.path))
+    print(mascm)
 
 
 if "__main__" == __name__:

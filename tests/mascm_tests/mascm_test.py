@@ -3,13 +3,13 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.1"
 
-from multithreaded_application_model import MultithreadedApplicationModel
+from mascm import MultithreadedApplicationSourceCodeModel
 import unittest
 
 
-class MultithreadedApplicationModelTest(unittest.TestCase):
+class MultithreadedApplicationSourceCodeModelTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.mam = MultithreadedApplicationModel({}, [], {}, {}, {}, {})
+        self.mam = MultithreadedApplicationSourceCodeModel({}, [], {}, {}, {}, {})
 
     def test_get_attribute_by_full_name(self):
         self.assertDictEqual({}, self.mam.threads)

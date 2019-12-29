@@ -6,9 +6,9 @@ __version__ = "0.1"
 from collections import namedtuple
 
 
-class MultithreadedApplicationModel(namedtuple(
-    'MAM', ('threads', 'time_units', 'resource', 'operations', 'mutexes', 'edges'))):
-    """General class of multithreaded application model
+class MultithreadedApplicationSourceCodeModel(namedtuple(
+    'MASCM', ('threads', 'time_units', 'resource', 'operations', 'mutexes', 'edges'))):
+    """General class of multithreaded application source code model
     """
 
     def __getattr__(self, item):
@@ -25,4 +25,4 @@ class MultithreadedApplicationModel(namedtuple(
                 return self.mutexes
             elif 'f' == item:
                 return self.edges
-        return super(MultithreadedApplicationModel, self).__getattribute__(item)
+        return super(MultithreadedApplicationSourceCodeModel, self).__getattribute__(item)
