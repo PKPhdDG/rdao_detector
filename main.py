@@ -7,6 +7,7 @@ __version__ = "0.1"
 
 import argparse
 from collections import deque
+from helpers.purifier import purify_file
 from multithreaded_application_model import create_multithreaded_application_model, MultithreadedApplicationModel
 import os
 from pycparser import parse_file
@@ -21,9 +22,10 @@ def create_ast(path: str) -> CParser:
     :param path: Path to source code
     :return: CParser object
     """
-    if os.path.isfile(path):
+    try:
         return parse_file(path, use_cpp=False)
-    raise NotImplementedError("Target is not a file")
+    except IsADirectoryError:
+        raise NotImplementedError("Target is not a file")
 
 
 def create_mam(asts: deque) -> MultithreadedApplicationModel:

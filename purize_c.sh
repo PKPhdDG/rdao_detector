@@ -16,7 +16,7 @@ fi
 
 for file in "$@"
 do
-  echo "Trying purize $file"
+  echo "Trying purify $file"
   if ! [ -f "$file" ]
     then
     echo "Skipping $file"
