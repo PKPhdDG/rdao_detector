@@ -4,6 +4,8 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.1"
 
 from collections import deque
+import config as c
+from copy import deepcopy
 from mascm.edge import Edge
 from mascm.lock import Lock
 from mascm.mascm import MultithreadedApplicationSourceCodeModel
@@ -14,16 +16,18 @@ from mascm.time_unit import TimeUnit
 from parsing_utils import Function
 from pycparser.c_ast import *
 import sys
+from typing import Optional
 import warnings
 
 __new_time_unit = True
 __wait_for_operation = None
-main_function_name = "main"
+expected_definitions = list()
 expected_operation = (BinaryOp, Decl, Return)
 expected_unary_operations = ("++", "--")
+ignored_c_functions = list()
+ignored_c_functions.extend(c.ignored_c_functions)
 ignored_types = (Constant, ID)
-expected_definitions = list()
-ignored_c_functions = ("fscanf", "printf")
+main_function_name = c.main_function_name if hasattr(c, "main_function_name") else "main"
 
 
 def __add_edge_to_mascm(mascm, edge: Edge) -> None:
@@ -38,8 +42,8 @@ def __add_mutex_to_mascm(mascm, node) -> None:
     """Add Lock object into MASCM's Q set
     :param node: AST Node
     """
-    l = Lock(node, len(mascm.q) + 1)
-    mascm.q.append(l)
+    lock = Lock(node, len(mascm.q) + 1)
+    mascm.q.append(lock)
 
 
 def __add_operation_and_edge(mascm, node, thread) -> Operation:
@@ -76,14 +80,15 @@ def __add_operation_to_mascm(mascm, op: Operation) -> None:
 
 
 def __add_resource_to_mascm(mascm, node) -> None:
-    """Add Reasource object into MASCM's R set
+    """Add Resource object into MASCM's R set
     :param node: AST Node
     """
     r = Resource(node, len(mascm.r) + 1, node.name)
     mascm.r.append(r)
 
 
-def __parse_assignment(mascm, node: Assignment, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> deque:
+def __parse_assignment(mascm, node: Assignment, functions_definition: dict, thread: Thread, time_unit: TimeUnit)\
+        -> deque:
     """Function parsing Assignment node
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: Assignment object
@@ -223,7 +228,8 @@ def __parse_if_statement(mascm, node: If, functions_definition: dict, thread: Th
     return functions_call
 
 
-def __parse_pthread_mutex_create(mascm, node: FuncCall, time_unit: TimeUnit, func: Function) -> tuple:
+def __parse_pthread_create(mascm, node: FuncCall, time_unit: TimeUnit, func: Function,
+                           main_thread: Optional[Thread] = None) -> tuple:
     """Parse node FuncCall with pthread_mutex_create.
     Function return 3 elements tuple with TimeUnit, Thread and Function
 
@@ -231,13 +237,14 @@ def __parse_pthread_mutex_create(mascm, node: FuncCall, time_unit: TimeUnit, fun
     :param node: FuncCall object
     :param time_unit: TimeUnit object
     :param func: Function object
+    :param main_thread: Thread object used to nesting check
     :return: Tuple with TimeUnit, Thread, Function
     """
     global __new_time_unit
     if __new_time_unit:
         __new_time_unit = False
         mascm.u.append(TimeUnit(time_unit + 1))
-    new_thread = Thread(node.args, mascm.u[-1])
+    new_thread = Thread(node.args, mascm.u[-1], main_thread.depth + 1 if main_thread is not None else 0)
     mascm.t.append(new_thread)
     mascm.u[-1].append(new_thread)
 
@@ -300,6 +307,7 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
     :return: deque with function calls
     """
     global __new_time_unit
+
     functions_call = deque()
     if not node:
         return functions_call
@@ -313,11 +321,22 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
                     threadf_name = thread_func.name
                 elif isinstance(thread_func, UnaryOp):
                     threadf_name = thread_func.expr.name
-                result = __parse_pthread_mutex_create(mascm, child, time_unit, functions_definition[threadf_name])
+                result = __parse_pthread_create(mascm, child, time_unit, functions_definition[threadf_name], thread)
                 functions_call.append(result)
                 time_unit, *_ = result
             elif fcall_name == "pthread_join":
                 __new_time_unit = True
+                tu = deepcopy(functions_call[0][0])
+                threads = (call[1] for call in functions_call)
+                for index in range(len(tu)):
+                    for t in threads:
+                        try:
+                            tu.remove(t)
+                        except ValueError:
+                            # If there is no expected thread in time unit it means there is previous time unit
+                            pass
+                if tu and len(tu) == 1 and mascm.threads[0] not in tu:
+                    mascm.time_units.append(tu)
             elif fcall_name == "pthread_mutex_lock":
                 __parse_pthread_mutex_lock(mascm, child, thread)
             elif fcall_name == "pthread_mutex_unlock":
@@ -334,13 +353,12 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
 
                 operation: Operation = __add_operation_and_edge(mascm, child, thread)
                 # TODO This should be done in other function
-                # This should cover other stdlib functions too
-                if child.name.name == "printf":
-                    for printf_resource in child.args.exprs:
-                        if not isinstance(printf_resource, ID):
+                if child.name.name in ignored_c_functions:
+                    for builtin_resource in child.args.exprs:
+                        if not isinstance(builtin_resource, ID):
                             continue
                         for shared_resource in mascm.r:
-                            if printf_resource.name in shared_resource:
+                            if builtin_resource.name in shared_resource:
                                 __add_edge_to_mascm(mascm, Edge(shared_resource, operation))
 
         elif isinstance(child, expected_operation):
@@ -348,8 +366,8 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
                 fcall_name = child.init.name.name
                 if fcall_name in ignored_c_functions:
                     continue
-                functions_call.extend(__parse_function_call(mascm, functions_definition[fcall_name], functions_definition,
-                                                            thread, time_unit))
+                functions_call.extend(__parse_function_call(mascm, functions_definition[fcall_name],
+                                                            functions_definition, thread, time_unit))
             __add_operation_and_edge(mascm, child, thread)
         elif isinstance(child, If):
             __parse_if_statement(mascm, child, functions_definition, thread, time_unit)
@@ -470,5 +488,6 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
 
     if len(mascm.u) > 1:
         __put_main_thread_to_model(mascm)
+
     __restore_global_variable()
     return mascm

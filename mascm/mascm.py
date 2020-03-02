@@ -7,11 +7,11 @@ from collections import namedtuple
 
 
 class MultithreadedApplicationSourceCodeModel(namedtuple(
-    'MASCM', ('threads', 'time_units', 'resource', 'operations', 'mutexes', 'edges'))):
+        'MASCM', ('threads', 'time_units', 'resource', 'operations', 'mutexes', 'edges'))):
     """General class of multithreaded application source code model
     """
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str):
         if item in ['t', 'u', 'r', 'o', 'q', 'f']:
             if 't' == item:
                 return self.threads

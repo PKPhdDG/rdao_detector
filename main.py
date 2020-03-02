@@ -23,7 +23,7 @@ def create_ast(path: str) -> deque:
     """
     try:
         ast = deque()
-        ast.append(parse_file(purify_file(path), use_cpp=False))
+        ast.append(parse_file(purify_file(path)))
         return ast
     except IsADirectoryError:
         pass
@@ -35,6 +35,9 @@ def create_ast(path: str) -> deque:
 
 
 def main():
+    """ Main function
+    :return: None
+    """
     args = parser.parse_args()
     mascm = create_mascm(create_ast(args.path))
     print(mascm)

@@ -9,15 +9,20 @@ from helpers.purifier import purify, purify_files
 from mascm import create_mascm
 from os import remove
 from os.path import join
-from pathlib import Path
 from pycparser import parse_file
 import unittest
 
 
 class CreateMamTest(unittest.TestCase):
     project_dir = get_project_path()
-    source_path_prefix = join(project_dir, "tests\example_c_sources")
+    source_path_prefix = join(project_dir, "tests\\example_c_sources")
     multiple_files_app_path_prefix = join(source_path_prefix, "multiple_files_apps")
+
+    def __test_thread_nesting(self, threads):
+        main_thread, *other_threads = threads
+        self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
+        for thread in other_threads:
+            self.assertEqual(1, thread.depth, "Nested thread does not have expected depth!")
 
     def test_single_thread_global_variable_if_statement(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], " \
@@ -26,8 +31,9 @@ class CreateMamTest(unittest.TestCase):
         file_to_parse = "single_thread_global_variable_if_statement.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
-            ast = parse_file(pure_file_path, use_cpp=False)
+            ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
+            self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_single_thread_global_variable_if_else_statement(self):
@@ -38,8 +44,9 @@ class CreateMamTest(unittest.TestCase):
         file_to_parse = "single_thread_global_variable_if_else_statement.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
-            ast = parse_file(pure_file_path, use_cpp=False)
+            ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
+            self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_single_thread_global_variable_while_loop(self):
@@ -49,8 +56,9 @@ class CreateMamTest(unittest.TestCase):
         file_to_parse = "single_thread_global_variable_while_loop.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
-            ast = parse_file(pure_file_path, use_cpp=False)
+            ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
+            self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_two_threads_global_variable(self):
@@ -62,8 +70,9 @@ class CreateMamTest(unittest.TestCase):
         file_to_parse = "two_threads_global_variable.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
-            ast = parse_file(pure_file_path, use_cpp=False)
+            ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
+            self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_single_thread_do_while_loop(self):
@@ -74,8 +83,9 @@ class CreateMamTest(unittest.TestCase):
         file_to_parse = "single_thread_do_while_loop.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
-            ast = parse_file(pure_file_path, use_cpp=False)
+            ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
+            self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_single_thread_operation_in_main_thread_for_loop_without_body(self):
@@ -86,8 +96,9 @@ class CreateMamTest(unittest.TestCase):
         file_to_parse = "single_thread_operation_in_main_thread_for_loop_without_body.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
-            ast = parse_file(pure_file_path, use_cpp=False)
+            ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
+            self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_single_thread_for_loop(self):
@@ -98,8 +109,9 @@ class CreateMamTest(unittest.TestCase):
         file_to_parse = "single_thread_for_loop.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
-            ast = parse_file(pure_file_path, use_cpp=False)
+            ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
+            self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_multiple_file_application(self):
@@ -113,6 +125,7 @@ class CreateMamTest(unittest.TestCase):
         for pure_file in pure_files:
             collected_ast.append(parse_file(pure_file))
         result = create_mascm(deque(collected_ast))
+        self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
         for pure_file in pure_files:
             remove(pure_file)
@@ -129,6 +142,7 @@ class CreateMamTest(unittest.TestCase):
         for pure_file in pure_files:
             collected_ast.append(parse_file(pure_file))
         result = create_mascm(deque(collected_ast))
+        self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
         for pure_file in pure_files:
             remove(pure_file)
@@ -144,6 +158,85 @@ class CreateMamTest(unittest.TestCase):
         for pure_file in pure_files:
             collected_ast.append(parse_file(pure_file))
         result = create_mascm(deque(collected_ast))
+        self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))
+        for pure_file in pure_files:
+            remove(pure_file)
+
+    def test_multiple_file_application_4(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], "\
+                         "time_units=[[t0], [t1], [t2], [t0]], resource=[], "\
+                         "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o2,1, o2,2, o2,3, o2,4], mutexes=[], " \
+                         "edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), " \
+                         "(o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,4)])"
+        dir_path: str = join(self.multiple_files_app_path_prefix, "4")
+        collected_ast = list()
+        pure_files = purify_files(collect_c_project_files(dir_path))
+        for pure_file in pure_files:
+            collected_ast.append(parse_file(pure_file))
+        result = create_mascm(deque(collected_ast))
+        main_thread, *other_threads = result.threads
+        self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
+        for thread, depth in zip(other_threads, range(1, len(result.threads))):
+            self.assertEqual(depth, thread.depth, "Nested thread does not have expected depth!")
+        self.assertEqual(expected_mascm, str(result))
+        for pure_file in pure_files:
+            remove(pure_file)
+
+    def test_multiple_file_application_5(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], "\
+                         "time_units=[[t0], [t1], [t2, t1], [t1], [t0]], resource=[], "\
+                         "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o2,1, o2,2, o2,3, o2,4], mutexes=[], " \
+                         "edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (o1,4, o1,5), " \
+                         "(o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,4)])"
+        dir_path: str = join(self.multiple_files_app_path_prefix, "5")
+        collected_ast = list()
+        pure_files = purify_files(collect_c_project_files(dir_path))
+        for pure_file in pure_files:
+            collected_ast.append(parse_file(pure_file))
+        result = create_mascm(deque(collected_ast))
+        main_thread, *other_threads = result.threads
+        self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
+        for thread, depth in zip(other_threads, range(1, len(result.threads))):
+            self.assertEqual(depth, thread.depth, "Nested thread does not have expected depth!")
+        self.assertEqual(expected_mascm, str(result))
+        for pure_file in pure_files:
+            remove(pure_file)
+
+    def test_multiple_file_application_6(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3, t4], "\
+                         "time_units=[[t0], [t1], [t2], [t3], [t4], [t0]], resource=[], "\
+                         "operations=[o0,1, o0,2, o1,1, o1,2, o2,1, o2,2, o3,1, o3,2, o4,1], mutexes=[], " \
+                         "edges=[(o0,1, o0,2), (o1,1, o1,2), (o2,1, o2,2), (o3,1, o3,2)])"
+        dir_path: str = join(self.multiple_files_app_path_prefix, "6")
+        collected_ast = list()
+        pure_files = purify_files(collect_c_project_files(dir_path))
+        for pure_file in pure_files:
+            collected_ast.append(parse_file(pure_file))
+        result = create_mascm(deque(collected_ast))
+        main_thread, *other_threads = result.threads
+        self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
+        for thread, depth in zip(other_threads, range(1, len(result.threads))):
+            self.assertEqual(depth, thread.depth, "Nested thread does not have expected depth!")
+        self.assertEqual(expected_mascm, str(result))
+        for pure_file in pure_files:
+            remove(pure_file)
+
+    def test_multiple_file_application_7(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3, t4, t5], "\
+                         "time_units=[[t0], [t1], [t2, t3], [t4], [t5], [t0]], resource=[], "\
+                         "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o2,1, o2,2, o3,1, o3,2, o4,1, o5,1], "\
+                         "mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o2,1, o2,2), (o3,1, o3,2)])"
+        dir_path: str = join(self.multiple_files_app_path_prefix, "7")
+        collected_ast = list()
+        pure_files = purify_files(collect_c_project_files(dir_path))
+        for pure_file in pure_files:
+            collected_ast.append(parse_file(pure_file))
+        result = create_mascm(deque(collected_ast))
+        main_thread, *other_threads = result.threads
+        self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
+        for thread, depth in zip(other_threads, [1, 2, 2, 3, 3]):
+            self.assertEqual(depth, thread.depth, "Nested thread does not have expected depth!")
         self.assertEqual(expected_mascm, str(result))
         for pure_file in pure_files:
             remove(pure_file)
