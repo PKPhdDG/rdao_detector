@@ -7,7 +7,7 @@ from collections import namedtuple
 
 
 class MultithreadedApplicationSourceCodeModel(namedtuple(
-        'MASCM', ('threads', 'time_units', 'resource', 'operations', 'mutexes', 'edges'))):
+        'MASCM', ('threads', 'time_units', 'resource', 'operations', 'mutexes', 'edges', 'relations'))):
     """General class of multithreaded application source code model
     """
 
@@ -25,4 +25,6 @@ class MultithreadedApplicationSourceCodeModel(namedtuple(
                 return self.mutexes
             elif 'f' == item:
                 return self.edges
+            elif 'b' == item:
+                return self.relations
         return super(MultithreadedApplicationSourceCodeModel, self).__getattribute__(item)

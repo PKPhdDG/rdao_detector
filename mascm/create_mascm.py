@@ -10,6 +10,7 @@ from mascm.edge import Edge
 from mascm.lock import Lock
 from mascm.mascm import MultithreadedApplicationSourceCodeModel
 from mascm.operation import Operation
+from mascm.relations import Relations
 from mascm.resource import Resource
 from mascm.thread import Thread
 from mascm.time_unit import TimeUnit
@@ -26,8 +27,16 @@ expected_operation = (BinaryOp, Decl, Return)
 expected_unary_operations = ("++", "--")
 ignored_c_functions = list()
 ignored_c_functions.extend(c.ignored_c_functions)
-ignored_types = (Constant, ID)
+ignored_types = (Constant, ID, Typename)
 main_function_name = c.main_function_name if hasattr(c, "main_function_name") else "main"
+relations: dict = {  # Names of functions between which there are sequential relationships
+    'forward': [('calloc', 'free'), ('malloc', 'free')],
+    'backward': [('fgetpos', 'stderr'), ('fsetpos', 'stderr'), ('fell', 'stderr'), ('atof', 'stderr'),
+                 ('strtod', 'stderr'), ('strtol', 'stderr'), ('strtoul', 'stderr'), ('calloc', 'realloc'),
+                 ('malloc', 'realloc'), ('srand', 'rand')],
+    'symmetric': [('va_start', 'va_arg'), ('va_arg', 'va_end')]
+}
+relations.update(c.relations)
 
 
 def __add_edge_to_mascm(mascm, edge: Edge) -> None:
@@ -193,8 +202,11 @@ def __parse_global_trees(mascm, asts: deque) -> dict:
             elif isinstance(node, FuncDef):
                 func = Function(node)
                 functions_definition[func.name] = func
-            elif isinstance(node, Decl) and isinstance(node.type, TypeDecl)\
-                    and isinstance(node.type.type, IdentifierType):
+                # It is declaration and (it is variable of type or variable which is pointer of type)
+            elif isinstance(node, Decl) and \
+                    ((isinstance(node.type, TypeDecl) and isinstance(node.type.type, IdentifierType)) or
+                     (isinstance(node.type, PtrDecl) and isinstance(node.type.type, TypeDecl) and
+                      isinstance(node.type.type.type, IdentifierType))):
                 __add_resource_to_mascm(mascm, node)
             elif isinstance(node, Decl) and isinstance(node.type, FuncDecl):
                 expected_definitions.append(node)
@@ -355,11 +367,14 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
                 # TODO This should be done in other function
                 if child.name.name in ignored_c_functions:
                     for builtin_resource in child.args.exprs:
-                        if not isinstance(builtin_resource, ID):
-                            continue
-                        for shared_resource in mascm.r:
-                            if builtin_resource.name in shared_resource:
-                                __add_edge_to_mascm(mascm, Edge(shared_resource, operation))
+                        if isinstance(builtin_resource, ID):  # For values
+                            for shared_resource in mascm.r:
+                                if builtin_resource.name in shared_resource:
+                                    __add_edge_to_mascm(mascm, Edge(shared_resource, operation))
+                        if isinstance(builtin_resource, UnaryOp):  # For pointers to values
+                            for shared_resource in mascm.r:
+                                if builtin_resource.expr.name.name in shared_resource:
+                                    __add_edge_to_mascm(mascm, Edge(shared_resource, operation))
 
         elif isinstance(child, expected_operation):
             if isinstance(child, Decl) and isinstance(child.init, FuncCall):
@@ -471,7 +486,7 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
     :param asts: AST's deque
     :return: MultithreadedApplicationSourceCodeModel object
     """
-    mascm = MultithreadedApplicationSourceCodeModel(list(), list(), list(), list(), list(), list())
+    mascm = MultithreadedApplicationSourceCodeModel(list(), list(), list(), list(), list(), list(), Relations())
     __put_main_thread_to_model(mascm)
 
     functions_definition = __parse_global_trees(mascm, asts)

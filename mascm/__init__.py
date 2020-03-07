@@ -8,6 +8,7 @@ from mascm.edge import Edge
 from mascm.lock import Lock, LockType
 from mascm.mascm import MultithreadedApplicationSourceCodeModel
 from mascm.operation import Operation
+from mascm.relations import Relations
 from mascm.resource import Resource
 from mascm.thread import Thread
 from mascm.time_unit import TimeUnit
