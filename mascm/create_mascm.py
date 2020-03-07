@@ -51,11 +51,13 @@ def __operation_is_in_forward_relation(mascm, operation: Operation):
             try:
                 data = next((d for d in forward_operation_handlers if d["pair"][1] == operation.name))
             except StopIteration:
-                return
+                break
             if not data:
-                return
+                break
+            # TODO Check both operations use this same resource
             mascm.relations.forward.append((data[1], operation))
             forward_operation_handlers.remove(data)
+            break
 
 
 def __operation_is_in_backward_relation(mascm, operation: Operation):
