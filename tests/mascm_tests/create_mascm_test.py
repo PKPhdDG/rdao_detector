@@ -27,7 +27,7 @@ class CreateMamTest(unittest.TestCase):
     def test_single_thread_global_variable_if_statement(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3], mutexes=[q1], edges=[(o0,1, o0,2),"\
-                         " (o1,1, o1,2), (o1,2, r1), (o1,1, o1,3), (o1,2, o1,3)], relations=Relations(forward=[], "\
+                         " (o1,1, o1,2), (o1,2, r1), (o1,1, o1,3), (o1,2, o1,3)], relations=(forward=[], "\
                          "backward=[], symmetric=[]))"
         file_to_parse = "single_thread_global_variable_if_statement.c"
         file_path = join(self.source_path_prefix, file_to_parse)
@@ -41,7 +41,7 @@ class CreateMamTest(unittest.TestCase):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5], mutexes=[q1], "\
                          "edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, r1), (o1,1, o1,3), (o1,2, o1,3), (o1,3, o1,4), "\
-                         "(o1,4, r1), (o1,3, o1,5), (o1,4, o1,5)], relations=Relations(forward=[], backward=[], "\
+                         "(o1,4, r1), (o1,3, o1,5), (o1,4, o1,5)], relations=(forward=[], backward=[], "\
                          "symmetric=[]))"
         file_to_parse = "single_thread_global_variable_if_else_statement.c"
         file_path = join(self.source_path_prefix, file_to_parse)
@@ -54,7 +54,7 @@ class CreateMamTest(unittest.TestCase):
     def test_single_thread_global_variable_while_loop(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3], mutexes=[q1], edges=[(o0,1, o0,2),"\
-                         " (o1,1, o1,2), (o1,2, r1), (o1,2, o1,1), (o1,1, o1,3), (o1,2, o1,3)], relations=Relations("\
+                         " (o1,1, o1,2), (o1,2, r1), (o1,2, o1,1), (o1,1, o1,3), (o1,2, o1,3)], relations=("\
                          "forward=[], backward=[], symmetric=[]))"
         file_to_parse = "single_thread_global_variable_while_loop.c"
         file_path = join(self.source_path_prefix, file_to_parse)
@@ -69,7 +69,7 @@ class CreateMamTest(unittest.TestCase):
                          "[t0]], resource=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4, o2,1, o2,2,"\
                          " o2,3, o2,4], mutexes=[q1], edges=[(o0,1, o0,2), (o0,2, o0,3), (q1, o1,1), (o1,1, o1,2), "\
                          "(o1,2, r1), (o1,2, o1,3), (o1,3, q1), (o1,3, o1,4), (q1, o2,1), (o2,1, o2,2), (o2,2, r1), "\
-                         "(o2,2, o2,3), (o2,3, q1), (o2,3, o2,4)], relations=Relations(forward=[], backward=[],"\
+                         "(o2,2, o2,3), (o2,3, q1), (o2,3, o2,4)], relations=(forward=[], backward=[],"\
                          " symmetric=[]))"
         file_to_parse = "two_threads_global_variable.c"
         file_path = join(self.source_path_prefix, file_to_parse)
@@ -83,7 +83,7 @@ class CreateMamTest(unittest.TestCase):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6], mutexes=[q1], "\
                          "edges=[(o0,1, o0,2), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), (o1,3, o1,4), "\
-                         "(o1,4, o1,2), (o1,4, o1,5), (o1,5, q1), (o1,5, o1,6)], relations=Relations(forward=[],"\
+                         "(o1,4, o1,2), (o1,4, o1,5), (o1,5, q1), (o1,5, o1,6)], relations=(forward=[],"\
                          " backward=[], symmetric=[]))"
         file_to_parse = "single_thread_do_while_loop.c"
         file_path = join(self.source_path_prefix, file_to_parse)
@@ -97,7 +97,7 @@ class CreateMamTest(unittest.TestCase):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t0, t1], [t0]],"\
                          " resource=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4], mutexes=[q1], "\
                          "edges=[(o0,1, o0,2), (r1, o0,2), (o0,2, o0,3), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,2),"\
-                         " (o1,2, o1,3), (o1,3, q1), (o1,3, o1,4)], relations=Relations(forward=[], backward=[],"\
+                         " (o1,2, o1,3), (o1,3, q1), (o1,3, o1,4)], relations=(forward=[], backward=[],"\
                          " symmetric=[]))"
         file_to_parse = "single_thread_operation_in_main_thread_for_loop_without_body.c"
         file_path = join(self.source_path_prefix, file_to_parse)
@@ -112,7 +112,7 @@ class CreateMamTest(unittest.TestCase):
                          "resource=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5], "\
                          "mutexes=[q1], edges=[(o0,1, o0,2), (o1,1, o1,2), (q1, o1,2), (o1,2, o1,3), "\
                          "(o1,3, r2), (o1,3, o1,4), (o1,4, q1), (o1,4, o1,1), (o1,1, o1,5), (o1,4, o1,5)], "\
-                         "relations=Relations(forward=[], backward=[], symmetric=[]))"
+                         "relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "single_thread_for_loop.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
@@ -126,7 +126,7 @@ class CreateMamTest(unittest.TestCase):
                          "resource=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5], "\
                          "mutexes=[q1], edges=[(o0,1, o0,2), (o1,1, o1,2), (q1, o1,2), (o1,2, o1,3), "\
                          "(o1,3, r2), (o1,3, o1,4), (o1,4, q1), (o1,4, o1,1), (o1,1, o1,5), (o1,4, o1,5)], "\
-                         "relations=Relations(forward=[], backward=[], symmetric=[]))"
+                         "relations=(forward=[], backward=[], symmetric=[]))"
         dir_path: str = join(self.multiple_files_app_path_prefix, "1")
         collected_ast = list()
         pure_files = purify_files(collect_c_project_files(dir_path))
@@ -143,7 +143,7 @@ class CreateMamTest(unittest.TestCase):
                          "[t0]], resource=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4, o2,1, o2,2, "\
                          "o2,3, o2,4], mutexes=[q1], edges=[(o0,1, o0,2), (o0,2, o0,3), (q1, o1,1), (o1,1, o1,2), "\
                          "(o1,2, r1), (o1,2, o1,3), (o1,3, q1), (o1,3, o1,4), (q1, o2,1), (o2,1, o2,2), (o2,2, r1), "\
-                         "(o2,2, o2,3), (o2,3, q1), (o2,3, o2,4)], relations=Relations(forward=[], backward=[],"\
+                         "(o2,2, o2,3), (o2,3, q1), (o2,3, o2,4)], relations=(forward=[], backward=[],"\
                          " symmetric=[]))"
         dir_path: str = join(self.multiple_files_app_path_prefix, "2")
         collected_ast = list()
@@ -160,7 +160,7 @@ class CreateMamTest(unittest.TestCase):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6], mutexes=[q1], "\
                          "edges=[(o0,1, o0,2), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), (o1,3, o1,4), "\
-                         "(o1,4, o1,2), (o1,4, o1,5), (o1,5, q1), (o1,5, o1,6)], relations=Relations(forward=[],"\
+                         "(o1,4, o1,2), (o1,4, o1,5), (o1,5, q1), (o1,5, o1,6)], relations=(forward=[],"\
                          " backward=[], symmetric=[]))"
         dir_path: str = join(self.multiple_files_app_path_prefix, "3")
         collected_ast = list()
@@ -178,7 +178,7 @@ class CreateMamTest(unittest.TestCase):
                          "time_units=[[t0], [t1], [t2], [t0]], resource=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o2,1, o2,2, o2,3, o2,4], mutexes=[], "\
                          "edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), "\
-                         "(o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,4)], relations=Relations(forward=[], backward=[], "\
+                         "(o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,4)], relations=(forward=[], backward=[], "\
                          "symmetric=[]))"
         dir_path: str = join(self.multiple_files_app_path_prefix, "4")
         collected_ast = list()
@@ -199,7 +199,7 @@ class CreateMamTest(unittest.TestCase):
                          "time_units=[[t0], [t1], [t2, t1], [t1], [t0]], resource=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o2,1, o2,2, o2,3, o2,4], mutexes=[], "\
                          "edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (o1,4, o1,5), "\
-                         "(o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,4)], relations=Relations(forward=[], backward=[],"\
+                         "(o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,4)], relations=(forward=[], backward=[],"\
                          " symmetric=[]))"
         dir_path: str = join(self.multiple_files_app_path_prefix, "5")
         collected_ast = list()
@@ -219,7 +219,7 @@ class CreateMamTest(unittest.TestCase):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3, t4], "\
                          "time_units=[[t0], [t1], [t2], [t3], [t4], [t0]], resource=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o2,1, o2,2, o3,1, o3,2, o4,1], mutexes=[], "\
-                         "edges=[(o0,1, o0,2), (o1,1, o1,2), (o2,1, o2,2), (o3,1, o3,2)], relations=Relations("\
+                         "edges=[(o0,1, o0,2), (o1,1, o1,2), (o2,1, o2,2), (o3,1, o3,2)], relations=("\
                          "forward=[], backward=[], symmetric=[]))"
         dir_path: str = join(self.multiple_files_app_path_prefix, "6")
         collected_ast = list()
@@ -240,7 +240,7 @@ class CreateMamTest(unittest.TestCase):
                          "time_units=[[t0], [t1], [t2, t3], [t4], [t5], [t0]], resource=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o2,1, o2,2, o3,1, o3,2, o4,1, o5,1], "\
                          "mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o2,1, o2,2), (o3,1, o3,2)], "\
-                         "relations=Relations(forward=[], backward=[], symmetric=[]))"
+                         "relations=(forward=[], backward=[], symmetric=[]))"
         dir_path: str = join(self.multiple_files_app_path_prefix, "7")
         collected_ast = list()
         pure_files = purify_files(collect_c_project_files(dir_path))
@@ -258,10 +258,10 @@ class CreateMamTest(unittest.TestCase):
     def test_forward_relation(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
-                         "o1,9], mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), "\
-                         "(o1,3, o1,4), (r1, o1,4), (o1,4, o1,5), (r1, o1,5), (o1,5, o1,6), (o1,6, o1,7), (o1,7, o1,6)"\
-                         ", (o1,6, o1,8), (o1,7, o1,8), (r1, o1,8), (o1,8, o1,9)], "\
-                         "relations=Relations(forward=[(o1,3, o1,8)], backward=[], symmetric=[]))"
+                         "o1,9, o1,10], mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), "\
+                         "(o1,4, r1), (o1,4, o1,5), (r1, o1,5), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o1,7, o1,8)"\
+                         ", (o1,8, o1,7), (o1,7, o1,9), (o1,8, o1,9), (r1, o1,9), (o1,9, o1,10)], "\
+                         "relations=(forward=[(o1,3, o1,9)], backward=[], symmetric=[]))"
         file_to_parse = "forward_relation.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:

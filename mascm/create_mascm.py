@@ -30,13 +30,42 @@ ignored_c_functions.extend(c.ignored_c_functions)
 ignored_types = (Constant, ID, Typename)
 main_function_name = c.main_function_name if hasattr(c, "main_function_name") else "main"
 relations: dict = {  # Names of functions between which there are sequential relationships
-    'forward': [('calloc', 'free'), ('malloc', 'free')],
-    'backward': [('fgetpos', 'stderr'), ('fsetpos', 'stderr'), ('fell', 'stderr'), ('atof', 'stderr'),
+    'forward': set([('calloc', 'free'), ('malloc', 'free')]),
+    'backward': set([('fgetpos', 'stderr'), ('fsetpos', 'stderr'), ('fell', 'stderr'), ('atof', 'stderr'),
                  ('strtod', 'stderr'), ('strtol', 'stderr'), ('strtoul', 'stderr'), ('calloc', 'realloc'),
-                 ('malloc', 'realloc'), ('srand', 'rand')],
-    'symmetric': [('va_start', 'va_arg'), ('va_arg', 'va_end')]
+                 ('malloc', 'realloc'), ('srand', 'rand')]),
+    'symmetric': set([('va_start', 'va_arg'), ('va_arg', 'va_end')])
 }
-relations.update(c.relations)
+relations["forward"].update(c.relations["forward"])
+relations["backward"].update(c.relations["backward"])
+relations["symmetric"].update(c.relations["symmetric"])
+forward_operation_handlers = list()
+
+
+def __operation_is_in_forward_relation(mascm, operation: Operation):
+    """Function check the operation can be a part of forward relation, and create it"""
+    for pair in relations["forward"]:
+        if operation.name == pair[0]:
+            forward_operation_handlers.append({'pair': pair, 1: operation})
+        elif operation.name == pair[1]:
+            try:
+                data = next((d for d in forward_operation_handlers if d["pair"][1] == operation.name))
+            except StopIteration:
+                return
+            if not data:
+                return
+            mascm.relations.forward.append((data[1], operation))
+            forward_operation_handlers.remove(data)
+
+
+def __operation_is_in_backward_relation(mascm, operation: Operation):
+    """Function check the operation can be a part of backward relation, and create it"""
+    NotImplementedError("Function not implemented yet")
+
+
+def __operation_is_in_symmetric_relation(mascm, operation: Operation):
+    """Function check the operation can be a part of symmetric relation, and create it"""
+    NotImplementedError("Function not implemented yet")
 
 
 def __add_edge_to_mascm(mascm, edge: Edge) -> None:
@@ -66,6 +95,7 @@ def __add_operation_and_edge(mascm, node, thread) -> Operation:
     """
     operation = Operation(node, thread)
     __add_operation_to_mascm(mascm, operation)
+    __operation_is_in_forward_relation(mascm, operation)
     if operation.index <= 1:  # If it is first operation than cannot create edge
         return operation
     __add_edge_to_mascm(mascm, Edge(mascm.o[-2], operation))
@@ -380,6 +410,7 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
             if isinstance(child, Decl) and isinstance(child.init, FuncCall):
                 fcall_name = child.init.name.name
                 if fcall_name in ignored_c_functions:
+                    __add_operation_and_edge(mascm, child, thread)
                     continue
                 functions_call.extend(__parse_function_call(mascm, functions_definition[fcall_name],
                                                             functions_definition, thread, time_unit))
@@ -491,8 +522,8 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
 
     functions_definition = __parse_global_trees(mascm, asts)
     __unexpected_declarations(functions_definition)
-    functions = __parse_function_call(mascm, functions_definition[main_function_name], functions_definition, mascm.t[-1],
-                                      mascm.u[-1])
+    functions = __parse_function_call(mascm, functions_definition[main_function_name], functions_definition,
+                                      mascm.t[-1], mascm.u[-1])
 
     while functions:
         new_functions = list()
