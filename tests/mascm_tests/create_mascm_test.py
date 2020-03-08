@@ -26,9 +26,9 @@ class CreateMamTest(unittest.TestCase):
 
     def test_single_thread_global_variable_if_statement(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3], mutexes=[q1], edges=[(o0,1, o0,2),"\
-                         " (o1,1, o1,2), (o1,2, r1), (o1,1, o1,3), (o1,2, o1,3)], relations=(forward=[], "\
-                         "backward=[], symmetric=[]))"
+                         "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3], mutexes=[q1], "\
+                         "edges=[(o0,1, o0,2), (r1, o1,1), (o1,1, o1,2), (o1,2, r1), (o1,1, o1,3), (o1,2, o1,3)], "\
+                         "relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "single_thread_global_variable_if_statement.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
@@ -39,9 +39,9 @@ class CreateMamTest(unittest.TestCase):
 
     def test_single_thread_global_variable_if_else_statement(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5], mutexes=[q1], "\
-                         "edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, r1), (o1,1, o1,3), (o1,2, o1,3), (o1,3, o1,4), "\
-                         "(o1,4, r1), (o1,3, o1,5), (o1,4, o1,5)], relations=(forward=[], backward=[], "\
+                         "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5], mutexes=[q1], "\
+                         "edges=[(o0,1, o0,2), (r1, o1,1), (o1,1, o1,2), (o1,2, r1), (o1,1, o1,3), (o1,2, o1,3), "\
+                         "(o1,3, o1,4), (o1,4, r1), (o1,4, o1,5)], relations=(forward=[], backward=[], "\
                          "symmetric=[]))"
         file_to_parse = "single_thread_global_variable_if_else_statement.c"
         file_path = join(self.source_path_prefix, file_to_parse)
@@ -53,7 +53,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_single_thread_global_variable_while_loop(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3], mutexes=[q1], edges=[(o0,1, o0,2),"\
+                         "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3], mutexes=[q1], edges=[(o0,1, o0,2),"\
                          " (o1,1, o1,2), (o1,2, r1), (o1,2, o1,1), (o1,1, o1,3), (o1,2, o1,3)], relations=("\
                          "forward=[], backward=[], symmetric=[]))"
         file_to_parse = "single_thread_global_variable_while_loop.c"
@@ -66,7 +66,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_two_threads_global_variable(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], time_units=[[t0], [t1, t2], "\
-                         "[t0]], resource=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4, o2,1, o2,2,"\
+                         "[t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4, o2,1, o2,2,"\
                          " o2,3, o2,4], mutexes=[q1], edges=[(o0,1, o0,2), (o0,2, o0,3), (q1, o1,1), (o1,1, o1,2), "\
                          "(o1,2, r1), (o1,2, o1,3), (o1,3, q1), (o1,3, o1,4), (q1, o2,1), (o2,1, o2,2), (o2,2, r1), "\
                          "(o2,2, o2,3), (o2,3, q1), (o2,3, o2,4)], relations=(forward=[], backward=[],"\
@@ -81,7 +81,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_single_thread_do_while_loop(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6], mutexes=[q1], "\
+                         "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6], mutexes=[q1], "\
                          "edges=[(o0,1, o0,2), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), (o1,3, o1,4), "\
                          "(o1,4, o1,2), (o1,4, o1,5), (o1,5, q1), (o1,5, o1,6)], relations=(forward=[],"\
                          " backward=[], symmetric=[]))"
@@ -95,7 +95,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_single_thread_operation_in_main_thread_for_loop_without_body(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t0, t1], [t0]],"\
-                         " resource=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4], mutexes=[q1], "\
+                         " resources=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4], mutexes=[q1], "\
                          "edges=[(o0,1, o0,2), (r1, o0,2), (o0,2, o0,3), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,2),"\
                          " (o1,2, o1,3), (o1,3, q1), (o1,3, o1,4)], relations=(forward=[], backward=[],"\
                          " symmetric=[]))"
@@ -109,7 +109,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_single_thread_for_loop(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resource=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5], "\
+                         "resources=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5], "\
                          "mutexes=[q1], edges=[(o0,1, o0,2), (o1,1, o1,2), (q1, o1,2), (o1,2, o1,3), "\
                          "(o1,3, r2), (o1,3, o1,4), (o1,4, q1), (o1,4, o1,1), (o1,1, o1,5), (o1,4, o1,5)], "\
                          "relations=(forward=[], backward=[], symmetric=[]))"
@@ -123,7 +123,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_multiple_file_application(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resource=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5], "\
+                         "resources=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5], "\
                          "mutexes=[q1], edges=[(o0,1, o0,2), (o1,1, o1,2), (q1, o1,2), (o1,2, o1,3), "\
                          "(o1,3, r2), (o1,3, o1,4), (o1,4, q1), (o1,4, o1,1), (o1,1, o1,5), (o1,4, o1,5)], "\
                          "relations=(forward=[], backward=[], symmetric=[]))"
@@ -140,7 +140,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_multiple_file_application_2(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], time_units=[[t0], [t1, t2], "\
-                         "[t0]], resource=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4, o2,1, o2,2, "\
+                         "[t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4, o2,1, o2,2, "\
                          "o2,3, o2,4], mutexes=[q1], edges=[(o0,1, o0,2), (o0,2, o0,3), (q1, o1,1), (o1,1, o1,2), "\
                          "(o1,2, r1), (o1,2, o1,3), (o1,3, q1), (o1,3, o1,4), (q1, o2,1), (o2,1, o2,2), (o2,2, r1), "\
                          "(o2,2, o2,3), (o2,3, q1), (o2,3, o2,4)], relations=(forward=[], backward=[],"\
@@ -158,7 +158,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_multiple_file_application_3(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6], mutexes=[q1], "\
+                         "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6], mutexes=[q1], "\
                          "edges=[(o0,1, o0,2), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), (o1,3, o1,4), "\
                          "(o1,4, o1,2), (o1,4, o1,5), (o1,5, q1), (o1,5, o1,6)], relations=(forward=[],"\
                          " backward=[], symmetric=[]))"
@@ -175,7 +175,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_multiple_file_application_4(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], "\
-                         "time_units=[[t0], [t1], [t2], [t0]], resource=[], "\
+                         "time_units=[[t0], [t1], [t2], [t0]], resources=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o2,1, o2,2, o2,3, o2,4], mutexes=[], "\
                          "edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), "\
                          "(o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,4)], relations=(forward=[], backward=[], "\
@@ -196,7 +196,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_multiple_file_application_5(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], "\
-                         "time_units=[[t0], [t1], [t2, t1], [t1], [t0]], resource=[], "\
+                         "time_units=[[t0], [t1], [t2, t1], [t1], [t0]], resources=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o2,1, o2,2, o2,3, o2,4], mutexes=[], "\
                          "edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (o1,4, o1,5), "\
                          "(o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,4)], relations=(forward=[], backward=[],"\
@@ -217,7 +217,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_multiple_file_application_6(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3, t4], "\
-                         "time_units=[[t0], [t1], [t2], [t3], [t4], [t0]], resource=[], "\
+                         "time_units=[[t0], [t1], [t2], [t3], [t4], [t0]], resources=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o2,1, o2,2, o3,1, o3,2, o4,1], mutexes=[], "\
                          "edges=[(o0,1, o0,2), (o1,1, o1,2), (o2,1, o2,2), (o3,1, o3,2)], relations=("\
                          "forward=[], backward=[], symmetric=[]))"
@@ -237,7 +237,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_multiple_file_application_7(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3, t4, t5], "\
-                         "time_units=[[t0], [t1], [t2, t3], [t4], [t5], [t0]], resource=[], "\
+                         "time_units=[[t0], [t1], [t2, t3], [t4], [t5], [t0]], resources=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o2,1, o2,2, o3,1, o3,2, o4,1, o5,1], "\
                          "mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o2,1, o2,2), (o3,1, o3,2)], "\
                          "relations=(forward=[], backward=[], symmetric=[]))"
@@ -257,7 +257,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_forward_relation(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resource=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
+                         "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
                          "o1,9, o1,10], mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), "\
                          "(o1,4, r1), (o1,4, o1,5), (r1, o1,5), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o1,7, o1,8)"\
                          ", (o1,8, o1,7), (o1,7, o1,9), (o1,8, o1,9), (r1, o1,9), (o1,9, o1,10)], "\
@@ -272,7 +272,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_two_forward_relation(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resource=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
+                         "resources=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
                          "o1,9, o1,10, o1,11, o1,12, o1,13, o1,14, o1,15, o1,16, o1,17, o1,18, o1,19, o1,20], "\
                          "mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (o1,4, o1,5), "\
                          "(o1,5, o1,6), (o1,6, r1), (o1,6, o1,7), (o1,7, o1,8), (o1,8, r2), (o1,8, o1,9), (r1, o1,9), "\
@@ -289,6 +289,16 @@ class CreateMamTest(unittest.TestCase):
             self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
-
-if "__main__" == __name__:
-    unittest.main()
+    def test_backward_relation(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
+                         "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8], "\
+                         "mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, r1), (o1,2, o1,3), (r1, o1,3),"\
+                         "(o1,3, o1,4), (o1,4, r1), (o1,4, o1,5), (o1,3, o1,5), (o1,6, o1,7), (r1, o1,7) "\
+                         "(o1,7, o1,8)], relations=(forward=[], backward=[(o1,2, o1,4)], symmetric=[]))"
+        file_to_parse = "backward_relation.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+            self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))

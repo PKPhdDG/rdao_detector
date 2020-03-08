@@ -30,11 +30,11 @@ ignored_c_functions.extend(c.ignored_c_functions)
 ignored_types = (Constant, ID, Typename)
 main_function_name = c.main_function_name if hasattr(c, "main_function_name") else "main"
 relations: dict = {  # Names of functions between which there are sequential relationships
-    'forward': set([('calloc', 'free'), ('malloc', 'free')]),
-    'backward': set([('fgetpos', 'stderr'), ('fsetpos', 'stderr'), ('fell', 'stderr'), ('atof', 'stderr'),
-                 ('strtod', 'stderr'), ('strtol', 'stderr'), ('strtoul', 'stderr'), ('calloc', 'realloc'),
-                 ('malloc', 'realloc'), ('srand', 'rand')]),
-    'symmetric': set([('va_start', 'va_arg'), ('va_arg', 'va_end')])
+    'forward': {('calloc', 'free'), ('malloc', 'free')},
+    'backward': {('fgetpos', 'strerror'), ('fsetpos', 'strerror'), ('fell', 'strerror'), ('atof', 'strerror'),
+                 ('strtod', 'strerror'), ('strtol', 'strerror'), ('strtoul', 'strerror'), ('calloc', 'realloc'),
+                 ('malloc', 'realloc'), ('srand', 'rand'), ('fopen', 'strerror')},
+    'symmetric': {('va_start', 'va_arg'), ('va_arg', 'va_end')}
 }
 relations["forward"].update(c.relations["forward"])
 relations["backward"].update(c.relations["backward"])
@@ -247,6 +247,34 @@ def __parse_global_trees(mascm, asts: deque) -> dict:
     return functions_definition
 
 
+def __parse_compound_statement(mascm, cond: Node, operation: Operation):
+    """ Compound statement has a lot of branches, and all of the have to be checked
+    :param mascm: MultithreadedApplicationSourceCodeModel
+    :param cond: BinaryOb with branches
+    :param operation: MASCM Operation object to link resource with correct operation
+    """
+    if hasattr(cond, 'left') and isinstance(cond.left, BinaryOp):
+        __parse_compound_statement(mascm, cond.left, operation)
+
+    if hasattr(cond, 'right') and isinstance(cond.right, BinaryOp):
+        __parse_compound_statement(mascm, cond.right, operation)
+
+    if hasattr(cond, 'left') and isinstance(cond.left, ID):
+        for resource in mascm.resources:
+            if resource.has_name(cond.left.name):
+                __add_edge_to_mascm(mascm, Edge(resource, operation))
+
+    if hasattr(cond, 'right') and isinstance(cond.right, ID):
+        for resource in mascm.resources:
+            if resource.has_name(cond.right.name):
+                __add_edge_to_mascm(mascm, Edge(resource, operation))
+
+    if isinstance(cond, ID):
+        for resource in mascm.resources:
+            if resource.has_name(cond.name):
+                __add_edge_to_mascm(mascm, Edge(resource, operation))
+
+
 def __parse_if_statement(mascm, node: If, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> deque:
     """Function parsing if statement
     :param mascm: MultithreadedApplicationSourceCodeModel object
@@ -256,19 +284,18 @@ def __parse_if_statement(mascm, node: If, functions_definition: dict, thread: Th
     :param time_unit: TimeUnit object
     :return: deque with function calls
     """
-    functions_call = __parse_statement(mascm, node.cond, functions_definition, thread, time_unit)
-
-    branches = list()
-    if hasattr(node, 'iftrue') and (node.iftrue is not None):
-        branches.append(node.iftrue)
-    if hasattr(node, 'iffalse') and (node.iffalse is not None):
-        branches.append(node.iffalse)
-
     global __wait_for_operation
-    for branch in branches:  # Parse if statement branches
-        operation = __add_operation_and_edge(mascm, branch, thread)
-        functions_call.extend(__parse_statement(mascm, branch, functions_definition, thread, time_unit))
+    functions_call = deque()
+    operation = __add_operation_and_edge(mascm, node, thread)
+    __parse_compound_statement(mascm, node if isinstance(node, BinaryOp) else node.cond, operation)
+
+    if hasattr(node, 'iftrue') and (node.iftrue is not None):
+        functions_call.extend(__parse_statement(mascm, node.iftrue, functions_definition, thread, time_unit))
         __wait_for_operation = operation
+    if hasattr(node, 'iffalse') and (node.iffalse is not None):
+        __add_operation_and_edge(mascm, node.iffalse, thread)
+        functions_call.extend(__parse_statement(mascm, node.iffalse, functions_definition, thread, time_unit))
+
     return functions_call
 
 

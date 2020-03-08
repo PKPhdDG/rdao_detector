@@ -5,13 +5,23 @@ __version__ = "0.1"
 
 
 class Resource:
-    def __init__(self, node, num, *args):
+    def __init__(self, node, num: int, *args):
         self.__node = node
         self.__names = set(args)
         self.__num = num
 
-    def add_name(self, name):
+    def add_name(self, name: str):
+        """ Add resource name or resource alias
+        :param name: String with name
+        """
         self.__names.add(name)
+
+    def has_name(self, name) -> bool:
+        """ Resource has given name or alias
+        :param name: String with name
+        :return: Boolean value with result
+        """
+        return name in self.__names
 
     def __eq__(self, other):
         return other.__names == self.__names

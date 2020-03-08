@@ -6,7 +6,8 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.1"
 
 main_function_name: str = "main"  # Name of main function in application
-ignored_c_functions: tuple = ("fscanf", "printf", "strlen", "memcpy", "memset", "free")  # Builtin elemental functions
+# Builtin elemental functions
+ignored_c_functions: tuple = ("fscanf", "printf", "strlen", "memcpy", "memset", "free", "fopen", "fclose")
 relations: dict = {  # Names of functions between which there are sequential relationships
     'forward': [],
     'backward': [],

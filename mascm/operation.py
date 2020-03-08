@@ -3,12 +3,12 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.1"
 
-from pycparser.c_ast import FuncCall
+from pycparser.c_ast import FuncCall, Node, Compound
 
 
 class Operation:
     """Operation class"""
-    def __init__(self, operation_obj, thread):
+    def __init__(self, operation_obj: Node, thread):
         self.__operation_obj = operation_obj
         self.__thread = thread
         self.__thread.add_operation(self)
