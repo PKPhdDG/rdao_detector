@@ -13,7 +13,8 @@ void *thread_test(void *args)
     f = fopen("logs.txt", "r");
     if (f == NULL)
     {
-        printf("Cannot open the file. Reason: %s\n", strerror(errno));
+        const char *message = strerror(errno);
+        printf("Cannot open the file. Reason: %s\n", message);
         return (void*)NULL;
     }
     puts("File opened");

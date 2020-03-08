@@ -258,10 +258,10 @@ class CreateMamTest(unittest.TestCase):
     def test_forward_relation(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
-                         "o1,9, o1,10], mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), "\
-                         "(o1,4, r1), (o1,4, o1,5), (r1, o1,5), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o1,7, o1,8)"\
-                         ", (o1,8, o1,7), (o1,7, o1,9), (o1,8, o1,9), (r1, o1,9), (o1,9, o1,10)], "\
-                         "relations=(forward=[(o1,3, o1,9)], backward=[], symmetric=[]))"
+                         "o1,9, o1,10, o1,11], mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), "\
+                         "(o1,3, o1,4), (o1,4, o1,5), (o1,5, r1), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (r1, o1,7), "\
+                         "(o1,7, o1,8), (o1,8, o1,9), (o1,9, o1,8), (o1,8, o1,10), (o1,9, o1,10), (r1, o1,10), "\
+                         "(o1,10, o1,11)], relations=(forward=[(o1,4, o1,10)], backward=[], symmetric=[]))"
         file_to_parse = "forward_relation.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
@@ -273,14 +273,14 @@ class CreateMamTest(unittest.TestCase):
     def test_two_forward_relation(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resources=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
-                         "o1,9, o1,10, o1,11, o1,12, o1,13, o1,14, o1,15, o1,16, o1,17, o1,18, o1,19, o1,20], "\
-                         "mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (o1,4, o1,5), "\
-                         "(o1,5, o1,6), (o1,6, r1), (o1,6, o1,7), (o1,7, o1,8), (o1,8, r2), (o1,8, o1,9), (r1, o1,9), "\
-                         "(o1,9, o1,10), (r2, o1,10), (o1,10, o1,11), (r1, o1,11), (o1,11, o1,12), (r2, o1,12), "\
-                         "(o1,12, o1,13), (o1,13, o1,14), (o1,14, o1,13), (o1,13, o1,15), (o1,14, o1,15), "\
-                         "(o1,15, o1,16), (o1,16, o1,17), (o1,17, o1,16), (o1,16, o1,18), (o1,17, o1,18), (r1, o1,18),"\
-                         " (o1,18, o1,19), (r2, o1,19), (o1,19, o1,20)], "\
-                         "relations=(forward=[(o1,5, o1,18), (o1,7, o1,19)], backward=[], symmetric=[]))"
+                         "o1,9, o1,10, o1,11, o1,12, o1,13, o1,14, o1,15, o1,16, o1,17, o1,18, o1,19, o1,20, o1,21, "\
+                         "o1,22], mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), "\
+                         "(o1,4, o1,5), (o1,5, o1,6), (o1,6, o1,7), (o1,7, o1,8), (o1,8, r1), (o1,8, o1,9), "\
+                         "(o1,9, o1,10), (o1,10, r2), (o1,10, o1,11), (r1, o1,11), (o1,11, o1,12), (r2, o1,12), "\
+                         "(o1,12, o1,13), (r1, o1,13), (o1,13, o1,14), (r2, o1,14), (o1,14, o1,15), (o1,15, o1,16), "\
+                         "(o1,16, o1,15), (o1,15, o1,17), (o1,16, o1,17), (o1,17, o1,18), (o1,18, o1,19), (o1,19, "\
+                         "o1,18), (o1,18, o1,20), (o1,19, o1,20), (r1, o1,20), (o1,20, o1,21), (r2, o1,21), (o1,21, "\
+                         "o1,22)], relations=(forward=[(o1,7, o1,20), (o1,9, o1,21)], backward=[], symmetric=[]))"
         file_to_parse = "two_forward_relation.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
@@ -291,10 +291,11 @@ class CreateMamTest(unittest.TestCase):
 
     def test_backward_relation(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8], "\
-                         "mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, r1), (o1,2, o1,3), (r1, o1,3),"\
-                         "(o1,3, o1,4), (o1,4, r1), (o1,4, o1,5), (o1,3, o1,5), (o1,6, o1,7), (r1, o1,7) "\
-                         "(o1,7, o1,8)], relations=(forward=[], backward=[(o1,2, o1,4)], symmetric=[]))"
+                         "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
+                         "o1,9, o1,10, o1,11], mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), "\
+                         "(o1,3, r1), (o1,3, o1,4), (r1, o1,4), (o1,4, o1,5), (o1,5, o1,6), (o1,6, o1,7), "\
+                         "(o1,7, o1,8), (o1,4, o1,9), (o1,9, o1,10), (r1, o1,10), (o1,10, o1,11)], "\
+                         "relations=(forward=[], backward=[(o1,2, o1,5)], symmetric=[]))"
         file_to_parse = "backward_relation.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:

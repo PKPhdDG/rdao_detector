@@ -27,42 +27,49 @@ expected_operation = (BinaryOp, Decl, Return)
 expected_unary_operations = ("++", "--")
 ignored_c_functions = list()
 ignored_c_functions.extend(c.ignored_c_functions)
-ignored_types = (Constant, ID, Typename)
+ignored_types = (Constant, ID, Typename, ExprList)
 main_function_name = c.main_function_name if hasattr(c, "main_function_name") else "main"
 relations: dict = {  # Names of functions between which there are sequential relationships
     'forward': {('calloc', 'free'), ('malloc', 'free')},
-    'backward': {('fgetpos', 'strerror'), ('fsetpos', 'strerror'), ('fell', 'strerror'), ('atof', 'strerror'),
-                 ('strtod', 'strerror'), ('strtol', 'strerror'), ('strtoul', 'strerror'), ('calloc', 'realloc'),
-                 ('malloc', 'realloc'), ('srand', 'rand'), ('fopen', 'strerror')},
+    'backward': {('fopen', 'strerror'),('fgetpos', 'strerror'), ('fsetpos', 'strerror'), ('fell', 'strerror'),
+                 ('atof', 'strerror'), ('strtod', 'strerror'), ('strtol', 'strerror'), ('strtoul', 'strerror'),
+                 ('calloc', 'realloc'), ('malloc', 'realloc'), ('srand', 'rand')},
     'symmetric': {('va_start', 'va_arg'), ('va_arg', 'va_end')}
 }
 relations["forward"].update(c.relations["forward"])
 relations["backward"].update(c.relations["backward"])
 relations["symmetric"].update(c.relations["symmetric"])
-forward_operation_handlers = list()
+forward_operations_handler = list()
+backward_operations_handler = dict()
 
 
 def __operation_is_in_forward_relation(mascm, operation: Operation):
     """Function check the operation can be a part of forward relation, and create it"""
     for pair in relations["forward"]:
         if operation.name == pair[0]:
-            forward_operation_handlers.append({'pair': pair, 1: operation})
+            forward_operations_handler.append({'pair': pair, 1: operation})
         elif operation.name == pair[1]:
             try:
-                data = next((d for d in forward_operation_handlers if d["pair"][1] == operation.name))
+                data = next((d for d in forward_operations_handler if d["pair"][1] == operation.name))
             except StopIteration:
                 break
-            if not data:
-                break
             # TODO Check both operations use this same resource
-            mascm.relations.forward.append((data[1], operation))
-            forward_operation_handlers.remove(data)
+            mascm.relations.forward.append(Edge(data[1], operation))
+            forward_operations_handler.remove(data)
             break
 
 
 def __operation_is_in_backward_relation(mascm, operation: Operation):
     """Function check the operation can be a part of backward relation, and create it"""
-    NotImplementedError("Function not implemented yet")
+    for pair in relations["backward"]:
+        if operation.name == pair[0]:
+            backward_operations_handler[pair] = operation
+            break
+        elif (operation.name == pair[1]) and (pair in backward_operations_handler.keys()):
+            first_operation = backward_operations_handler[pair]
+            del backward_operations_handler[pair]
+            mascm.relations.backward.append(Edge(first_operation, operation))
+            break
 
 
 def __operation_is_in_symmetric_relation(mascm, operation: Operation):
@@ -98,9 +105,13 @@ def __add_operation_and_edge(mascm, node, thread) -> Operation:
     operation = Operation(node, thread)
     __add_operation_to_mascm(mascm, operation)
     __operation_is_in_forward_relation(mascm, operation)
+    __operation_is_in_backward_relation(mascm, operation)
     if operation.index <= 1:  # If it is first operation than cannot create edge
         return operation
-    __add_edge_to_mascm(mascm, Edge(mascm.o[-2], operation))
+    last_operation: Operation = mascm.o[-2]
+    if last_operation.is_last_action():
+        return operation
+    __add_edge_to_mascm(mascm, Edge(last_operation, operation))
     return operation
 
 
@@ -145,6 +156,9 @@ def __parse_assignment(mascm, node: Assignment, functions_definition: dict, thre
         if resource_name in shared_resource:
             resource = shared_resource
     functions_call.extend(__parse_statement(mascm, node.rvalue, functions_definition, thread, time_unit))
+    if isinstance(node.rvalue, FuncCall):
+        __add_operation_and_edge(mascm, node.rvalue, thread)
+
     if resource is None:
         __add_operation_and_edge(mascm, node, thread)
         return functions_call
@@ -439,6 +453,7 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
             if isinstance(child, Decl) and isinstance(child.init, FuncCall):
                 fcall_name = child.init.name.name
                 if fcall_name in ignored_c_functions:
+                    __add_operation_and_edge(mascm, child.init, thread)
                     __add_operation_and_edge(mascm, child, thread)
                     continue
                 functions_call.extend(__parse_function_call(mascm, functions_definition[fcall_name],
