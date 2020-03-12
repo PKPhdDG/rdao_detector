@@ -12,7 +12,7 @@ class MultithreadedApplicationSourceCodeModel(namedtuple(
     """
 
     def __getattr__(self, item: str):
-        if item in ['t', 'u', 'r', 'o', 'q', 'f']:
+        if item in ['t', 'u', 'r', 'o', 'q', 'f', 'b']:
             if 't' == item:
                 return self.threads
             elif 'u' == item:

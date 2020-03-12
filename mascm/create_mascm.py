@@ -41,6 +41,7 @@ relations["backward"].update(c.relations["backward"])
 relations["symmetric"].update(c.relations["symmetric"])
 forward_operations_handler = list()
 backward_operations_handler = dict()
+symmetric_operations_handler = list()
 
 
 def __operation_is_in_forward_relation(mascm, operation: Operation):
@@ -61,6 +62,7 @@ def __operation_is_in_forward_relation(mascm, operation: Operation):
 
 def __operation_is_in_backward_relation(mascm, operation: Operation):
     """Function check the operation can be a part of backward relation, and create it"""
+    # TODO Check both operations use this same resource
     for pair in relations["backward"]:
         if operation.name == pair[0]:
             backward_operations_handler[pair] = operation
@@ -74,7 +76,18 @@ def __operation_is_in_backward_relation(mascm, operation: Operation):
 
 def __operation_is_in_symmetric_relation(mascm, operation: Operation):
     """Function check the operation can be a part of symmetric relation, and create it"""
-    NotImplementedError("Function not implemented yet")
+    for pair in relations["symmetric"]:
+        if operation.name == pair[0]:
+            symmetric_operations_handler.append({'pair': pair, 1: operation})
+        elif operation.name == pair[1]:
+            try:
+                data = next((d for d in symmetric_operations_handler if d["pair"][1] == operation.name))
+            except StopIteration:
+                break
+            # TODO Check both operations use this same resource
+            mascm.relations.symmetric.append(Edge(data[1], operation))
+            symmetric_operations_handler.remove(data)
+            break
 
 
 def __add_edge_to_mascm(mascm, edge: Edge) -> None:
