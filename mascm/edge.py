@@ -5,6 +5,7 @@ __version__ = "0.1"
 
 
 class Edge:
+    """ Edge class """
     def __init__(self, first, second):
         self.__first = first
         self.__second = second

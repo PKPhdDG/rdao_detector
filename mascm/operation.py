@@ -22,13 +22,20 @@ class Operation:
 
     @property
     def index(self):
+        """ Operation index """
         return self.__operation_number
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """ Name of operation if this is function call. In other case name is empty.
+        :return: String value
+        """
         return self.__name
 
-    def is_last_action(self):
+    def is_last_action(self) -> bool:
+        """ If this is return operation this method return true
+        :return: Boolean value
+        """
         return self.__is_last_action
 
     def __repr__(self):

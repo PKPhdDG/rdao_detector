@@ -292,11 +292,13 @@ class CreateMamTest(unittest.TestCase):
     def test_backward_relation(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
-                         "o1,9, o1,10, o1,11], mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), "\
-                         "(o1,3, r1), (o1,3, o1,4), (r1, o1,4), (o1,4, o1,5), (o1,5, o1,6), (o1,6, o1,7), "\
-                         "(o1,7, o1,8), (o1,4, o1,9), (o1,9, o1,10), (r1, o1,10), (o1,10, o1,11)], "\
-                         "relations=(forward=[], backward=[(o1,2, o1,5)], symmetric=[]))"
-        file_to_parse = "backward_relation.c"
+                         "o1,9, o1,10, o1,11, o1,12, o1,13, o1,14, o1,15, o1,16, o1,17], mutexes=[], edges=["\
+                         "(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (o1,4, o1,5), (o1,5, o1,6), "\
+                         "(o1,6, o1,7), (o1,7, o1,8), (o1,8, r1), (o1,8, o1,9), (r1, o1,9), (o1,9, o1,10), "\
+                         "(o1,10, o1,11), (o1,11, o1,12), (o1,12, o1,13), (o1,9, o1,14), (o1,14, o1,15), (r1, o1,15), "\
+                         "(o1,15, o1,16), (o1,16, o1,17)], relations=(forward=[], backward=[(o1,3, o1,4), "\
+                         "(o1,7, o1,10)], symmetric=[]))"
+        file_to_parse = "two_backward_relation.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
             ast = parse_file(pure_file_path)

@@ -31,7 +31,7 @@ ignored_types = (Constant, ID, Typename, ExprList)
 main_function_name = c.main_function_name if hasattr(c, "main_function_name") else "main"
 relations: dict = {  # Names of functions between which there are sequential relationships
     'forward': {('calloc', 'free'), ('malloc', 'free')},
-    'backward': {('fopen', 'strerror'),('fgetpos', 'strerror'), ('fsetpos', 'strerror'), ('fell', 'strerror'),
+    'backward': {('fopen', 'strerror'), ('fgetpos', 'strerror'), ('fsetpos', 'strerror'), ('fell', 'strerror'),
                  ('atof', 'strerror'), ('strtod', 'strerror'), ('strtol', 'strerror'), ('strtoul', 'strerror'),
                  ('calloc', 'realloc'), ('malloc', 'realloc'), ('srand', 'rand')},
     'symmetric': {('va_start', 'va_arg'), ('va_arg', 'va_end')}
@@ -470,7 +470,7 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
         elif isinstance(child, For):
             __parse_for_loop(mascm, child, functions_definition, thread, time_unit)
         elif isinstance(child, UnaryOp) and (child.op in expected_unary_operations):
-            __parse_unary_operator(mascm, child, functions_definition, thread, time_unit)
+            __parse_unary_operator(mascm, child, thread)
         elif isinstance(child, ignored_types):
             pass
         else:
@@ -479,14 +479,11 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
     return functions_call
 
 
-def __parse_unary_operator(mascm, node: UnaryOp, functions_definition: dict, thread: Thread, time_unit: TimeUnit)\
-        -> None:
+def __parse_unary_operator(mascm, node: UnaryOp, thread: Thread) -> None:
     """Function parsing UnaryOp node
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: Assignment object
-    :param functions_definition: dict with user functions definition
     :param thread: Thread object
-    :param time_unit: TimeUnit object
     """
     resource_name = node.expr.name
     resource = None
@@ -545,8 +542,8 @@ def __unexpected_declarations(defined_functions: dict):
     for name, func in defined_functions.items():
         if any(name == decl.name for decl in expected_definitions):
             for decl in expected_definitions:
-                if name == decl.name and func.node.decl.quals == decl.quals and func.node.decl.storage == decl.storage\
-                        and func.node.decl.funcspec == decl.funcspec:
+                if (name == decl.name) and (func.node.decl.quals == decl.quals) and \
+                        (func.node.decl.storage == decl.storage) and (func.node.decl.funcspec == decl.funcspec):
                     to_remove.append(decl)
 
     for el in to_remove:
