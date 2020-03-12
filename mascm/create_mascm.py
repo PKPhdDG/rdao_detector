@@ -6,6 +6,7 @@ __version__ = "0.1"
 from collections import deque
 import config as c
 from copy import deepcopy
+from helpers import memory_allocation_functions
 from mascm.edge import Edge
 from mascm.lock import Lock
 from mascm.mascm import MultithreadedApplicationSourceCodeModel
@@ -22,6 +23,7 @@ import warnings
 
 __new_time_unit = True
 __wait_for_operation = None
+__macro_func_pref = "__builtin_{}"
 expected_definitions = list()
 expected_operation = (BinaryOp, Decl, Return)
 expected_unary_operations = ("++", "--")
@@ -44,50 +46,68 @@ backward_operations_handler = dict()
 symmetric_operations_handler = list()
 
 
+def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation, resources: list) -> bool:
+    """ If both functions this same resource than they are in relation """
+    for resource in resources:
+        if op1.has_func_use_the_resource(resource) and op2.has_func_use_the_resource(resource):
+            return True
+    return False
+
+
 def __operation_is_in_forward_relation(mascm, operation: Operation):
     """Function check the operation can be a part of forward relation, and create it"""
     for pair in relations["forward"]:
-        if operation.name == pair[0]:
+        __func_name0 = __macro_func_pref.format(pair[0])
+        __func_name1 = __macro_func_pref.format(pair[1])
+
+        if operation.name in (pair[0], __func_name0):
             forward_operations_handler.append({'pair': pair, 1: operation})
-        elif operation.name == pair[1]:
+        elif operation.name in (pair[1], __func_name1):
             try:
-                data = next((d for d in forward_operations_handler if d["pair"][1] == operation.name))
+                data = next((d for d in forward_operations_handler if d["pair"][1] in (pair[1], __func_name1)))
             except StopIteration:
-                break
-            # TODO Check both operations use this same resource
+                continue
+            if not __operations_used_this_same_shared_resources(data[1], operation, mascm.resources):
+                continue
             mascm.relations.forward.append(Edge(data[1], operation))
             forward_operations_handler.remove(data)
-            break
 
 
 def __operation_is_in_backward_relation(mascm, operation: Operation):
     """Function check the operation can be a part of backward relation, and create it"""
-    # TODO Check both operations use this same resource
     for pair in relations["backward"]:
-        if operation.name == pair[0]:
+        __func_name0 = __macro_func_pref.format(pair[0])
+        __func_name1 = __macro_func_pref.format(pair[1])
+
+        if operation.name in (pair[0], __func_name0):
             backward_operations_handler[pair] = operation
-            break
-        elif (operation.name == pair[1]) and (pair in backward_operations_handler.keys()):
+        elif operation.name in (pair[1], __func_name1) and (pair in backward_operations_handler.keys()):
             first_operation = backward_operations_handler[pair]
             del backward_operations_handler[pair]
+            # TODO Check it for this relation
+            # if not __operations_used_this_same_shared_resources(first_operation, operation, mascm.resources):
+            #     continue
             mascm.relations.backward.append(Edge(first_operation, operation))
-            break
 
 
 def __operation_is_in_symmetric_relation(mascm, operation: Operation):
     """Function check the operation can be a part of symmetric relation, and create it"""
     for pair in relations["symmetric"]:
-        if operation.name == pair[0]:
+        __func_name0 = __macro_func_pref.format(pair[0])
+        __func_name1 = __macro_func_pref.format(pair[1])
+
+        if operation.name in (pair[0], __func_name0):
             symmetric_operations_handler.append({'pair': pair, 1: operation})
-        elif operation.name == pair[1]:
+        if operation.name in (pair[1], __func_name1):
             try:
-                data = next((d for d in symmetric_operations_handler if d["pair"][1] == operation.name))
+                data = next((d for d in symmetric_operations_handler if d["pair"][1] in (pair[1], __func_name1)))
             except StopIteration:
-                break
-            # TODO Check both operations use this same resource
+                continue
+                # TODO Check it for this relation
+            # if not __operations_used_this_same_shared_resources(data[1], operation, mascm.resources):
+            #     continue
             mascm.relations.symmetric.append(Edge(data[1], operation))
             symmetric_operations_handler.remove(data)
-            break
 
 
 def __add_edge_to_mascm(mascm, edge: Edge) -> None:
@@ -119,6 +139,7 @@ def __add_operation_and_edge(mascm, node, thread) -> Operation:
     __add_operation_to_mascm(mascm, operation)
     __operation_is_in_forward_relation(mascm, operation)
     __operation_is_in_backward_relation(mascm, operation)
+    __operation_is_in_symmetric_relation(mascm, operation)
     if operation.index <= 1:  # If it is first operation than cannot create edge
         return operation
     last_operation: Operation = mascm.o[-2]
@@ -177,6 +198,11 @@ def __parse_assignment(mascm, node: Assignment, functions_definition: dict, thre
         return functions_call
     operation = __add_operation_and_edge(mascm, node, thread)
     __add_edge_to_mascm(mascm, Edge(operation, resource))
+
+    # Dirty hack to link malloc and other function with correct resource
+    prev_op = mascm.operations[-2]
+    if isinstance(node, Assignment) and resource.has_name(node.lvalue.name):
+        prev_op.add_use_resource(resource)
     return functions_call
 
 
@@ -471,6 +497,15 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
                     continue
                 functions_call.extend(__parse_function_call(mascm, functions_definition[fcall_name],
                                                             functions_definition, thread, time_unit))
+            elif isinstance(child, BinaryOp):
+                if isinstance(child.left, FuncCall):
+                    functions_call.extend(__parse_statement(mascm, child.left, functions_definition, thread, time_unit))
+                    __add_operation_and_edge(mascm, child.left, thread)
+                if isinstance(child.right, FuncCall):
+                    functions_call.extend(
+                        __parse_statement(mascm, child.right, functions_definition, thread, time_unit)
+                    )
+                    __add_operation_and_edge(mascm, child.right, thread)
             __add_operation_and_edge(mascm, child, thread)
         elif isinstance(child, If):
             __parse_if_statement(mascm, child, functions_definition, thread, time_unit)

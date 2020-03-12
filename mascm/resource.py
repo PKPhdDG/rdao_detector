@@ -3,8 +3,11 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.1"
 
+from pycparser.c_ast import Node
+
 
 class Resource:
+    """ Resource class """
     def __init__(self, node, num: int, *args):
         self.__node = node
         self.__names = set(args)
@@ -22,6 +25,10 @@ class Resource:
         :return: Boolean value with result
         """
         return name in self.__names
+
+    def get_node(self) -> Node:
+        """ Method return Node obj """
+        return self.__node
 
     def __eq__(self, other):
         return other.__names == self.__names
