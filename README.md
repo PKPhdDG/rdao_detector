@@ -1,6 +1,6 @@
-# C to Multithreaded Application Source Code Model
+# Race condition/Deadlock/Atomicity violation/Order violation Detector
 
-This simple application convert C source code to Multithreaded Application Source Code Model via AST.
+This simple application convert C source code to Multithreaded Application Source Code Model via AST, and using MASCM detecting RDAO bugs.
 
 Source code used to creating MAM have to be purified.
 ~~To purify C code use `purize_c.sh` script, when parameters are names of C files.~~

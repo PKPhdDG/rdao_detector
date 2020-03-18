@@ -3,7 +3,7 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.1"
+__version__ = "0.2"
 
 import argparse
 from collections import deque
@@ -19,7 +19,7 @@ parser.add_argument('path', type=str, help="Paths to source code")
 def create_ast(path: str) -> deque:
     """Function converting C code to AST
     :param path: Path to source code
-    :return: CParser object
+    :return: deque object
     """
     try:
         ast = deque()
@@ -34,9 +34,8 @@ def create_ast(path: str) -> deque:
     return ast
 
 
-def main():
+def main() -> None:
     """ Main function
-    :return: None
     """
     args = parser.parse_args()
     mascm = create_mascm(create_ast(args.path))
