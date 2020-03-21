@@ -32,7 +32,9 @@ class Resource:
         return self.__node
 
     def __eq__(self, other):
-        return other.__names == self.__names
+        if isinstance(other, Resource):
+            return other.__names == self.__names
+        return False
 
     def __repr__(self):
         return f"r{self.__num}"
