@@ -26,8 +26,9 @@ class Resource:
         """
         return name in self.__names
 
-    def get_node(self) -> Node:
-        """ Method return Node obj """
+    @property
+    def node(self) -> Node:
+        """ Node obj getter """
         return self.__node
 
     def __eq__(self, other):

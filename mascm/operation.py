@@ -45,6 +45,13 @@ class Operation:
         """
         return self.__args
 
+    @property
+    def node(self) -> Node:
+        """ Node getter
+        :return: Node
+        """
+        return self.__operation_obj
+
     def is_last_action(self) -> bool:
         """ If this is return operation this method return true
         :return: Boolean value
@@ -53,7 +60,7 @@ class Operation:
 
     def add_use_resource(self, resource: Resource) -> None:
         """ Method add resource to resource list """
-        self.__args.append(resource.get_node())
+        self.__args.append(resource.node)
 
     def has_func_use_the_resource(self, resource: Resource) -> bool:
         """ Method check given resource is used by operation
