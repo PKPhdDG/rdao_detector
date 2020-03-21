@@ -1,23 +1,22 @@
+#!/usr/bin/env python3.7
+
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.2"
 
 from collections import deque
-from helpers.path import collect_c_project_files, get_project_path
+from helpers.path import collect_c_project_files
 from helpers.purifier import purify, purify_files
 from mascm import create_mascm
 from os import remove
 from os.path import join
 from pycparser import parse_file
+from tests.test_base import TestBase
 import unittest
 
 
-class CreateMamTest(unittest.TestCase):
-    project_dir = get_project_path()
-    source_path_prefix = join(project_dir, "tests\\example_c_sources")
-    multiple_files_app_path_prefix = join(source_path_prefix, "multiple_files_apps")
-
+class CreateMamTest(unittest.TestCase, TestBase):
     def __test_thread_nesting(self, threads):
         main_thread, *other_threads = threads
         self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")

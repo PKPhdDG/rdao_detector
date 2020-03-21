@@ -72,6 +72,10 @@ class Operation:
                 print(f"Cannot handle arg: {arg}", file=sys.stderr)
         return False
 
+    def is_operation_of_thread(self, other_thread) -> bool:
+        """ Method check operation is operation of a given thread """
+        return self.__thread == other_thread
+
     def __repr__(self):
         return "o{},{}".format(str(self.__thread)[1:], self.__operation_number)
 

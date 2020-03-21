@@ -295,7 +295,7 @@ def __parse_global_trees(mascm, asts: deque) -> dict:
                 __add_resource_to_mascm(mascm, node)
             elif isinstance(node, Decl) and isinstance(node.type, FuncDecl):
                 expected_definitions.append(node)
-            else:
+            elif c.DEBUG:
                 print(node, "is not expected", file=sys.stderr)
     return functions_definition
 
@@ -521,7 +521,7 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
             __parse_unary_operator(mascm, child, thread)
         elif isinstance(child, ignored_types):
             pass
-        else:
+        elif c.DEBUG:
             print("Not expected node:", child, file=sys.stderr)
 
     return functions_call

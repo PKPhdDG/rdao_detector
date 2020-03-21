@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"

@@ -15,6 +15,11 @@ def get_project_path() -> str:
 
 
 def collect_c_project_files(dir_path: str, extensions: list = ("c", "h")) -> str:
+    """ Coroutine which return all source codes and headers file from given path
+    :param dir_path: Path with sources
+    :param extensions: list with file extensions
+    :return: string with path to file
+    """
     dir_path = Path(dir_path)
     for extension in extensions:
         for file in dir_path.glob(f"**/*.{extension}"):
