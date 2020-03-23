@@ -7,6 +7,7 @@ __version__ = "0.2"
 
 import config as c
 from helpers import get_time_units_graphs, expressions as e
+from itertools import combinations
 from mascm import MultithreadedApplicationSourceCodeModel as MASCM
 import re
 from typing import Optional
@@ -18,43 +19,60 @@ class GraphComparator:
     def __init__(self, first: Optional[list] = None, second: Optional[list] = None):
         self.first, self.second = first, second
 
-    def compare(self) -> bool:
+    def locate_race_condition(self) -> list:
+        """ Method detect operations casing race condition
+        :return:
+        """
         if (self.first is None) or (self.second is None):
             raise ValueError("Comparator does not contain enough graphs")
-        order = [[], []]
 
+        possible_conflicts = list()
+        resource_edges = ([], [])
+        locks = ([], [])
+        resources = ([], [])
+        graphs = ([], [])
         for index, edges in enumerate((self.first, self.second)):
+            possible_race_condition = True
             for edge in edges:
                 if re.match(e.mutex_lock_edge_exp, str(edge)):
-                    order[index].append(edge.first)
+                    possible_race_condition = False
+                    graphs[index].append(edge)
+                    locks[index].append(edge.first)
                 elif re.match(e.mutex_unlock_edge_exp, str(edge)):
-                    order[index].append(edge.second)
+                    possible_race_condition = True
+                    graphs[index].append(edge)
+                    locks[index].append(edge.second)
                 elif re.match(e.usage_edge_exp, str(edge)):
-                    order[index].append(edge.second)
+                    graphs[index].append(edge)
+                    resources[index].append(edge.second)
+                    resource_edges[index].append(edge)
+                    if possible_race_condition:
+                        possible_conflicts.append(edge)
                 elif re.match(e.dependency_edge_exp, str(edge)):
-                    order[index].append(edge.first)
+                    graphs[index].append(edge)
+                    resources[index].append(edge.first)
+                    resource_edges[index].append(edge)
+                    if possible_race_condition:
+                        possible_conflicts.append(edge)
                 elif c.DEBUG:
                     print(f"Skipped edge: {edge}")
 
-        comp = lambda a, b: all(i in b for i in a)
-        if comp(order[0], order[1]) or comp(order[1], order[0]):
-            return True  # There is no race condition between two threads
-        return False  # There is race condition between two threads
+        if (not possible_conflicts) and (locks[0] != locks[1]):
+            intersection = set(resources[0]).intersection(resources[1])
+            if intersection:
+                return resource_edges[0] + resource_edges[1]
+            else:
+                raise ValueError("Intersections does not give a results!")
 
+        intersection = set(resources[0]).intersection(resources[1])
+        if not intersection:
+            return []
 
-    def second_is_first(self) -> None:
-        """ Method make second graph first, and second graph is None """
-        self.first = self.second
-        self.second = None
+        return possible_conflicts
 
     def can_be_compared(self) -> bool:
         """ Method allow check there is possible to compare """
         return (self.first is not None) and (self.second is not None)
-
-    def feed(self, graph):
-        """ Method allow feed comparator """
-        self.second_is_first()
-        self.second = graph
 
 
 def detect_race_condition(mascm: MASCM) -> coroutine:
@@ -72,8 +90,8 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
             thread_edges = [edge for edge in edges if f"o{thread_num}" in str(edge)]
             if not thread_edges:
                 raise ValueError(f"Unexpected situation for thread no. {thread_num} in time unit {unit}")
-            if (len(thread_edges) == 1) and re.match(e.usage_edge_exp, str(thread_edges[0])):
-                yield thread_edges[0]
+            # if (len(thread_edges) == 1) and re.match(e.usage_edge_exp, str(thread_edges[0])):
+            #     yield thread_edges[0]
             subgraph = list()
             for edge in thread_edges:
                 if re.match(e.mutex_lock_edge_exp, str(edge)):
@@ -86,14 +104,13 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
                     subgraph.append(edge)
             subgraphs.append(subgraph)
 
-    comparator = GraphComparator()
-    for subgraph in subgraphs:
-        comparator.feed(subgraph)
-        if comparator.can_be_compared():
-            if not comparator.compare():
-                for s_graph in (comparator.first, comparator.second):
-                    for edge in s_graph:
-                        if re.match(e.usage_edge_exp, str(edge)) or re.match(e.dependency_edge_exp, str(edge)):
-                            yield edge
+    for s1, s2 in combinations(subgraphs, 2):
+        comparator = GraphComparator(s1, s2)
+        if not comparator.can_be_compared():
+            if c.DEBUG:
+                print(f"Skipping compare of pair: {s1}, {s2}")
+            continue
+        for op in comparator.locate_race_condition():
+            yield op
 
     pass

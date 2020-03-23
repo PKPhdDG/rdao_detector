@@ -45,6 +45,24 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
         self.assertEqual(result[0], mascm.edges[9])
         self.assertEqual(result[1], mascm.edges[18])
 
+    def test_no_race_condition1(self):
+        file_to_parse = "no_race_condition1.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            mascm = create_mascm(deque([ast]))
+        result = list(detect_race_condition(mascm))
+        self.assertListEqual(result, [])
+
+    def test_no_race_condition2(self):
+        file_to_parse = "no_race_condition2.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            mascm = create_mascm(deque([ast]))
+        result = list(detect_race_condition(mascm))
+        self.assertListEqual(result, [])
+
 
 if "__main__" == __name__:
     unittest.main()

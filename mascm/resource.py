@@ -31,6 +31,12 @@ class Resource:
         """ Node obj getter """
         return self.__node
 
+    def __hash__(self):
+        return hash(self.__node)
+
+    def __lt__(self, other):
+        return self.__num < other.__num
+
     def __eq__(self, other):
         if isinstance(other, Resource):
             return other.__names == self.__names
