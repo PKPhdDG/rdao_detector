@@ -6,7 +6,6 @@ __version__ = "0.2"
 from collections import deque
 import config as c
 from copy import deepcopy
-from helpers import memory_allocation_functions
 from mascm.edge import Edge
 from mascm.lock import Lock
 from mascm.mascm import MultithreadedApplicationSourceCodeModel
@@ -24,6 +23,10 @@ import warnings
 __new_time_unit = True
 __wait_for_operation = None
 __macro_func_pref = "__builtin_{}"
+
+# Flag used to detect there are thread creation into loop
+__is_loop_body = False
+
 expected_definitions = list()
 expected_operation = (BinaryOp, Decl, Return)
 expected_unary_operations = ("++", "--")
@@ -174,7 +177,7 @@ def __add_resource_to_mascm(mascm, node) -> None:
 
 
 def __parse_assignment(mascm, node: Assignment, functions_definition: dict, thread: Thread, time_unit: TimeUnit)\
-        -> deque:
+        -> list:
     """Function parsing Assignment node
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: Assignment object
@@ -183,15 +186,15 @@ def __parse_assignment(mascm, node: Assignment, functions_definition: dict, thre
     :param time_unit: TimeUnit object
     :return: deque object with functions to parse
     """
-    functions_call = deque()
+    functions_call = list()
     resource_name = node.lvalue.name if isinstance(node.lvalue, ID) else node.lvalue.expr.name
     resource = None
     for shared_resource in mascm.r:
         if resource_name in shared_resource:
             resource = shared_resource
     functions_call.extend(__parse_statement(mascm, node.rvalue, functions_definition, thread, time_unit))
-    if isinstance(node.rvalue, FuncCall):
-        __add_operation_and_edge(mascm, node.rvalue, thread)
+    # if isinstance(node.rvalue, FuncCall):
+    #     __add_operation_and_edge(mascm, node.rvalue, thread)
 
     if resource is None:
         __add_operation_and_edge(mascm, node, thread)
@@ -207,7 +210,7 @@ def __parse_assignment(mascm, node: Assignment, functions_definition: dict, thre
 
 
 def __parse_do_while_loop(mascm, node: DoWhile, functions_definition: dict, thread: Thread, time_unit: TimeUnit)\
-        -> deque:
+        -> list:
     """Function parsing Assignment node
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: Assignment object
@@ -216,16 +219,19 @@ def __parse_do_while_loop(mascm, node: DoWhile, functions_definition: dict, thre
     :param time_unit: TimeUnit object
     :return: deque with function calls
     """
-    functions_call = deque()
+    global __is_loop_body
+    __is_loop_body = True
+    functions_call = list()
     do_operation = __add_operation_and_edge(mascm, node, thread)
     functions_call.extend(__parse_statement(mascm, node.stmt, functions_definition, thread, time_unit))
     functions_call.extend(__parse_statement(mascm, node.cond, functions_definition, thread, time_unit))
     while_operation = __add_operation_and_edge(mascm, node, thread)
     __add_edge_to_mascm(mascm, Edge(while_operation, do_operation))
+    __is_loop_body = False
     return functions_call
 
 
-def __parse_for_loop(mascm, node: For, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> deque:
+def __parse_for_loop(mascm, node: For, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> list:
     """Function parsing Assignment node
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: Assignment object
@@ -234,8 +240,9 @@ def __parse_for_loop(mascm, node: For, functions_definition: dict, thread: Threa
     :param time_unit: TimeUnit object
     :return: deque with function calls
     """
-    global __wait_for_operation
-    functions_call = deque()
+    global __wait_for_operation, __is_loop_body
+    __is_loop_body = True
+    functions_call = list()
     operation = __add_operation_and_edge(mascm, node, thread)
     # functions_call.extend(__parse_statement(mascm, node.init, functions_definition, thread, time_unit))
     # functions_call.extend(__parse_statement(mascm, node.cond, functions_definition, thread, time_unit))
@@ -247,11 +254,12 @@ def __parse_for_loop(mascm, node: For, functions_definition: dict, thread: Threa
     else:
         __add_edge_to_mascm(mascm, Edge(mascm.o[-1], operation))  # Add return loop edge
         __wait_for_operation = operation
+    __is_loop_body = False
     return functions_call
 
 
 def __parse_function_call(mascm, function_to_parse: Function, functions_definition: dict, thread: Thread,
-                          time_unit: TimeUnit) -> deque:
+                          time_unit: TimeUnit) -> list:
     """Function parsing FuncCall node
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param function_to_parse: Function object
@@ -261,7 +269,7 @@ def __parse_function_call(mascm, function_to_parse: Function, functions_definiti
     :return: deque with function calls
     """
     global __new_time_unit
-    functions_call = deque()
+    functions_call = list()
     functions_call.extend(__parse_statement(mascm, function_to_parse.body, functions_definition, thread, time_unit))
     return functions_call
 
@@ -328,7 +336,7 @@ def __parse_compound_statement(mascm, cond: Node, operation: Operation):
                 __add_edge_to_mascm(mascm, Edge(resource, operation))
 
 
-def __parse_if_statement(mascm, node: If, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> deque:
+def __parse_if_statement(mascm, node: If, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> list:
     """Function parsing if statement
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: If object
@@ -338,7 +346,7 @@ def __parse_if_statement(mascm, node: If, functions_definition: dict, thread: Th
     :return: deque with function calls
     """
     global __wait_for_operation
-    functions_call = deque()
+    functions_call = list()
     operation = __add_operation_and_edge(mascm, node, thread)
     __parse_compound_statement(mascm, node if isinstance(node, BinaryOp) else node.cond, operation)
 
@@ -364,16 +372,16 @@ def __parse_pthread_create(mascm, node: FuncCall, time_unit: TimeUnit, func: Fun
     :param main_thread: Thread object used to nesting check
     :return: Tuple with TimeUnit, Thread, Function
     """
-    global __new_time_unit
+    global __new_time_unit, __is_loop_body
     if __new_time_unit:
         __new_time_unit = False
         mascm.u.append(TimeUnit(time_unit + 1))
     thread_depth = main_thread.depth + 1 if main_thread is not None else 0
-    new_thread = Thread(len(mascm.threads), node.args, mascm.u[-1], thread_depth)
-    mascm.t.append(new_thread)
-    mascm.u[-1].append(new_thread)
-
-    return mascm.u[-1], new_thread, func
+    for i in range(2 if __is_loop_body else 1):
+        new_thread = Thread(len(mascm.threads), node.args, mascm.u[-1], thread_depth)
+        mascm.t.append(new_thread)
+        mascm.u[-1].append(new_thread)
+        yield mascm.u[-1], new_thread, func
 
 
 def __parse_pthread_mutex_lock(mascm, node: FuncCall, thread: Thread) -> Operation:
@@ -422,7 +430,7 @@ def __parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread) -> Opera
     return operation
 
 
-def __parse_statement(mascm, node: Compound, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> deque:
+def __parse_statement(mascm, node: Compound, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> list:
     """Function parsing Compode type node with functions/loops/if's body
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: If object
@@ -433,10 +441,12 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
     """
     global __new_time_unit
 
-    functions_call = deque()
+    functions_call = list()
     if not node:
         return functions_call
-    for child in node:
+    # Given node has not to be a Compound (ex. if we use for without {})
+    # In this case iter over it element is not correct action.
+    for child in node if type(node) is not FuncCall else [node]:
         if isinstance(child, FuncCall):
             fcall_name = child.name.name
             if fcall_name == "pthread_create":
@@ -446,12 +456,13 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
                     threadf_name = thread_func.name
                 elif isinstance(thread_func, UnaryOp):
                     threadf_name = thread_func.expr.name
-                result = __parse_pthread_create(mascm, child, time_unit, functions_definition[threadf_name], thread)
-                functions_call.append(result)
-                time_unit, *_ = result
+                    # If there are multiple threads created in the loop it is needed
+                for result in __parse_pthread_create(mascm, child, time_unit, functions_definition[threadf_name], thread):
+                    functions_call.append(result)
+                    time_unit, *_ = result
             elif fcall_name == "pthread_join":
                 __new_time_unit = True
-                tu = deepcopy(functions_call[0][0])
+                tu = deepcopy(functions_call[0][0]) if (len(functions_call) >= 1) and (len(functions_call[0]) >= 1) else []
                 threads = (call[1] for call in functions_call)
                 for index in range(len(tu)):
                     for t in threads:
@@ -501,27 +512,26 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
             elif isinstance(child, BinaryOp):
                 if isinstance(child.left, FuncCall):
                     functions_call.extend(__parse_statement(mascm, child.left, functions_definition, thread, time_unit))
-                    __add_operation_and_edge(mascm, child.left, thread)
                 if isinstance(child.right, FuncCall):
                     functions_call.extend(
                         __parse_statement(mascm, child.right, functions_definition, thread, time_unit)
                     )
-                    __add_operation_and_edge(mascm, child.right, thread)
             __add_operation_and_edge(mascm, child, thread)
         elif isinstance(child, If):
-            __parse_if_statement(mascm, child, functions_definition, thread, time_unit)
+            functions_call.extend(__parse_if_statement(mascm, child, functions_definition, thread, time_unit))
         elif isinstance(child, While):
-            __parse_while_loop(mascm, child, functions_definition, thread, time_unit)
+            functions_call.extend(__parse_while_loop(mascm, child, functions_definition, thread, time_unit))
         elif isinstance(child, Assignment):
-            __parse_assignment(mascm, child, functions_definition, thread, time_unit)
+            functions_call.extend(__parse_assignment(mascm, child, functions_definition, thread, time_unit))
         elif isinstance(child, DoWhile):
-            __parse_do_while_loop(mascm, child, functions_definition, thread, time_unit)
+            functions_call.extend(__parse_do_while_loop(mascm, child, functions_definition, thread, time_unit))
         elif isinstance(child, For):
-            __parse_for_loop(mascm, child, functions_definition, thread, time_unit)
+            functions_call.extend(__parse_for_loop(mascm, child, functions_definition, thread, time_unit))
         elif isinstance(child, UnaryOp) and (child.op in expected_unary_operations):
             __parse_unary_operator(mascm, child, thread)
         elif isinstance(child, ignored_types):
-            pass
+            if c.DEBUG:
+                print("Ignored node: ", child, file=sys.stderr)
         elif c.DEBUG:
             print("Not expected node:", child, file=sys.stderr)
 
@@ -543,7 +553,7 @@ def __parse_unary_operator(mascm, node: UnaryOp, thread: Thread) -> None:
     __add_edge_to_mascm(mascm, Edge(operation, resource))
 
 
-def __parse_while_loop(mascm, node: While, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> deque:
+def __parse_while_loop(mascm, node: While, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> list:
     """Function parsing if statement
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: If object
@@ -552,12 +562,14 @@ def __parse_while_loop(mascm, node: While, functions_definition: dict, thread: T
     :param time_unit: TimeUnit object
     :return: deque with function calls
     """
-    global __wait_for_operation
+    global __wait_for_operation, __is_loop_body
+    __is_loop_body = True
     functions_call = __parse_statement(mascm, node.cond, functions_definition, thread, time_unit)
     operation = __add_operation_and_edge(mascm, node, thread)
     functions_call.extend(__parse_statement(mascm, node.stmt, functions_definition, thread, time_unit))
     __add_edge_to_mascm(mascm, Edge(mascm.o[-1], operation))  # Add return loop edge
     __wait_for_operation = operation
+    __is_loop_body = False
     return functions_call
 
 
