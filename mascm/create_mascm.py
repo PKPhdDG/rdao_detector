@@ -135,7 +135,7 @@ def __add_operation_and_edge(mascm, node, thread) -> Operation:
     :param thread: Thread object
     :return: Operation object
     """
-    operation = Operation(node, thread)
+    operation = Operation(node, thread, mascm.threads.index(thread))
     __add_operation_to_mascm(mascm, operation)
     __operation_is_in_forward_relation(mascm, operation)
     __operation_is_in_backward_relation(mascm, operation)
@@ -368,7 +368,8 @@ def __parse_pthread_create(mascm, node: FuncCall, time_unit: TimeUnit, func: Fun
     if __new_time_unit:
         __new_time_unit = False
         mascm.u.append(TimeUnit(time_unit + 1))
-    new_thread = Thread(node.args, mascm.u[-1], main_thread.depth + 1 if main_thread is not None else 0)
+    thread_depth = main_thread.depth + 1 if main_thread is not None else 0
+    new_thread = Thread(len(mascm.threads), node.args, mascm.u[-1], thread_depth)
     mascm.t.append(new_thread)
     mascm.u[-1].append(new_thread)
 
@@ -565,7 +566,7 @@ def __put_main_thread_to_model(mascm) -> None:
     :param mascm: MultithreadedApplicationSourceCodeModel object
     """
     unit = TimeUnit(len(mascm.u))
-    thread = Thread(None, unit)
+    thread = Thread(0, None, unit)
     unit.append(thread)
     if thread not in mascm.t:
         mascm.t.append(thread)

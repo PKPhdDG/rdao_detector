@@ -62,7 +62,7 @@ class GraphComparator:
             if intersection:
                 return resource_edges[0] + resource_edges[1]
             else:
-                raise ValueError("Intersections does not give a results!")
+                return []
 
         intersection = set(resources[0]).intersection(resources[1])
         if not intersection:
@@ -83,6 +83,7 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
 
     graphs = get_time_units_graphs(time_units, mascm.edges)  # Build full graphs for every time unit
 
+    reported_op = list()
     subgraphs = list()
     for unit in time_units:
         edges = graphs[str(unit)]
@@ -111,6 +112,6 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
                 print(f"Skipping compare of pair: {s1}, {s2}")
             continue
         for op in comparator.locate_race_condition():
-            yield op
-
-    pass
+            if op not in reported_op:
+                reported_op.append(op)
+                yield op

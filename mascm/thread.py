@@ -12,7 +12,7 @@ from typing import Optional
 class Thread:
     """Thread representation object
     """
-    def __init__(self, expr_list: Optional[ExprList], time_unit: TimeUnit, depth: int = 0):
+    def __init__(self, thread_index: int, expr_list: Optional[ExprList], time_unit: TimeUnit, depth: int = 0):
         """C'tor
         :param expr_list: ExprList object
         :param time_unit: Time unit in which thread works
@@ -23,6 +23,7 @@ class Thread:
         self.__time_unit = time_unit
         self.__operations = list()
         self.__depth = depth
+        self.__thread_index = thread_index
 
     def add_operation(self, operation: Operation):
         """ Add operation which is run in this thread
@@ -55,7 +56,7 @@ class Thread:
         return self.__depth
 
     def __repr__(self) -> str:
-        return self.__name
+        return f"t{self.__thread_index}"
 
     def __eq__(self, other) -> bool:
-        return self.__name == other.__name
+        return (self.__name == other.__name) and (self.__thread_index == other.__thread_index)

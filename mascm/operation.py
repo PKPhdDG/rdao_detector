@@ -11,9 +11,15 @@ import sys
 
 class Operation:
     """Operation class"""
-    def __init__(self, operation_obj: Node, thread):
+    def __init__(self, operation_obj: Node, thread, thread_index: int):
+        """Ctor
+        :param operation_obj: Node obj
+        :param thread: Thread object
+        :param thread_index: Thread index in the mascm
+        """
         self.__operation_obj = operation_obj
         self.__thread = thread
+        self.__thread_index = thread_index
         self.__thread.add_operation(self)
         self.__operation_number = self.__thread.num_of_operations()
         self.__name = ""
@@ -84,7 +90,7 @@ class Operation:
         return self.__thread == other_thread
 
     def __repr__(self):
-        return "o{},{}".format(str(self.__thread)[1:], self.__operation_number)
+        return "o{},{}".format(self.__thread_index, self.__operation_number)
 
     def __lt__(self, other):
         return self.__operation_number < other.__operation_number

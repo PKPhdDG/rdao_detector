@@ -2,8 +2,10 @@
 #include <pthread.h>
 
 static volatile int r1 = 0, r2 = 0;
+pthread_mutex_t m;
 
 void* deposit1(void *args) {
+    pthread_mutex_lock(&m);
     for (int i=0; i<1000000; i++)
     {
         ++r1;
@@ -12,10 +14,12 @@ void* deposit1(void *args) {
 }
 
 void* deposit2(void *args) {
+    pthread_mutex_lock(&m);
     for (int i=0; i<1000000; i++)
     {
         ++r2;
     }
+    pthread_mutex_unlock(&m);
     return NULL;
 }
 
