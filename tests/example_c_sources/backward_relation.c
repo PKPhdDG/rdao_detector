@@ -14,7 +14,7 @@ void *thread_test(void *args)
     if (f == NULL)
     {
         const char *message = strerror(errno);
-        printf("Cannot open the file. Reason: %s\n", message);
+        printf("Cannot open the file. Reason: %s\r\n", message);
         return (void*)NULL;
     }
     puts("File opened");

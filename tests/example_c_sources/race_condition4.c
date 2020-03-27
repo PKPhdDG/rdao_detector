@@ -13,7 +13,7 @@ void* deposit1(void *args) {
 
 int main() {
     pthread_t worker1, worker2, worker3, worker4;
-    printf("App start work with r1 = %d\n", r1);
+    printf("App start work with r1 = %d\r\n", r1);
 
     pthread_create(&worker1, NULL, deposit1, NULL);
     pthread_create(&worker2, NULL, deposit1, NULL);
@@ -25,6 +25,6 @@ int main() {
     pthread_join(worker3, NULL);
     pthread_join(worker4, NULL);
 
-    printf("App finish work with r1 = %d\n", r1);
+    printf("App finish work with r1 = %d\r\n", r1);
     return 0;
 }

@@ -24,6 +24,7 @@ class Thread:
         self.__operations = list()
         self.__depth = depth
         self.__thread_index = thread_index
+        self.__thread_does_not_care_about_anything = False
 
     def add_operation(self, operation: Operation):
         """ Add operation which is run in this thread
@@ -36,6 +37,13 @@ class Thread:
         :return: Number of operations in thread
         """
         return len(self.__operations)
+
+    @property
+    def index(self):
+        """ Getter
+        :return: index
+        """
+        return self.__thread_index
 
     @property
     def time_unit(self):
@@ -54,6 +62,16 @@ class Thread:
         :return: Depth value
         """
         return self.__depth
+
+    def set_always_parallel(self):
+        """ Mark thread as always parallel """
+        self.__thread_does_not_care_about_anything = True
+
+    def is_always_parallel(self):
+        """ Method return True value if thread is always parallel
+        :return: Boolean value
+        """
+        return self.__thread_does_not_care_about_anything
 
     def __repr__(self) -> str:
         return f"t{self.__thread_index}"

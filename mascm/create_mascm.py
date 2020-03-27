@@ -376,6 +376,8 @@ def __parse_pthread_create(mascm, node: FuncCall, time_unit: TimeUnit, func: Fun
     if __new_time_unit:
         __new_time_unit = False
         mascm.u.append(TimeUnit(time_unit + 1))
+        always_parallel = (t for t in mascm.threads if t.is_always_parallel())
+        mascm.u[-1].extend(always_parallel)
     thread_depth = main_thread.depth + 1 if main_thread is not None else 0
     for i in range(2 if __is_loop_body else 1):
         new_thread = Thread(len(mascm.threads), node.args, mascm.u[-1], thread_depth)
@@ -482,10 +484,14 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
                                                time_unit)
                 functions_call.extend(result)
             else:
+                if (thread not in mascm.u[-1]) and not __new_time_unit:
+                    thread.set_always_parallel()
                 # If there are some operation between create and join pthread
-                if not __new_time_unit and (thread.time_unit != time_unit):
-                    thread.time_unit = time_unit
-                    mascm.u[-1].insert(len(mascm.u) - 2, thread)
+                if not __new_time_unit:
+                    mascm.time_units[-1].insert(thread.index, thread)
+                    mascm.time_units[-1] = sorted(
+                        mascm.time_units[-1], key=lambda t: t.index
+                    )
 
                 operation: Operation = __add_operation_and_edge(mascm, child, thread)
                 # TODO This should be done in other function

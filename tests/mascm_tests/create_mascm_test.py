@@ -195,7 +195,7 @@ class CreateMamTest(unittest.TestCase, TestBase):
 
     def test_multiple_file_application_5(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], "\
-                         "time_units=[[t0], [t1], [t2, t1], [t1], [t0]], resources=[], "\
+                         "time_units=[[t0], [t1], [t1, t2], [t1], [t0]], resources=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o2,1, o2,2, o2,3, o2,4], mutexes=[], "\
                          "edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (o1,4, o1,5), "\
                          "(o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,4)], relations=(forward=[], backward=[],"\
@@ -371,6 +371,47 @@ class CreateMamTest(unittest.TestCase, TestBase):
             self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
+    def test_nested_threads_main_thread_is_parallel(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3], time_units=[[t0], [t1], "\
+                         "[t1, t2, t3], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o1,1, o1,2, o1,3, "\
+                         "o1,4, o1,5, o1,6, o1,7, o2,1, o2,2, o2,3, o3,1, o3,2, o3,3], mutexes=[], "\
+                         "edges=[(o0,1, o0,2), (r1, o0,2), (o0,2, o0,3), (r1, o0,3), (o0,3, o0,4), (o1,1, o1,2), "\
+                         "(o1,2, o1,3), (o1,3, o1,3), (o1,3, o1,4), (o1,3, o1,4), (r1, o1,4), (o1,4, o1,5), "\
+                         "(o1,5, o1,5), (o1,5, o1,6), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o2,1, o2,2), "\
+                         "(o2,2, r1), (o2,2, o2,1), (o2,1, o2,3), (o2,2, o2,3), (o3,1, o3,2), (o3,2, r1), "\
+                         "(o3,2, o3,1), (o3,1, o3,3), (o3,2, o3,3)], relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "race_condition10.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        main_thread, *other_threads = result.threads
+        self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
+        for thread, depth in zip(other_threads, [1, 2, 2]):
+            self.assertEqual(depth, thread.depth, "Nested thread does not have expected depth!")
+        self.assertEqual(expected_mascm, str(result))
+
+    def test_ignoring_nested_threads(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3], time_units=[[t0], "\
+                         "[t0, t1], [t0, t2, t3], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o1,1, "\
+                         "o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o2,1, o2,2, o2,3, o3,1, o3,2, o3,3], mutexes=[], "\
+                         "edges=[(o0,1, o0,2), (r1, o0,2), (o0,2, o0,3), (r1, o0,3), (o0,3, o0,4), (o1,1, o1,2), "\
+                         "(o1,2, o1,3), (r1, o1,3), (o1,3, o1,4), (o1,4, o1,4), (o1,4, o1,5), (o1,4, o1,5), "\
+                         "(o1,5, o1,5), (o1,5, o1,6), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o2,1, o2,2), "\
+                         "(o2,2, r1), (o2,2, o2,1), (o2,1, o2,3), (o2,2, o2,3), (o3,1, o3,2), (o3,2, r1), "\
+                         "(o3,2, o3,1), (o3,1, o3,3), (o3,2, o3,3)], relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "race_condition11.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        main_thread, *other_threads = result.threads
+        self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
+        for thread, depth in zip(other_threads, [1, 2, 2]):
+            self.assertEqual(depth, thread.depth, "Nested thread does not have expected depth!")
+        self.assertEqual(expected_mascm, str(result))
 
 if "__main__" == __name__:
     unittest.main()
