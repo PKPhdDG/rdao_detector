@@ -27,7 +27,7 @@ int add(int n, ...)
 void *thread_test(void *arguments)
 {
     int result = add(5, 1, 2, 3, 4, 5);
-    printf("Result: %d", result);
+    printf("Result: %d\r\n", result);
 
     return (void*)NULL;
 }

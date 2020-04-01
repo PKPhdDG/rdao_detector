@@ -5,5 +5,8 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.2"
 
-from helpers.functions import *
-from helpers.time_unit_helper import get_time_unit_edges, get_time_units_graphs
+from tests.rdao_tests.race_condition_test import DetectRaceConditionTest
+import unittest
+
+if "__main__" == __name__:
+    unittest.main()

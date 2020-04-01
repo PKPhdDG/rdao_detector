@@ -1,23 +1,22 @@
+#!/usr/bin/env python3.7
+
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.2"
 
 from collections import deque
-from helpers.path import collect_c_project_files, get_project_path
+from helpers.path import collect_c_project_files
 from helpers.purifier import purify, purify_files
 from mascm import create_mascm
 from os import remove
 from os.path import join
 from pycparser import parse_file
+from tests.test_base import TestBase
 import unittest
 
 
-class CreateMamTest(unittest.TestCase):
-    project_dir = get_project_path()
-    source_path_prefix = join(project_dir, "tests\\example_c_sources")
-    multiple_files_app_path_prefix = join(source_path_prefix, "multiple_files_apps")
-
+class CreateMamTest(unittest.TestCase, TestBase):
     def __test_thread_nesting(self, threads):
         main_thread, *other_threads = threads
         self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
@@ -196,7 +195,7 @@ class CreateMamTest(unittest.TestCase):
 
     def test_multiple_file_application_5(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], "\
-                         "time_units=[[t0], [t1], [t2, t1], [t1], [t0]], resources=[], "\
+                         "time_units=[[t0], [t1], [t1, t2], [t1], [t0]], resources=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o2,1, o2,2, o2,3, o2,4], mutexes=[], "\
                          "edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (o1,4, o1,5), "\
                          "(o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,4)], relations=(forward=[], backward=[],"\
@@ -336,6 +335,83 @@ class CreateMamTest(unittest.TestCase):
             self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
+    def test_four_threads_in_time_unit(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3, t4], "\
+                         "time_units=[[t0], [t1, t2, t3, t4], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, "\
+                         "o0,4, o0,5, o0,6, o0,7, o1,1, o1,2, o1,3, o2,1, o2,2, o2,3, o3,1, o3,2, o3,3, o4,1, o4,2, "\
+                         "o4,3], mutexes=[], edges=[(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (o0,4, o0,5), "\
+                         "(r1, o0,5), (o0,5, o0,6), (r1, o0,6), (o0,6, o0,7), (o1,1, o1,2), (o1,2, r1), (o1,2, o1,1), "\
+                         "(o1,1, o1,3), (o1,2, o1,3), (o2,1, o2,2), (o2,2, r1), (o2,2, o2,1), (o2,1, o2,3), "\
+                         "(o2,2, o2,3), (o3,1, o3,2), (o3,2, r1), (o3,2, o3,1), (o3,1, o3,3), (o3,2, o3,3), "\
+                         "(o4,1, o4,2), (o4,2, r1), (o4,2, o4,1), (o4,1, o4,3), (o4,2, o4,3)], "\
+                         "relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "race_condition4.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+            self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))
+
+    def test_loop_thread_creation(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], time_units=[[t0], [t1, t2], "\
+                         "[t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o0,7, o1,1, o1,2, "\
+                         "o1,3, o1,4, o1,5, o2,1, o2,2, o2,3, o2,4, o2,5], mutexes=[], edges=[(o0,1, o0,2), "\
+                         "(o0,2, o0,3), (r1, o0,3), (o0,3, o0,4), (o0,4, o0,4), (o0,4, o0,5), (o0,4, o0,5), "\
+                         "(o0,5, o0,5), (o0,5, o0,6), (o0,5, o0,6), (r1, o0,6), (o0,6, o0,7), (r1, o1,1), "\
+                         "(o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), (o1,3, o1,2), (o1,2, o1,4), (o1,3, o1,4), "\
+                         "(r1, o1,4), (o1,4, o1,5), (r1, o2,1), (o2,1, o2,2), (o2,2, o2,3), (o2,3, r1), (o2,3, o2,2), "\
+                         "(o2,2, o2,4), (o2,3, o2,4), (r1, o2,4), (o2,4, o2,5)], "\
+                         "relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "race_condition8.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+            self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))
+
+    def test_nested_threads_main_thread_is_parallel(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3], time_units=[[t0], [t1], "\
+                         "[t1, t2, t3], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o1,1, o1,2, o1,3, "\
+                         "o1,4, o1,5, o1,6, o1,7, o2,1, o2,2, o2,3, o3,1, o3,2, o3,3], mutexes=[], "\
+                         "edges=[(o0,1, o0,2), (r1, o0,2), (o0,2, o0,3), (r1, o0,3), (o0,3, o0,4), (o1,1, o1,2), "\
+                         "(o1,2, o1,3), (o1,3, o1,3), (o1,3, o1,4), (o1,3, o1,4), (r1, o1,4), (o1,4, o1,5), "\
+                         "(o1,5, o1,5), (o1,5, o1,6), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o2,1, o2,2), "\
+                         "(o2,2, r1), (o2,2, o2,1), (o2,1, o2,3), (o2,2, o2,3), (o3,1, o3,2), (o3,2, r1), "\
+                         "(o3,2, o3,1), (o3,1, o3,3), (o3,2, o3,3)], relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "race_condition10.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        main_thread, *other_threads = result.threads
+        self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
+        for thread, depth in zip(other_threads, [1, 2, 2]):
+            self.assertEqual(depth, thread.depth, "Nested thread does not have expected depth!")
+        self.assertEqual(expected_mascm, str(result))
+
+    def test_ignoring_nested_threads(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3], time_units=[[t0], "\
+                         "[t0, t1], [t0, t2, t3], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o1,1, "\
+                         "o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o2,1, o2,2, o2,3, o3,1, o3,2, o3,3], mutexes=[], "\
+                         "edges=[(o0,1, o0,2), (r1, o0,2), (o0,2, o0,3), (r1, o0,3), (o0,3, o0,4), (o1,1, o1,2), "\
+                         "(o1,2, o1,3), (r1, o1,3), (o1,3, o1,4), (o1,4, o1,4), (o1,4, o1,5), (o1,4, o1,5), "\
+                         "(o1,5, o1,5), (o1,5, o1,6), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o2,1, o2,2), "\
+                         "(o2,2, r1), (o2,2, o2,1), (o2,1, o2,3), (o2,2, o2,3), (o3,1, o3,2), (o3,2, r1), "\
+                         "(o3,2, o3,1), (o3,1, o3,3), (o3,2, o3,3)], relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "race_condition11.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        main_thread, *other_threads = result.threads
+        self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
+        for thread, depth in zip(other_threads, [1, 2, 2]):
+            self.assertEqual(depth, thread.depth, "Nested thread does not have expected depth!")
+        self.assertEqual(expected_mascm, str(result))
 
 if "__main__" == __name__:
     unittest.main()

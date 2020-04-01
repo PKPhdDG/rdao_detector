@@ -11,9 +11,15 @@ import sys
 
 class Operation:
     """Operation class"""
-    def __init__(self, operation_obj: Node, thread):
+    def __init__(self, operation_obj: Node, thread, thread_index: int):
+        """Ctor
+        :param operation_obj: Node obj
+        :param thread: Thread object
+        :param thread_index: Thread index in the mascm
+        """
         self.__operation_obj = operation_obj
         self.__thread = thread
+        self.__thread_index = thread_index
         self.__thread.add_operation(self)
         self.__operation_number = self.__thread.num_of_operations()
         self.__name = ""
@@ -45,6 +51,13 @@ class Operation:
         """
         return self.__args
 
+    @property
+    def node(self) -> Node:
+        """ Node getter
+        :return: Node
+        """
+        return self.__operation_obj
+
     def is_last_action(self) -> bool:
         """ If this is return operation this method return true
         :return: Boolean value
@@ -53,7 +66,7 @@ class Operation:
 
     def add_use_resource(self, resource: Resource) -> None:
         """ Method add resource to resource list """
-        self.__args.append(resource.get_node())
+        self.__args.append(resource.node)
 
     def has_func_use_the_resource(self, resource: Resource) -> bool:
         """ Method check given resource is used by operation
@@ -72,8 +85,12 @@ class Operation:
                 print(f"Cannot handle arg: {arg}", file=sys.stderr)
         return False
 
+    def is_operation_of_thread(self, other_thread) -> bool:
+        """ Method check operation is operation of a given thread """
+        return self.__thread == other_thread
+
     def __repr__(self):
-        return "o{},{}".format(str(self.__thread)[1:], self.__operation_number)
+        return "o{},{}".format(self.__thread_index, self.__operation_number)
 
     def __lt__(self, other):
         return self.__operation_number < other.__operation_number

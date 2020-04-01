@@ -26,12 +26,21 @@ class Resource:
         """
         return name in self.__names
 
-    def get_node(self) -> Node:
-        """ Method return Node obj """
+    @property
+    def node(self) -> Node:
+        """ Node obj getter """
         return self.__node
 
+    def __hash__(self):
+        return hash(self.__node)
+
+    def __lt__(self, other):
+        return self.__num < other.__num
+
     def __eq__(self, other):
-        return other.__names == self.__names
+        if isinstance(other, Resource):
+            return other.__names == self.__names
+        return False
 
     def __repr__(self):
         return f"r{self.__num}"

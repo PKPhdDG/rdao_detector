@@ -15,3 +15,13 @@ class Edge:
 
     def __lt__(self, other):
         return self.__first < other.__first or self.__second < other.__second
+
+    @property
+    def first(self):
+        """ Getter """
+        return self.__first
+
+    @property
+    def second(self):
+        """ Getter """
+        return self.__second
