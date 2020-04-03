@@ -154,7 +154,7 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             mascm = create_mascm(deque([ast]))
         result = list(detect_race_condition(mascm))
-        self.assertEqual([], result)
+        self.assertListEqual([], result)
 
     def test_no_race_condition2(self):
         file_to_parse = "no_race_condition2.c"
@@ -163,7 +163,7 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             mascm = create_mascm(deque([ast]))
         result = list(detect_race_condition(mascm))
-        self.assertEqual([], result)
+        self.assertListEqual([], result)
 
     def test_no_race_condition3(self):
         file_to_parse = "no_race_condition3.c"
@@ -172,7 +172,7 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             mascm = create_mascm(deque([ast]))
         result = list(detect_race_condition(mascm))
-        self.assertEqual([], result)
+        self.assertListEqual([], result)
 
     def test_no_race_condition4(self):
         file_to_parse = "no_race_condition4.c"
@@ -181,7 +181,7 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             mascm = create_mascm(deque([ast]))
         result = list(detect_race_condition(mascm))
-        self.assertEqual([], result)
+        self.assertListEqual([], result)
 
     def test_no_race_condition5(self):
         file_to_parse = "no_race_condition5.c"
@@ -190,7 +190,7 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             mascm = create_mascm(deque([ast]))
         result = list(detect_race_condition(mascm))
-        self.assertEqual([], result)
+        self.assertListEqual([], result)
 
     def test_no_race_condition6(self):
         file_to_parse = "no_race_condition6.c"
@@ -199,7 +199,7 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             mascm = create_mascm(deque([ast]))
         result = list(detect_race_condition(mascm))
-        self.assertEqual([], result)
+        self.assertListEqual([], result)
 
     def test_no_race_condition7(self):
         file_to_parse = "deadlock1.c"
@@ -208,7 +208,7 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             mascm = create_mascm(deque([ast]))
         result = list(detect_race_condition(mascm))
-        self.assertEqual([], result)
+        self.assertListEqual([], result)
 
 
 if "__main__" == __name__:

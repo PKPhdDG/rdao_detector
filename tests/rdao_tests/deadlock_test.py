@@ -59,6 +59,15 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
         self.assertEqual(mascm.edges[23], result[2][1][0])
         self.assertEqual(mascm.edges[25], result[2][1][1])
 
+    def test_no_deadlock1(self):
+        file_to_parse = "no_deadlock1.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            mascm = create_mascm(deque([ast]))
+        result = list(detect_deadlock(mascm))
+        self.assertListEqual([], result)
+
 
 if "__main__" == __name__:
     unittest.main()
