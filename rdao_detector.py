@@ -6,7 +6,7 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.2"
 
 import argparse
-from helpers import lock_types_str
+from helpers import lock_types_str, deadlock_causes_str
 from itertools import chain
 from mascm_generator import create_ast, create_mascm
 from rdao import detect_deadlock, detect_race_condition
@@ -32,8 +32,9 @@ def main():
     print("="*60)
 
     print("Deadlocks:")
-    for el in detect_deadlock(mascm):
+    for cause, el in detect_deadlock(mascm):
         print(f"\tDeadlock detected involving a set of locks: {set((edge.first for edge in chain(*el)))}")
+        print("\t\tDeadlock cause:", deadlock_causes_str[cause])
         print("\tLocking operations can be found in")
         for edge in chain(*el):
             print(f"\t\t{edge.second.node.coord}", end=" ")

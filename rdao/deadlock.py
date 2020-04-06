@@ -5,8 +5,7 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.2"
 
-import config as c
-from helpers import get_time_units_graphs, expressions as e
+from helpers import DeadlockType, get_time_units_graphs, expressions as e
 from itertools import combinations
 from mascm import MultithreadedApplicationSourceCodeModel as MASCM
 import re
@@ -118,5 +117,5 @@ def detect_deadlock(mascm: MASCM) -> coroutine:
 
     for s1, s2 in combinations(mutex_collections, 2):
         for pair in mutually_exclusive_pairs_of_mutex(s1, s2):
-            yield pair
+            yield DeadlockType.double_lock, pair
     pass
