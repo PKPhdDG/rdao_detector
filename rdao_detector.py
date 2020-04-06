@@ -35,10 +35,10 @@ def main():
     for cause, el in detect_deadlock(mascm):
         print(f"\tDeadlock detected involving a set of locks: {set((edge.first for edge in chain(*el)))}")
         print("\t\tDeadlock cause:", deadlock_causes_str[cause])
-        print("\tLocking operations can be found in")
+        print("\tLocking operations can be found in:")
         for edge in chain(*el):
             print(f"\t\t{edge.second.node.coord}", end=" ")
-            print(f"\t\t using mutex variable {edge.first.name} of type {lock_types_str[edge.first.type]}")
+            print(f"using mutex variable {edge.first.name} of type {lock_types_str[edge.first.type]}")
     print("="*60)
 
 

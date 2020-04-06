@@ -90,6 +90,16 @@ def mutually_exclusive_pairs_of_mutex(first: Iterable, second: Iterable) -> coro
         yield p1_pair, p2_pair
 
 
+def missing_unlock(mutex_collections: Iterable) -> coroutine:
+    """ Function check there is no missing unlocks """
+    pairs = collect_mutexes_indexes(mutex_collections)
+    only_indexes = list((index for index, _ in pairs))
+    for i, lock_index in enumerate(only_indexes):
+        if (lock_index > 0) and (-lock_index not in only_indexes):
+            yield mutex_collections[i]
+    pass
+
+
 def detect_deadlock(mascm: MASCM) -> coroutine:
     """ Function is responsible for detecting deadlocks using MASCM """
     time_units = [unit for unit in mascm.time_units if len(unit) > 1]  # Do not check units with one thread only
@@ -118,4 +128,9 @@ def detect_deadlock(mascm: MASCM) -> coroutine:
     for s1, s2 in combinations(mutex_collections, 2):
         for pair in mutually_exclusive_pairs_of_mutex(s1, s2):
             yield DeadlockType.double_lock, pair
+
+    for mutex_collection in mutex_collections:
+        for edge in missing_unlock(mutex_collection):
+            yield DeadlockType.missing_unlock, [[edge]]
+
     pass
