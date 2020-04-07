@@ -3,7 +3,7 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.2"
 
-from collections import deque
+from collections import deque, defaultdict
 import config as c
 from copy import deepcopy
 from mascm.edge import Edge
@@ -47,6 +47,9 @@ relations["symmetric"].update(c.relations["symmetric"])
 forward_operations_handler = list()
 backward_operations_handler = dict()
 symmetric_operations_handler = list()
+function_call_stack = deque()
+RECURSION_MAX_DEPTH = 1
+operations_for_return_from_recursion = defaultdict(deque)
 
 
 def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation, resources: list) -> bool:
@@ -480,9 +483,22 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
             elif fcall_name == "pthread_mutex_unlock":
                 __parse_pthread_mutex_unlock(mascm, child, thread)
             elif fcall_name in functions_definition.keys():
+                # To avoid crash on recursion
+                num_of_calls = len([fname for fname in function_call_stack if fname == fcall_name])
+                if num_of_calls > RECURSION_MAX_DEPTH:
+                    # TODO Make more efficient mechanism for returning from recursion
+                    operations_for_return_from_recursion[fcall_name].append(mascm.operations[-1])
+                    continue
+                function_call_stack.appendleft(fcall_name)
                 result = __parse_function_call(mascm, functions_definition[fcall_name], functions_definition, thread,
                                                time_unit)
                 functions_call.extend(result)
+                num_of_calls = len([fname for fname in function_call_stack if fname == fcall_name])
+                if num_of_calls > 1 and operations_for_return_from_recursion[fcall_name]:
+                    __add_edge_to_mascm(
+                        mascm, Edge(mascm.operations[-1], operations_for_return_from_recursion[fcall_name][-1])
+                    )
+                function_call_stack.remove(fcall_name)
             else:
                 if (thread not in mascm.u[-1]) and not __new_time_unit:
                     thread.set_always_parallel()
