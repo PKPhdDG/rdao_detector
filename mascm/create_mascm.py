@@ -17,7 +17,7 @@ from mascm.time_unit import TimeUnit
 from parsing_utils import Function
 from pycparser.c_ast import *
 import sys
-from typing import Optional
+from typing import Optional, Union as t_Union
 import warnings
 
 __new_time_unit = True
@@ -142,6 +142,7 @@ def __add_operation_and_edge(mascm, node, thread) -> Operation:
     :return: Operation object
     """
     operation = Operation(node, thread, mascm.threads.index(thread))
+    keep_operation = __wait_for_operation
     __add_operation_to_mascm(mascm, operation)
     __operation_is_in_forward_relation(mascm, operation)
     __operation_is_in_backward_relation(mascm, operation)
@@ -435,8 +436,9 @@ def __parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread) -> Opera
     return operation
 
 
-def __parse_statement(mascm, node: Compound, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> list:
-    """Function parsing Compode type node with functions/loops/if's body
+def __parse_statement(mascm, node: t_Union[Compound, FuncCall], functions_definition: dict, thread: Thread,
+                      time_unit: TimeUnit) -> list:
+    """Function parsing Compound type node with functions/loops/if's body
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: If object
     :param functions_definition: dict with user functions
@@ -539,6 +541,11 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
                     functions_call.extend(
                         __parse_statement(mascm, child.right, functions_definition, thread, time_unit)
                     )
+            elif isinstance(child, Return) and isinstance(child.expr, FuncCall):
+                    functions_call.extend(
+                        __parse_statement(mascm, child.expr, functions_definition, thread, time_unit)
+                    )
+
             __add_operation_and_edge(mascm, child, thread)
         elif isinstance(child, If):
             functions_call.extend(__parse_if_statement(mascm, child, functions_definition, thread, time_unit))

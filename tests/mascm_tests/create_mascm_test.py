@@ -413,8 +413,20 @@ class CreateMamTest(unittest.TestCase, TestBase):
             self.assertEqual(depth, thread.depth, "Nested thread does not have expected depth!")
         self.assertEqual(expected_mascm, str(result))
 
+    def test_recursion0(self):
+        expected_mascm = ""
+        file_to_parse = "recursion0.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        main_thread, *other_threads = result.threads
+        self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
+        self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))
+
     def test_recursion1(self):
-        # TODO Make more recursion test
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], " \
                          "resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o1,1, o1,2, o1,3, o1,4, " \
                          "o1,5, o1,6, o1,7, o1,8, o1,9], mutexes=[], edges=[(o0,1, o0,2), (o0,2, o0,3), " \
@@ -422,6 +434,24 @@ class CreateMamTest(unittest.TestCase, TestBase):
                          "(o1,3, o1,4), (o1,3, o1,5), (o1,4, o1,5), (o1,5, o1,3), (o1,2, o1,7), (o1,6, o1,7), " \
                          "(o1,8, r1), (o1,8, o1,9)], relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "recursion1.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        main_thread, *other_threads = result.threads
+        self.assertEqual(0, main_thread.depth, "Main thread does not have expected depth!")
+        self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))
+
+    def test_recursion2(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], " \
+                         "resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o1,1, o1,2, o1,3, o1,4, " \
+                         "o1,5, o1,6, o1,7, o1,8, o1,9], mutexes=[], edges=[(o0,1, o0,2), (o0,2, o0,3), " \
+                         "(o0,3, o0,4), (o0,4, o0,5), (r1, o0,5), (o0,5, o0,6), (o1,1, o1,2), (o1,2, o1,3), " \
+                         "(o1,3, o1,4), (o1,3, o1,5), (o1,4, o1,5), (o1,5, o1,3), (o1,2, o1,7), (o1,6, o1,7), " \
+                         "(o1,8, r1), (o1,8, o1,9)], relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "recursion2.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
             ast = parse_file(pure_file_path)
