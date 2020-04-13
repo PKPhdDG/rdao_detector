@@ -109,7 +109,7 @@ def __operation_is_in_symmetric_relation(mascm, operation: Operation):
                 data = next((d for d in symmetric_operations_handler if d["pair"][1] in (pair[1], __func_name1)))
             except StopIteration:
                 continue
-                # TODO Check it for this relation
+            # TODO Check it for this relation
             # if not __operations_used_this_same_shared_resources(data[1], operation, mascm.resources):
             #     continue
             mascm.relations.symmetric.append(Edge(data[1], operation))
@@ -152,7 +152,9 @@ def __add_operation_and_edge(mascm, node, thread) -> Operation:
     last_operation: Operation = mascm.o[-2]
     if last_operation.is_last_action():
         return operation
-    __add_edge_to_mascm(mascm, Edge(last_operation, operation))
+    new_edge = Edge(last_operation, operation)
+    if (not mascm.edges) or ((len(mascm.edges) > 0) and (str(mascm.edges[-1]) != str(new_edge))):
+        __add_edge_to_mascm(mascm, new_edge)
     return operation
 
 

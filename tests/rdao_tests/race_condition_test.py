@@ -101,12 +101,12 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
             mascm = create_mascm(deque([ast]))
         result = list(detect_race_condition(mascm))
         self.assertEqual(6, len(result), "Unexpected edges in the result.")
-        self.assertEqual(mascm.edges[12], result[0])
-        self.assertEqual(mascm.edges[15], result[1])
-        self.assertEqual(mascm.edges[19], result[2])
-        self.assertEqual(mascm.edges[21], result[3])
-        self.assertEqual(mascm.edges[24], result[4])
-        self.assertEqual(mascm.edges[28], result[5])
+        self.assertEqual(mascm.edges[10], result[0])
+        self.assertEqual(mascm.edges[13], result[1])
+        self.assertEqual(mascm.edges[17], result[2])
+        self.assertEqual(mascm.edges[19], result[3])
+        self.assertEqual(mascm.edges[22], result[4])
+        self.assertEqual(mascm.edges[26], result[5])
 
     def test_race_condition9(self):
         file_to_parse = "race_condition9.c"
@@ -116,8 +116,8 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
             mascm = create_mascm(deque([ast]))
         result = list(detect_race_condition(mascm))
         self.assertEqual(2, len(result), "Unexpected edges in the result.")
-        self.assertEqual(mascm.edges[18], result[0])
-        self.assertEqual(mascm.edges[23], result[1])
+        self.assertEqual(mascm.edges[16], result[0])
+        self.assertEqual(mascm.edges[21], result[1])
 
     def test_race_condition10(self):
         file_to_parse = "race_condition10.c"
@@ -127,10 +127,10 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
             mascm = create_mascm(deque([ast]))
         result = list(detect_race_condition(mascm))
         self.assertEqual(4, len(result), "Unexpected edges in the result.")
-        self.assertEqual(mascm.edges[10], result[0])
-        self.assertEqual(mascm.edges[15], result[1])
-        self.assertEqual(mascm.edges[18], result[2])
-        self.assertEqual(mascm.edges[23], result[3])
+        self.assertEqual(mascm.edges[9], result[0])
+        self.assertEqual(mascm.edges[13], result[1])
+        self.assertEqual(mascm.edges[16], result[2])
+        self.assertEqual(mascm.edges[21], result[3])
 
     def test_race_condition11(self):
         file_to_parse = "race_condition11.c"
@@ -143,9 +143,9 @@ class DetectRaceConditionTest(unittest.TestCase, TestBase):
         self.assertEqual(mascm.edges[1], result[0])
         self.assertEqual(mascm.edges[3], result[1])
         self.assertEqual(mascm.edges[7], result[2])
-        self.assertEqual(mascm.edges[15], result[3])
-        self.assertEqual(mascm.edges[18], result[4])
-        self.assertEqual(mascm.edges[23], result[5])
+        self.assertEqual(mascm.edges[13], result[3])
+        self.assertEqual(mascm.edges[16], result[4])
+        self.assertEqual(mascm.edges[21], result[5])
 
     def test_no_race_condition1(self):
         file_to_parse = "no_race_condition1.c"
