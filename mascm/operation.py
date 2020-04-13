@@ -81,8 +81,9 @@ class Operation:
                     return True
                 elif hasattr(arg, "name") and resource.has_name(arg.name):
                     return True
-            elif isinstance(arg, Decl) and hasattr(arg, "name") and resource.has_name(arg.name):
-                return True
+            elif isinstance(arg, Decl) and hasattr(arg, "name"):
+                if resource.has_name(arg.name):
+                    return True
             elif c.DEBUG:
                 print(f"Cannot handle arg: {arg}", file=sys.stderr)
         return False

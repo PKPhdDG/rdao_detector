@@ -5,7 +5,7 @@ __version__ = "0.2"
 
 from mascm.create_mascm import create_mascm
 from mascm.edge import Edge
-from mascm.lock import Lock, LockType
+from mascm.lock import Lock
 from mascm.mascm import MultithreadedApplicationSourceCodeModel
 from mascm.operation import Operation
 from mascm.relations import Relations

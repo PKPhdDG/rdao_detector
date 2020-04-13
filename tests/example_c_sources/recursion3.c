@@ -2,13 +2,17 @@
 #include <pthread.h>
 
 static volatile long long result;
+pthread_mutex_t m;
 
 int sum(int n);
-int logN(int n);
 void *thread(void *args);
 
 int main() {
     int number;
+    pthread_mutexattr_t ma;
+    pthread_mutexattr_init(&ma);
+    pthread_mutexattr_settype(&ma, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&m, &ma);
 
     printf("Enter a positive integer: ");
     scanf("%d", &number);
@@ -22,21 +26,18 @@ int main() {
 }
 
 int sum(int n) {
-    if (n == 0)
-        return n;
+    pthread_mutex_lock(&m);
+    if (n != 0)
+        // sum() function calls itself
+        return n + sum(n-1);
     else
-        return n + logN(n-1);
-}
-
-int logN(int n)
-{
-    printf("Step: %d\n", n);
-    return sum(n);
+        return n;
+    pthread_mutex_unlock(&m);
 }
 
 void *thread(void *args)
 {
     int start_val = *(int*)args;
-    result = logN(start_val);
+    result = sum(start_val);
     return NULL;
 }

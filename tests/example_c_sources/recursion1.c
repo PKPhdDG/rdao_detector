@@ -16,7 +16,7 @@ int main() {
     pthread_create(&t, NULL, thread, &number);
     pthread_join(t, NULL);
 
-    printf("sum = %d", result);
+    printf("Sum = %lld", result);
     return 0;
 }
 

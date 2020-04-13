@@ -515,6 +515,15 @@ def __parse_statement(mascm, node: t_Union[Compound, FuncCall], functions_defini
                         mascm.time_units[-1], key=lambda t: t.index
                     )
 
+                if fcall_name == "pthread_mutexattr_settype":
+                    attrs_name = child.args.exprs[0].expr.name
+                    attrs_type = child.args.exprs[1].name
+                    mascm.mutex_attrs[attrs_name] = attrs_type
+                elif fcall_name == "pthread_mutex_init":
+                    mutex = child.args.exprs[0].expr.name
+                    attrs_identifier = child.args.exprs[1].expr.name
+                    mascm.set_mutex_type(mutex, attrs_identifier)
+
                 operation: Operation = __add_operation_and_edge(mascm, child, thread)
                 if child.name.name in ignored_c_functions:
                     for builtin_resource in child.args.exprs:
@@ -536,6 +545,8 @@ def __parse_statement(mascm, node: t_Union[Compound, FuncCall], functions_defini
                     continue
                 functions_call.extend(__parse_function_call(mascm, functions_definition[fcall_name],
                                                             functions_definition, thread, time_unit))
+            if isinstance(child, Decl) and isinstance(child.init, FuncCall) and 'pthread_mutexattr_t' in child.type.type.names:
+                mascm.mutex_attrs[child.type.declname] = ""
             elif isinstance(child, BinaryOp):
                 if isinstance(child.left, FuncCall):
                     functions_call.extend(__parse_statement(mascm, child.left, functions_definition, thread, time_unit))

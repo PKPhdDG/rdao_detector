@@ -11,7 +11,7 @@ int main() {
     printf("Enter a positive integer: ");
     scanf("%d", &number);
     result = logN(number);
-    printf("Sum = %d", result);
+    printf("Sum = %lld", result);
     return 0;
 }
 

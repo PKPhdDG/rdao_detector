@@ -7,6 +7,8 @@ from pycparser.c_ast import FuncDef
 
 
 class Function:
+    """ Function object"""
+
     def __init__(self, node: FuncDef):
         self.__node = node
 

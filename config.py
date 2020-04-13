@@ -5,7 +5,7 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.2"
 
-DEBUG = False
+DEBUG = True
 
 main_function_name: str = "main"  # Name of main function in application
 # Builtin elemental functions
@@ -16,3 +16,5 @@ relations: dict = {  # Names of functions between which there are sequential rel
     'backward': [],
     'symmetric': []
 }
+
+PTHREAD_MUTEX_DEFAULT_VAL = "PTHREAD_MUTEX_NORMAL"
