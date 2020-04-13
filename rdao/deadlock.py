@@ -36,14 +36,6 @@ def is_used_single_mutex(collection: Iterable) -> bool:
     return len(set((pair[0] for pair in collection if pair[0] > 0))) == 1
 
 
-def is_correct_numbers_of_locks_and_unlocks(collection: list) -> bool:
-    """ Function check there is correct numbers of locks and unlocks
-    :param collection: List of mutex indexes
-    :return: Boolean value
-    """
-    return bool(sum(collection))
-
-
 def get_all_pairs_indexes(collection: Iterable) -> Sequence:
     """ Function return every pair build from given collection
     :param collection: Collection of elements
@@ -97,18 +89,35 @@ def missing_unlock(mutex_collections: Iterable) -> coroutine:
     for i, lock_index in enumerate(only_indexes):
         if (lock_index > 0) and (-lock_index not in only_indexes):
             yield mutex_collections[i]
-    pass
+
+
+def double_locks(mutex_collections: Iterable) -> coroutine:
+    """ Function is responsible for detect double locks """
+    pairs = collect_mutexes_indexes(mutex_collections)
+    for index, edge in (pair for pair in pairs if pair[0] > 0):
+        if edge.second.is_multiple_called:
+            release_edge = next((pair[1] for pair in pairs if pair[0] == -index))
+            if not release_edge.first.is_multiple_called:
+                yield [edge]  # To be compatible with output mechanism
+    mutex_numbers = list((index for index, _ in pairs))
+    mutex_indices = list((i for i, _ in enumerate(mutex_numbers)))
+    for num, index in zip(mutex_numbers, mutex_indices):
+        num_slices = mutex_numbers[index+1:]
+        if num not in num_slices:
+            continue
+        _, *other_nums = mutex_numbers[index:]
+        r = other_nums.index(num)
+        num_slices = other_nums[:r]
+        if -num not in num_slices:
+            yield mutex_collections[index], mutex_collections[other_nums[r]]
 
 
 def detect_deadlock(mascm: MASCM) -> coroutine:
     """ Function is responsible for detecting deadlocks using MASCM """
-    time_units = [unit for unit in mascm.time_units if len(unit) > 1]  # Do not check units with one thread only
-    if not time_units:
-        return None
+    time_units = mascm.time_units
 
     graphs = get_time_units_graphs(time_units, mascm.edges)  # Build full graphs for every time unit
 
-    reported_op = list()
     mutex_collections = list()
     for unit in time_units:
         edges = graphs[str(unit)]
@@ -123,14 +132,19 @@ def detect_deadlock(mascm: MASCM) -> coroutine:
                     collection.append(edge)
                 elif re.match(e.mutex_unlock_edge_exp, str(edge)):
                     collection.append(edge)
-            mutex_collections.append(collection)
+            if collection:
+                mutex_collections.append(collection)
 
-    for s1, s2 in combinations(mutex_collections, 2):
-        for pair in mutually_exclusive_pairs_of_mutex(s1, s2):
-            yield DeadlockType.double_lock, pair
+    if time_units:
+        for s1, s2 in combinations(mutex_collections, 2):
+            for pair in mutually_exclusive_pairs_of_mutex(s1, s2):
+                yield DeadlockType.exclusion_lock, pair
+
+        for mutex_collection in mutex_collections:
+            for edge in missing_unlock(mutex_collection):
+                yield DeadlockType.missing_unlock, [[edge]]
 
     for mutex_collection in mutex_collections:
-        for edge in missing_unlock(mutex_collection):
-            yield DeadlockType.missing_unlock, [[edge]]
+        for pair in double_locks(mutex_collection):
+            yield DeadlockType.double_lock, [pair]
 
-    pass

@@ -6,7 +6,8 @@ __version__ = "0.2"
 from helpers.deadlock_type import DeadlockType
 
 deadlock_causes_str = {
-    DeadlockType.double_lock: "Pair of mutexes are mutually exclusive",
+    DeadlockType.exclusion_lock: "Pair of mutexes are mutually exclusive",
+    DeadlockType.double_lock: "Trying to re-lock locked mutex",
     DeadlockType.missing_unlock: "Mutex is not released",
     DeadlockType.incorrect_lock_type: "Incorrect type of mutex",
 }

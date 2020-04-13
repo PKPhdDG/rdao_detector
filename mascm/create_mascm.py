@@ -141,7 +141,7 @@ def __add_operation_and_edge(mascm, node, thread) -> Operation:
     :param thread: Thread object
     :return: Operation object
     """
-    operation = Operation(node, thread, mascm.threads.index(thread))
+    operation = Operation(node, thread, mascm.threads.index(thread), __is_loop_body)
     keep_operation = __wait_for_operation
     __add_operation_to_mascm(mascm, operation)
     __operation_is_in_forward_relation(mascm, operation)

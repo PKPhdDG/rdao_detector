@@ -10,6 +10,7 @@ from enum import auto, Enum
 
 class DeadlockType(Enum):
     """ Enum which help differentiate between the cause of deadlock """
+    exclusion_lock = auto()
     double_lock = auto()
     missing_unlock = auto()
     incorrect_lock_type = auto()

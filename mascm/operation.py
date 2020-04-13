@@ -11,11 +11,12 @@ import sys
 
 class Operation:
     """Operation class"""
-    def __init__(self, operation_obj: Node, thread, thread_index: int):
+    def __init__(self, operation_obj: Node, thread, thread_index: int, called_in_loop: bool):
         """Ctor
         :param operation_obj: Node obj
         :param thread: Thread object
         :param thread_index: Thread index in the mascm
+        :param called_in_loop: Boolean value  which is True if operation is part of loop body
         """
         self.__operation_obj = operation_obj
         self.__thread = thread
@@ -25,6 +26,7 @@ class Operation:
         self.__name = ""
         self.__args = list()
         self.__is_last_action = False
+        self.is_multiple_called = called_in_loop  # Used generally for pthread_mutex_lock/unlock
         if isinstance(self.__operation_obj, FuncCall):
             self.__name = self.__operation_obj.name.name
             if operation_obj.args is not None:
