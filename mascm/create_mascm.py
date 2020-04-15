@@ -3,7 +3,7 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.2"
 
-from collections import deque
+from collections import deque, defaultdict
 import config as c
 from copy import deepcopy
 from mascm.edge import Edge
@@ -17,7 +17,7 @@ from mascm.time_unit import TimeUnit
 from parsing_utils import Function
 from pycparser.c_ast import *
 import sys
-from typing import Optional
+from typing import Optional, Union as t_Union
 import warnings
 
 __new_time_unit = True
@@ -47,6 +47,9 @@ relations["symmetric"].update(c.relations["symmetric"])
 forward_operations_handler = list()
 backward_operations_handler = dict()
 symmetric_operations_handler = list()
+function_call_stack = deque()
+RECURSION_MAX_DEPTH = 1
+operations_for_return_from_recursion = defaultdict(deque)
 
 
 def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation, resources: list) -> bool:
@@ -106,7 +109,7 @@ def __operation_is_in_symmetric_relation(mascm, operation: Operation):
                 data = next((d for d in symmetric_operations_handler if d["pair"][1] in (pair[1], __func_name1)))
             except StopIteration:
                 continue
-                # TODO Check it for this relation
+            # TODO Check it for this relation
             # if not __operations_used_this_same_shared_resources(data[1], operation, mascm.resources):
             #     continue
             mascm.relations.symmetric.append(Edge(data[1], operation))
@@ -138,7 +141,8 @@ def __add_operation_and_edge(mascm, node, thread) -> Operation:
     :param thread: Thread object
     :return: Operation object
     """
-    operation = Operation(node, thread, mascm.threads.index(thread))
+    operation = Operation(node, thread, mascm.threads.index(thread), __is_loop_body)
+    keep_operation = __wait_for_operation
     __add_operation_to_mascm(mascm, operation)
     __operation_is_in_forward_relation(mascm, operation)
     __operation_is_in_backward_relation(mascm, operation)
@@ -148,7 +152,9 @@ def __add_operation_and_edge(mascm, node, thread) -> Operation:
     last_operation: Operation = mascm.o[-2]
     if last_operation.is_last_action():
         return operation
-    __add_edge_to_mascm(mascm, Edge(last_operation, operation))
+    new_edge = Edge(last_operation, operation)
+    if (not mascm.edges) or ((len(mascm.edges) > 0) and (str(mascm.edges[-1]) != str(new_edge))):
+        __add_edge_to_mascm(mascm, new_edge)
     return operation
 
 
@@ -432,8 +438,9 @@ def __parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread) -> Opera
     return operation
 
 
-def __parse_statement(mascm, node: Compound, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> list:
-    """Function parsing Compode type node with functions/loops/if's body
+def __parse_statement(mascm, node: t_Union[Compound, FuncCall], functions_definition: dict, thread: Thread,
+                      time_unit: TimeUnit) -> list:
+    """Function parsing Compound type node with functions/loops/if's body
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: If object
     :param functions_definition: dict with user functions
@@ -480,9 +487,24 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
             elif fcall_name == "pthread_mutex_unlock":
                 __parse_pthread_mutex_unlock(mascm, child, thread)
             elif fcall_name in functions_definition.keys():
+                # To avoid crash on recursion
+                num_of_calls = len([fname for fname in function_call_stack if fname == fcall_name])
+                if num_of_calls > RECURSION_MAX_DEPTH:
+                    operations_for_return_from_recursion[fcall_name].append(mascm.operations[-1])
+                    continue
+                operations_for_return_from_recursion[fcall_name].append(mascm.operations[-1])
+                function_call_stack.appendleft(fcall_name)
                 result = __parse_function_call(mascm, functions_definition[fcall_name], functions_definition, thread,
                                                time_unit)
                 functions_call.extend(result)
+                num_of_calls = len([fname for fname in function_call_stack if fname == fcall_name])
+                if num_of_calls > 1 and operations_for_return_from_recursion[fcall_name]:
+                    __add_edge_to_mascm(
+                        mascm, Edge(mascm.operations[-1], operations_for_return_from_recursion[fcall_name].pop())
+                    )
+                else:
+                    operations_for_return_from_recursion[fcall_name].pop()
+                function_call_stack.remove(fcall_name)
             else:
                 if (thread not in mascm.u[-1]) and not __new_time_unit:
                     thread.set_always_parallel()
@@ -493,8 +515,16 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
                         mascm.time_units[-1], key=lambda t: t.index
                     )
 
+                if fcall_name == "pthread_mutexattr_settype":
+                    attrs_name = child.args.exprs[0].expr.name
+                    attrs_type = child.args.exprs[1].name
+                    mascm.mutex_attrs[attrs_name] = attrs_type
+                elif fcall_name == "pthread_mutex_init":
+                    mutex = child.args.exprs[0].expr.name
+                    attrs_identifier = child.args.exprs[1].expr.name
+                    mascm.set_mutex_type(mutex, attrs_identifier)
+
                 operation: Operation = __add_operation_and_edge(mascm, child, thread)
-                # TODO This should be done in other function
                 if child.name.name in ignored_c_functions:
                     for builtin_resource in child.args.exprs:
                         if isinstance(builtin_resource, ID):  # For values
@@ -515,6 +545,8 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
                     continue
                 functions_call.extend(__parse_function_call(mascm, functions_definition[fcall_name],
                                                             functions_definition, thread, time_unit))
+            if isinstance(child, Decl) and isinstance(child.init, FuncCall) and 'pthread_mutexattr_t' in child.type.type.names:
+                mascm.mutex_attrs[child.type.declname] = ""
             elif isinstance(child, BinaryOp):
                 if isinstance(child.left, FuncCall):
                     functions_call.extend(__parse_statement(mascm, child.left, functions_definition, thread, time_unit))
@@ -522,6 +554,11 @@ def __parse_statement(mascm, node: Compound, functions_definition: dict, thread:
                     functions_call.extend(
                         __parse_statement(mascm, child.right, functions_definition, thread, time_unit)
                     )
+            elif isinstance(child, Return) and isinstance(child.expr, FuncCall):
+                    functions_call.extend(
+                        __parse_statement(mascm, child.expr, functions_definition, thread, time_unit)
+                    )
+
             __add_operation_and_edge(mascm, child, thread)
         elif isinstance(child, If):
             functions_call.extend(__parse_if_statement(mascm, child, functions_definition, thread, time_unit))

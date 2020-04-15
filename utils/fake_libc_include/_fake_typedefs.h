@@ -172,5 +172,9 @@ typedef uint32_t xcb_visualid_t;
 /* Custom */
 
 typedef uint32_t socklen_t;
+//#define PTHREAD_MUTEX_NORMAL 0
+//#define PTHREAD_MUTEX_ERRORCHECK 1
+//#define PTHREAD_MUTEX_RECURSIVE 2
+//#define PTHREAD_MUTEX_DEFAULT PTHREAD_MUTEX_NORMAL
 
 #endif

@@ -5,6 +5,7 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.2"
 
+from tests.rdao_tests.deadlock_test import DetectDeadlockTest
 from tests.rdao_tests.race_condition_test import DetectRaceConditionTest
 import unittest
 

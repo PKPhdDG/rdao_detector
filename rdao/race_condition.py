@@ -57,7 +57,7 @@ class GraphComparator:
                 elif c.DEBUG:
                     print(f"Skipped edge: {edge}")
 
-        if (not possible_conflicts) and (locks[0] != locks[1]):
+        if (not possible_conflicts) and not set(locks[0]).intersection(locks[1]):
             intersection = set(resources[0]).intersection(resources[1])
             if intersection:
                 return resource_edges[0] + resource_edges[1]
@@ -76,7 +76,7 @@ class GraphComparator:
 
 
 def detect_race_condition(mascm: MASCM) -> coroutine:
-    """ Function is responsible for detecting race condition using MASCM """
+    """ Function is responsible for detecting race conditions using MASCM """
     time_units = [unit for unit in mascm.time_units if len(unit) > 1]  # Do not check units with one thread only
     if not time_units:
         return None
@@ -101,7 +101,7 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
                     subgraph.append(edge)
                 elif re.match(e.dependency_edge_exp, str(edge)):
                     subgraph.append(edge)
-                if re.match(e.usage_edge_exp, str(edge)):
+                elif re.match(e.usage_edge_exp, str(edge)):
                     subgraph.append(edge)
             subgraphs.append(subgraph)
 
