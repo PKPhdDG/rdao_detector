@@ -1,0 +1,31 @@
+#!/usr/bin/env python3.7
+
+__author__ = "Damian Giebas"
+__email__ = "damian.giebas@gmail.com"
+__license__ = "GNU/GPLv3"
+__version__ = "0.3"
+
+import config as c
+from collections import deque
+from helpers.purifier import purify
+from mascm import create_mascm
+from os.path import join
+from pycparser import parse_file
+from rdao import detect_atomicity_violation
+from tests.test_base import TestBase
+import unittest
+
+
+class DetectAtomicityViolationTest(unittest.TestCase, TestBase):
+    def test_atomicity_violation1(self):
+        file_to_parse = "atomicity_violation1.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        c.relations["symmetric"].append(('++', 'printf'))
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            mascm = create_mascm(deque([ast]))
+        result = list(detect_atomicity_violation(mascm))
+
+
+if "__main__" == __name__:
+    unittest.main()

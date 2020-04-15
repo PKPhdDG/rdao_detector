@@ -1,7 +1,7 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.2"
+__version__ = "0.3"
 
 from collections import deque, defaultdict
 import config as c
@@ -41,9 +41,7 @@ relations: dict = {  # Names of functions between which there are sequential rel
                  ('calloc', 'realloc'), ('malloc', 'realloc'), ('srand', 'rand')},
     'symmetric': {('va_start', 'va_arg'), ('va_arg', 'va_end')}
 }
-relations["forward"].update(c.relations["forward"])
-relations["backward"].update(c.relations["backward"])
-relations["symmetric"].update(c.relations["symmetric"])
+
 forward_operations_handler = list()
 backward_operations_handler = dict()
 symmetric_operations_handler = list()
@@ -62,6 +60,7 @@ def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation,
 
 def __operation_is_in_forward_relation(mascm, operation: Operation):
     """Function check the operation can be a part of forward relation, and create it"""
+    relations["forward"].update(c.relations["forward"])
     for pair in relations["forward"]:
         __func_name0 = __macro_func_pref.format(pair[0])
         __func_name1 = __macro_func_pref.format(pair[1])
@@ -81,6 +80,7 @@ def __operation_is_in_forward_relation(mascm, operation: Operation):
 
 def __operation_is_in_backward_relation(mascm, operation: Operation):
     """Function check the operation can be a part of backward relation, and create it"""
+    relations["backward"].update(c.relations["backward"])
     for pair in relations["backward"]:
         __func_name0 = __macro_func_pref.format(pair[0])
         __func_name1 = __macro_func_pref.format(pair[1])
@@ -98,6 +98,7 @@ def __operation_is_in_backward_relation(mascm, operation: Operation):
 
 def __operation_is_in_symmetric_relation(mascm, operation: Operation):
     """Function check the operation can be a part of symmetric relation, and create it"""
+    relations["symmetric"].update(c.relations["symmetric"])
     for pair in relations["symmetric"]:
         __func_name0 = __macro_func_pref.format(pair[0])
         __func_name1 = __macro_func_pref.format(pair[1])
@@ -142,7 +143,6 @@ def __add_operation_and_edge(mascm, node, thread) -> Operation:
     :return: Operation object
     """
     operation = Operation(node, thread, mascm.threads.index(thread), __is_loop_body)
-    keep_operation = __wait_for_operation
     __add_operation_to_mascm(mascm, operation)
     __operation_is_in_forward_relation(mascm, operation)
     __operation_is_in_backward_relation(mascm, operation)

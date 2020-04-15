@@ -3,7 +3,7 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.2"
+__version__ = "0.3"
 
 import argparse
 from helpers import lock_types_str, deadlock_causes_str
@@ -39,6 +39,11 @@ def main():
         for edge in chain(*el):
             print(f"\t\t{edge.second.node.coord}", end=" ")
             print(f"using mutex variable {edge.first.name} of type {lock_types_str[edge.first.type]}")
+    print("="*60)
+
+    print("Atomicity violations:")
+    for el in detect_deadlock(mascm):
+        print(el)
     print("="*60)
 
 

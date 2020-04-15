@@ -3,12 +3,13 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.2"
+__version__ = "0.3"
 
 from helpers import DeadlockType, get_time_units_graphs, expressions as e
 from itertools import combinations
 from mascm import MultithreadedApplicationSourceCodeModel as MASCM
 import re
+import sys
 from typing import Iterable, Sequence
 from types import coroutine
 
@@ -114,7 +115,7 @@ def double_locks(mutex_collections: Iterable) -> coroutine:
 
 def recursion_locks(mutex_collections: Iterable) -> coroutine:
     """ Function is responsible for detect not PMR locks in recursion function """
-    print("recursion locks not implemented yet!")
+    print("recursion locks not implemented yet!", file=sys.stderr)
     yield None
 
 

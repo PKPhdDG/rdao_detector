@@ -1,11 +1,11 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.2"
+__version__ = "0.3"
 
 import config as c
 from mascm.resource import Resource
-from pycparser.c_ast import Decl, FuncCall, ID, Node, Return
+from pycparser.c_ast import Decl, FuncCall, ID, Node, Return, UnaryOp
 import sys
 
 
@@ -29,8 +29,11 @@ class Operation:
         self.is_multiple_called = called_in_loop  # Used generally for pthread_mutex_lock/unlock
         if isinstance(self.__operation_obj, FuncCall):
             self.__name = self.__operation_obj.name.name
-            if operation_obj.args is not None:
-                self.__args.extend(operation_obj.args.exprs)
+            if self.__operation_obj.args is not None:
+                self.__args.extend(self.__operation_obj.args.exprs)
+        elif isinstance(self.__operation_obj, UnaryOp):
+            self.__name = self.__operation_obj.op
+            self.__args.extend(self.__operation_obj.expr)
         if isinstance(self.__operation_obj, Return):
             self.__is_last_action = True
 
