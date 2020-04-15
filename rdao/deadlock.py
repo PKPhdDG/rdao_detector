@@ -112,6 +112,12 @@ def double_locks(mutex_collections: Iterable) -> coroutine:
             yield mutex_collections[index], mutex_collections[other_nums[r]]
 
 
+def recursion_locks(mutex_collections: Iterable) -> coroutine:
+    """ Function is responsible for detect not PMR locks in recursion function """
+    print("recursion locks not implemented yet!")
+    yield None
+
+
 def detect_deadlock(mascm: MASCM) -> coroutine:
     """ Function is responsible for detecting deadlocks using MASCM """
     time_units = mascm.time_units
@@ -148,3 +154,4 @@ def detect_deadlock(mascm: MASCM) -> coroutine:
         for pair in double_locks(mutex_collection):
             yield DeadlockType.double_lock, [pair]
 
+    next(recursion_locks(mutex_collections))
