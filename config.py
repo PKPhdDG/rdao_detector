@@ -5,7 +5,7 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.3"
 
-DEBUG = True
+DEBUG = False
 
 main_function_name: str = "main"  # Name of main function in application
 # Builtin elemental functions

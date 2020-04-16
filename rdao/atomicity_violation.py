@@ -5,6 +5,9 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.3"
 
+from copy import copy
+from collections import defaultdict
+import config as c
 from helpers import get_time_units_graphs, expressions as e
 from itertools import combinations
 from mascm import MultithreadedApplicationSourceCodeModel as MASCM, Resource
@@ -13,20 +16,71 @@ import sys
 from types import coroutine
 
 
+class RDAOException(BaseException):
+    """ RDAO Exception """
+    pass
+
+
+def group_operations_by_critical_section(graph: list) -> dict:
+    """ Function is responsible for group operations by critical_sections  """
+    critical_sections_operations = defaultdict(list)
+    critical_sections_stack = []
+    critical_section_number = 0
+    for edge in graph:
+        if re.match(e.mutex_lock_edge_exp, str(edge)):
+            if not critical_sections_stack:
+                critical_section_number += 1
+            critical_sections_stack.append(edge.first)
+            continue
+        elif re.match(e.mutex_unlock_edge_exp, str(edge)):
+            critical_sections_stack.remove(edge.second)
+            continue
+        if critical_sections_stack:
+            if re.match(e.usage_edge_exp, str(edge)):
+                critical_sections_operations[critical_section_number].append(
+                    (edge.first, edge.second, copy(critical_sections_stack), edge)
+                )
+            elif re.match(e.dependency_edge_exp, str(edge)):
+                critical_sections_operations[critical_section_number].append(
+                    (edge.second, edge.first, copy(critical_sections_stack), edge)
+                )
+    return critical_sections_operations
+
+
 def detect_violation(first: list, second: list, relation: list) -> list:
     """ Function is responsible for detect """
+    EDGE_POS = 3
     f_op, s_op = relation
-    # TODO Re-implement code bellow to detect critical sectionsu
-    op_edges = list((edge for edge in first if edge.first in relation or edge.second in relation))
+    def is_in_the_section(op, collection):
+        return collection[0] == op
+    critical_sections_operations = group_operations_by_critical_section(first)
+    split_sections = list()
+    operations_atomicity_violated = list()
+    for _, section_ops in critical_sections_operations.items():
+        for section_op in section_ops:
+            if is_in_the_section(f_op, section_op) and not is_in_the_section(s_op, section_op):
+                split_sections.append(section_op)
+                operations_atomicity_violated.append(section_op[EDGE_POS])
+            elif is_in_the_section(s_op, section_op) and not is_in_the_section(f_op, section_op):
+                split_sections.append(section_op)
+                operations_atomicity_violated.append(section_op[EDGE_POS])
+    if len(split_sections) > 2:
+        if c.DEBUG:
+            print(f"Unexpected sections: {split_sections}", file=sys.stderr)
+        raise RDAOException(f"Unexpected sections: {split_sections}")
+    if len(split_sections) < 2:
+        return []
+    if c.DEBUG and split_sections[0][1] != split_sections[1][1]:
+        print(f"Pair related operations use two different resources:{split_sections[0][1], split_sections[1][1]}",
+              file=sys.stderr)
 
-    used_resources = list()
-    for edge in op_edges:
-        if isinstance(edge.first, Resource):
-            used_resources.append(edge.first)
-        elif isinstance(edge.second, Resource):
-            used_resources.append(edge.second)
-
-
+    shared_resource = split_sections[0][1]
+    for edge in second:
+        if re.match(e.usage_edge_exp, str(edge)) and (edge.second == shared_resource):
+            operations_atomicity_violated.append(edge)
+        elif re.match(e.dependency_edge_exp, str(edge)) and (edge.first == shared_resource):
+            operations_atomicity_violated.append(edge)
+    return operations_atomicity_violated
 
 
 def forward_relation_violated(graph: list, relations: list) -> coroutine:
@@ -44,10 +98,14 @@ def backward_relation_violated(graph: list, relations: list) -> coroutine:
 def symmetric_relation_violated(first: list, second: list, relations: list) -> coroutine:
     """ Function detect atomicity violation in symmetric relation """
     for relation in relations:
-        result = set()
-        result.add(detect_violation(first, second, relation))
-        result.add(detect_violation(second, first, relation))
-        yield result
+        results = list()
+        result = detect_violation(first, second, relation)
+        if result:
+            results.append(result)
+        result = detect_violation(second, first, relation)
+        if result:
+            results.append(result)
+        yield results
 
 
 def detect_atomicity_violation(mascm: MASCM) -> coroutine:

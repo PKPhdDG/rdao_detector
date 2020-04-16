@@ -26,6 +26,18 @@ class DetectAtomicityViolationTest(unittest.TestCase, TestBase):
             mascm = create_mascm(deque([ast]))
         result = list(detect_atomicity_violation(mascm))
 
+        self.assertEqual(2, len(result))
+        # First thread
+        self.assertEqual(mascm.edges[9], result[0][0][0])
+        self.assertEqual(mascm.edges[16], result[0][0][1])
+        self.assertEqual(mascm.edges[25], result[0][0][2])
+        self.assertEqual(mascm.edges[32], result[0][0][3])
+        # Second thread
+        self.assertEqual(mascm.edges[25], result[1][0][0])
+        self.assertEqual(mascm.edges[32], result[1][0][1])
+        self.assertEqual(mascm.edges[9], result[1][0][2])
+        self.assertEqual(mascm.edges[16], result[1][0][3])
+
 
 if "__main__" == __name__:
     unittest.main()

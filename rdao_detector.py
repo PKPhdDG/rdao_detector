@@ -6,19 +6,42 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.3"
 
 import argparse
+import config as c
 from helpers import lock_types_str, deadlock_causes_str
+from helpers.rdao_helper import get_operation_from_edge, get_operation_name_from_edge
 from itertools import chain
 from mascm_generator import create_ast, create_mascm
-from rdao import detect_deadlock, detect_race_condition
+from rdao import detect_atomicity_violation, detect_deadlock, detect_race_condition
+
+
+def functions_pair(arg) -> tuple:
+    """ Function split arguments using coma as delimiter """
+    if arg:
+        return tuple(pair for pair in arg.split(","))
+    return tuple()
+
 
 parser = argparse.ArgumentParser(description='Detect RDAO Bugs')
 parser.add_argument('path', type=str, help="Paths to source code")
+parser.add_argument(
+    '--forward-rel-pairs', type=functions_pair, help="Pairs of functions with forwards relation", default="", nargs="+"
+)
+parser.add_argument(
+    '--backward-rel-pairs', type=functions_pair, help="Pairs of functions with backward relation", default="", nargs="+"
+)
+parser.add_argument(
+    '--symmetric-rel-pairs', type=functions_pair, help="Pairs of functions with symmetric relation", default="",
+    nargs="+"
+)
 
 
 def main():
     """ Main function
     """
     args = parser.parse_args()
+    c.relations['forward'].extend(args.forward_rel_pairs)
+    c.relations['backward'].extend(args.backward_rel_pairs)
+    c.relations['symmetric'].extend(args.symmetric_rel_pairs)
     mascm = create_mascm(create_ast(args.path))
 
     print("Race conditions:")
@@ -42,8 +65,16 @@ def main():
     print("="*60)
 
     print("Atomicity violations:")
-    for el in detect_deadlock(mascm):
-        print(el)
+    for collection in detect_atomicity_violation(mascm):
+        for f_edge, s_edge, *rest in collection:
+            f_name = get_operation_name_from_edge(f_edge)
+            s_name = get_operation_name_from_edge(s_edge)
+            print(f"\tAtomicity violation detect for pair: {f_name}, {s_name}")
+            print(f"\t\t{f_name} is located in: {get_operation_from_edge(f_edge).node.coord}")
+            print(f"\t\t{s_name} is located in: {get_operation_from_edge(s_edge).node.coord}")
+            for edge in rest:
+                print(f"\t\tViolation is cause by: {get_operation_name_from_edge(edge)}")
+                print(f"\t\tViolating operation is located in: {get_operation_from_edge(edge).node.coord}")
     print("="*60)
 
 
