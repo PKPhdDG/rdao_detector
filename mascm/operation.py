@@ -5,7 +5,7 @@ __version__ = "0.3"
 
 import logging
 from mascm.resource import Resource
-from pycparser.c_ast import Decl, FuncCall, ID, Node, Return, UnaryOp
+from pycparser.c_ast import Constant, Decl, FuncCall, ID, Node, Return, UnaryOp
 import sys
 
 
@@ -25,6 +25,7 @@ class Operation:
         self.__operation_number = self.__thread.num_of_operations()
         self.__name = ""
         self.__args = list()
+        self.__ignored_arg_types = (Constant,)
         self.__is_last_action = False
         self.is_multiple_called = called_in_loop  # Used generally for pthread_mutex_lock/unlock
         if isinstance(self.__operation_obj, FuncCall):
@@ -36,6 +37,8 @@ class Operation:
             self.__args.append(self.__operation_obj.expr)
         if isinstance(self.__operation_obj, Return):
             self.__is_last_action = True
+
+
 
     @property
     def index(self):
@@ -88,7 +91,8 @@ class Operation:
                 if resource.has_name(arg.name):
                     return True
             else:
-                logging.warning(f"Cannot handle arg: {arg}")
+                if not isinstance(arg, self.__ignored_arg_types):
+                    logging.warning(f"Cannot handle arg: {arg}")
         return False
 
     def is_operation_of_thread(self, other_thread) -> bool:
