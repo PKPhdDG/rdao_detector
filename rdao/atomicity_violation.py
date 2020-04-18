@@ -11,6 +11,7 @@ import config as c
 from helpers import get_time_units_graphs, expressions as e
 from helpers.exceptions import RDAOException
 from itertools import combinations
+import logging
 from mascm import MultithreadedApplicationSourceCodeModel as MASCM, Resource
 import re
 import sys
@@ -63,14 +64,14 @@ def detect_violation(first: list, second: list, relation: list) -> list:
                 split_sections.append(section_op)
                 operations_atomicity_violated.append(section_op[EDGE_POS])
     if len(split_sections) > 2:
-        if c.DEBUG:
-            print(f"Unexpected sections: {split_sections}", file=sys.stderr)
+        logging.warning(f"Unexpected sections: {split_sections}")
         raise RDAOException(f"Unexpected sections: {split_sections}")
     if len(split_sections) < 2:
         return []
-    if c.DEBUG and split_sections[0][1] != split_sections[1][1]:
-        print(f"Pair related operations use two different resources:{split_sections[0][1], split_sections[1][1]}",
-              file=sys.stderr)
+    if split_sections[0][1] != split_sections[1][1]:
+        logging.warning(
+            f"Pair related operations use two different resources:{split_sections[0][1], split_sections[1][1]}"
+        )
 
     shared_resource = split_sections[0][1]
     for edge in second:
@@ -81,19 +82,7 @@ def detect_violation(first: list, second: list, relation: list) -> list:
     return operations_atomicity_violated
 
 
-def forward_relation_violated(graph: list, relations: list) -> coroutine:
-    """ Function detect atomicity violation in forward relation """
-    print("atomicity violation for forward relation not implemented yet!", file=sys.stderr)
-    yield None
-
-
-def backward_relation_violated(graph: list, relations: list) -> coroutine:
-    """ Function detect atomicity violation in backward relation """
-    print("atomicity violation for backward relation not implemented yet!", file=sys.stderr)
-    yield None
-
-
-def symmetric_relation_violated(first: list, second: list, relations: list) -> coroutine:
+def find_violated_relations(first: list, second: list, relations: list) -> coroutine:
     """ Function detect atomicity violation in symmetric relation """
     for relation in relations:
         results = list()
@@ -136,8 +125,10 @@ def detect_atomicity_violation(mascm: MASCM) -> coroutine:
             if subgraph:
                 subgraphs.append(subgraph)
 
-    next(forward_relation_violated(subgraphs, mascm.relations.forward))
-    next(backward_relation_violated(subgraphs, mascm.relations.backward))
     for f, s in combinations(subgraphs, 2):
-        for violation in symmetric_relation_violated(f, s, mascm.relations.symmetric):
+        for violation in find_violated_relations(f, s, mascm.relations.forward):
+            yield violation
+        for violation in find_violated_relations(f, s, mascm.relations.backward):
+            yield violation
+        for violation in find_violated_relations(f, s, mascm.relations.symmetric):
             yield violation

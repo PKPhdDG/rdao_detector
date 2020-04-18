@@ -6,6 +6,7 @@ __version__ = "0.3"
 from collections import deque, defaultdict
 import config as c
 from copy import deepcopy
+import logging
 from mascm.edge import Edge
 from mascm.lock import Lock
 from mascm.mascm import MultithreadedApplicationSourceCodeModel
@@ -323,8 +324,8 @@ def __parse_global_trees(mascm, asts: deque) -> dict:
                 __add_resource_to_mascm(mascm, node)
             elif isinstance(node, Decl) and isinstance(node.type, FuncDecl):
                 expected_definitions.append(node)
-            elif c.DEBUG:
-                print(node, "is not expected", file=sys.stderr)
+            else:
+                logging.debug(f"{node} is not expected")
     return functions_definition
 
 
@@ -587,10 +588,9 @@ def __parse_statement(mascm, node: t_Union[Compound, FuncCall], functions_defini
         elif isinstance(child, UnaryOp) and (child.op in expected_unary_operations):
             __parse_unary_operator(mascm, child, thread)
         elif isinstance(child, ignored_types):
-            if c.DEBUG:
-                print("Ignored node: ", child, file=sys.stderr)
-        elif c.DEBUG:
-            print("Not expected node:", child, file=sys.stderr)
+            logging.warning(f"Ignored node: {child}")
+        else:
+            logging.warning(f"Not expected node: {child}")
 
     return functions_call
 

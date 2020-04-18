@@ -7,6 +7,7 @@ __version__ = "0.3"
 
 from helpers import DeadlockType, get_time_units_graphs, expressions as e
 from itertools import combinations
+import logging
 from mascm import MultithreadedApplicationSourceCodeModel as MASCM
 import re
 import sys
@@ -115,7 +116,7 @@ def double_locks(mutex_collections: Iterable) -> coroutine:
 
 def recursion_locks(mutex_collections: Iterable) -> coroutine:
     """ Function is responsible for detect not PMR locks in recursion function """
-    print("recursion locks not implemented yet!", file=sys.stderr)
+    logging.critical("recursion locks not implemented yet!")
     yield None
 
 

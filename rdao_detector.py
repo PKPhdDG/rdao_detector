@@ -10,6 +10,7 @@ import config as c
 from helpers import lock_types_str, deadlock_causes_str
 from helpers.rdao_helper import get_operation_from_edge, get_operation_name_from_edge, get_resource_name_from_edge
 from itertools import chain
+import logging
 from mascm_generator import create_ast, create_mascm
 from rdao import detect_atomicity_violation, detect_deadlock, detect_race_condition
 
@@ -38,6 +39,10 @@ def functions_pair(arg) -> tuple:
 parser = argparse.ArgumentParser(description='Detect RDAO Bugs')
 parser.add_argument('path', type=str, help="Paths to source code")
 parser.add_argument(
+    '--log-level', choices=(logging.DEBUG, logging.INFO, logging.WARN, logging.ERROR, logging.CRITICAL),
+    default=logging.INFO
+)
+parser.add_argument(
     '--forward-rel-pairs', type=functions_pair, help="Pairs of functions with forwards relation", default="", nargs="+"
 )
 parser.add_argument(
@@ -56,6 +61,7 @@ def main():
     c.relations['forward'].extend(args.forward_rel_pairs)
     c.relations['backward'].extend(args.backward_rel_pairs)
     c.relations['symmetric'].extend(args.symmetric_rel_pairs)
+    logging.basicConfig(filename="rdao.log", level=args.log_level)
     mascm = create_mascm(create_ast(args.path))
 
     print("Race conditions:")

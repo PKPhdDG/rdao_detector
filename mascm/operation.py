@@ -3,7 +3,7 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.3"
 
-import config as c
+import logging
 from mascm.resource import Resource
 from pycparser.c_ast import Decl, FuncCall, ID, Node, Return, UnaryOp
 import sys
@@ -87,8 +87,8 @@ class Operation:
             elif isinstance(arg, Decl) and hasattr(arg, "name"):
                 if resource.has_name(arg.name):
                     return True
-            elif c.DEBUG:
-                print(f"Cannot handle arg: {arg}", file=sys.stderr)
+            else:
+                logging.warning(f"Cannot handle arg: {arg}")
         return False
 
     def is_operation_of_thread(self, other_thread) -> bool:
