@@ -54,6 +54,8 @@ def detect_violation(first: list, second: list, relation: list) -> list:
     def is_in_the_section(op, collection):
         return collection[0] == op
     critical_sections_operations = group_operations_by_critical_section(first)
+    if len(critical_sections_operations) < 2:
+        return []
     split_sections = list()
     operations_atomicity_violated = list()
     for _, section_ops in critical_sections_operations.items():
@@ -105,7 +107,8 @@ def symmetric_relation_violated(first: list, second: list, relations: list) -> c
         result = detect_violation(second, first, relation)
         if result:
             results.append(result)
-        yield results
+        if results:
+            yield results
 
 
 def detect_atomicity_violation(mascm: MASCM) -> coroutine:
