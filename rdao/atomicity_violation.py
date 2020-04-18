@@ -9,16 +9,12 @@ from copy import copy
 from collections import defaultdict
 import config as c
 from helpers import get_time_units_graphs, expressions as e
+from helpers.exceptions import RDAOException
 from itertools import combinations
 from mascm import MultithreadedApplicationSourceCodeModel as MASCM, Resource
 import re
 import sys
 from types import coroutine
-
-
-class RDAOException(BaseException):
-    """ RDAO Exception """
-    pass
 
 
 def group_operations_by_critical_section(graph: list) -> dict:

@@ -35,11 +35,11 @@ ignored_c_functions.extend(c.ignored_c_functions)
 ignored_types = (Constant, ID, Typename, ExprList)
 main_function_name = c.main_function_name if hasattr(c, "main_function_name") else "main"
 relations: dict = {  # Names of functions between which there are sequential relationships
-    'forward': {('calloc', 'free'), ('malloc', 'free')},
-    'backward': {('fopen', 'strerror'), ('fgetpos', 'strerror'), ('fsetpos', 'strerror'), ('fell', 'strerror'),
+    'forward': [('calloc', 'free'), ('malloc', 'free')],
+    'backward': [('fopen', 'strerror'), ('fgetpos', 'strerror'), ('fsetpos', 'strerror'), ('fell', 'strerror'),
                  ('atof', 'strerror'), ('strtod', 'strerror'), ('strtol', 'strerror'), ('strtoul', 'strerror'),
-                 ('calloc', 'realloc'), ('malloc', 'realloc'), ('srand', 'rand')},
-    'symmetric': {('va_start', 'va_arg'), ('va_arg', 'va_end')}
+                 ('calloc', 'realloc'), ('malloc', 'realloc'), ('srand', 'rand')],
+    'symmetric': [('va_start', 'va_arg'), ('va_arg', 'va_end')]
 }
 
 forward_operations_handler = list()
@@ -72,8 +72,8 @@ def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation,
 
 def __operation_is_in_forward_relation(mascm, operation: Operation):
     """Function check the operation can be a part of forward relation, and create it"""
-    relations["forward"].update(c.relations["forward"])
-    for pair in relations["forward"]:
+    forward_relations = set(relations["forward"] + c.relations["forward"])
+    for pair in forward_relations:
         __func_name0 = __macro_func_pref.format(pair[0])
         __func_name1 = __macro_func_pref.format(pair[1])
 
@@ -92,8 +92,8 @@ def __operation_is_in_forward_relation(mascm, operation: Operation):
 
 def __operation_is_in_backward_relation(mascm, operation: Operation):
     """Function check the operation can be a part of backward relation, and create it"""
-    relations["backward"].update(c.relations["backward"])
-    for pair in relations["backward"]:
+    backward_relations = set(relations["backward"] + c.relations["backward"])
+    for pair in backward_relations:
         __func_name0 = __macro_func_pref.format(pair[0])
         __func_name1 = __macro_func_pref.format(pair[1])
 
@@ -110,8 +110,8 @@ def __operation_is_in_backward_relation(mascm, operation: Operation):
 
 def __operation_is_in_symmetric_relation(mascm, operation: Operation):
     """Function check the operation can be a part of symmetric relation, and create it"""
-    relations["symmetric"].update(c.relations["symmetric"])
-    for pair in relations["symmetric"]:
+    symmetric_relations = set(relations["symmetric"] + c.relations["symmetric"])
+    for pair in symmetric_relations:
         __func_name0 = __macro_func_pref.format(pair[0])
         __func_name1 = __macro_func_pref.format(pair[1])
 

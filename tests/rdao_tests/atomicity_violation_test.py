@@ -17,6 +17,12 @@ import unittest
 
 
 class DetectAtomicityViolationTest(unittest.TestCase, TestBase):
+    def setUp(self) -> None:
+        super(DetectAtomicityViolationTest, self).setUp()
+        c.relations["forward"] = []
+        c.relations["backward"] = []
+        c.relations["symmetric"] = []
+
     def test_atomicity_violation1(self):
         file_to_parse = "atomicity_violation1.c"
         file_path = join(self.source_path_prefix, file_to_parse)
@@ -78,11 +84,35 @@ class DetectAtomicityViolationTest(unittest.TestCase, TestBase):
             mascm = create_mascm(deque([ast]))
         result = list(detect_atomicity_violation(mascm))
 
-        self.assertEqual(1, len(result))
+        self.assertEqual(2, len(result))
         # First thread
-        self.assertEqual(mascm.edges[11], result[0][0][0])
-        self.assertEqual(mascm.edges[27], result[0][0][1])
-        self.assertEqual(mascm.edges[41], result[0][0][2])
+        self.assertEqual(mascm.edges[13], result[0][0][0])
+        self.assertEqual(mascm.edges[22], result[0][0][1])
+        self.assertEqual(mascm.edges[30], result[0][0][2])
+
+        self.assertEqual(mascm.edges[15], result[1][0][0])
+        self.assertEqual(mascm.edges[24], result[1][0][1])
+        self.assertEqual(mascm.edges[32], result[1][0][2])
+
+    def test_atomicity_violation5(self):
+        file_to_parse = "atomicity_violation5.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        c.relations["symmetric"].append(('++', 'printf'))
+        c.relations["symmetric"].append(('--', 'printf'))
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            mascm = create_mascm(deque([ast]))
+        result = list(detect_atomicity_violation(mascm))
+
+        self.assertEqual(2, len(result))
+        # First thread
+        self.assertEqual(mascm.edges[13], result[0][0][0])
+        self.assertEqual(mascm.edges[24], result[0][0][1])
+        self.assertEqual(mascm.edges[30], result[0][0][2])
+
+        self.assertEqual(mascm.edges[15], result[1][0][0])
+        self.assertEqual(mascm.edges[26], result[1][0][1])
+        self.assertEqual(mascm.edges[32], result[1][0][2])
 
     def test_no_atomicity_violation1(self):
         file_to_parse = "no_atomicity_violation1.c"
