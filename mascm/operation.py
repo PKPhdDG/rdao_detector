@@ -33,7 +33,7 @@ class Operation:
                 self.__args.extend(self.__operation_obj.args.exprs)
         elif isinstance(self.__operation_obj, UnaryOp):
             self.__name = self.__operation_obj.op
-            self.__args.extend(self.__operation_obj.expr)
+            self.__args.append(self.__operation_obj.expr)
         if isinstance(self.__operation_obj, Return):
             self.__is_last_action = True
 
