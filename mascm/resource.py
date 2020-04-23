@@ -1,16 +1,16 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.2"
+__version__ = "0.3"
 
 from pycparser.c_ast import Node
 
 
 class Resource:
     """ Resource class """
-    def __init__(self, node, num: int, *args):
+    def __init__(self, node, num: int):
         self.__node = node
-        self.__names = set(args)
+        self.__names = {node.name}
         self.__num = num
 
     def add_name(self, name: str):

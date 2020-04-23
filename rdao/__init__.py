@@ -3,7 +3,8 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.2"
+__version__ = "0.3"
 
+from rdao.atomicity_violation import detect_atomicity_violation
 from rdao.deadlock import detect_deadlock
 from rdao.race_condition import detect_race_condition

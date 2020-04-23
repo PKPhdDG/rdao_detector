@@ -1,11 +1,12 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.2"
+__version__ = "0.3"
 
 from collections import deque, defaultdict
 import config as c
 from copy import deepcopy
+import logging
 from mascm.edge import Edge
 from mascm.lock import Lock
 from mascm.mascm import MultithreadedApplicationSourceCodeModel
@@ -35,15 +36,13 @@ ignored_c_functions.extend(c.ignored_c_functions)
 ignored_types = (Constant, ID, Typename, ExprList)
 main_function_name = c.main_function_name if hasattr(c, "main_function_name") else "main"
 relations: dict = {  # Names of functions between which there are sequential relationships
-    'forward': {('calloc', 'free'), ('malloc', 'free')},
-    'backward': {('fopen', 'strerror'), ('fgetpos', 'strerror'), ('fsetpos', 'strerror'), ('fell', 'strerror'),
+    'forward': [('calloc', 'free'), ('malloc', 'free')],
+    'backward': [('fopen', 'strerror'), ('fgetpos', 'strerror'), ('fsetpos', 'strerror'), ('fell', 'strerror'),
                  ('atof', 'strerror'), ('strtod', 'strerror'), ('strtol', 'strerror'), ('strtoul', 'strerror'),
-                 ('calloc', 'realloc'), ('malloc', 'realloc'), ('srand', 'rand')},
-    'symmetric': {('va_start', 'va_arg'), ('va_arg', 'va_end')}
+                 ('calloc', 'realloc'), ('malloc', 'realloc'), ('srand', 'rand')],
+    'symmetric': [('va_start', 'va_arg'), ('va_arg', 'va_end')]
 }
-relations["forward"].update(c.relations["forward"])
-relations["backward"].update(c.relations["backward"])
-relations["symmetric"].update(c.relations["symmetric"])
+
 forward_operations_handler = list()
 backward_operations_handler = dict()
 symmetric_operations_handler = list()
@@ -52,17 +51,30 @@ RECURSION_MAX_DEPTH = 1
 operations_for_return_from_recursion = defaultdict(deque)
 
 
-def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation, resources: list) -> bool:
-    """ If both functions this same resource than they are in relation """
+def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation, resources: list,
+                                                 local_resource: bool = False) -> bool:
+    """If both functions this same resource than they are in relation
+    :param op1: First operation
+    :param op2: Second operation
+    :param resources: shared resource
+    :param local_resource: Flag used to check operations share some local resources
+    :return: Boolean value if true
+    """
+    # Check operations uses even one shared resource
     for resource in resources:
         if op1.has_func_use_the_resource(resource) and op2.has_func_use_the_resource(resource):
             return True
+    if local_resource:
+        for arg in op1.args:
+            if op2.has_func_use_the_resource(Resource(arg, -1)):
+                return True
     return False
 
 
 def __operation_is_in_forward_relation(mascm, operation: Operation):
     """Function check the operation can be a part of forward relation, and create it"""
-    for pair in relations["forward"]:
+    forward_relations = set(relations["forward"] + c.relations["forward"])
+    for pair in forward_relations:
         __func_name0 = __macro_func_pref.format(pair[0])
         __func_name1 = __macro_func_pref.format(pair[1])
 
@@ -81,7 +93,8 @@ def __operation_is_in_forward_relation(mascm, operation: Operation):
 
 def __operation_is_in_backward_relation(mascm, operation: Operation):
     """Function check the operation can be a part of backward relation, and create it"""
-    for pair in relations["backward"]:
+    backward_relations = set(relations["backward"] + c.relations["backward"])
+    for pair in backward_relations:
         __func_name0 = __macro_func_pref.format(pair[0])
         __func_name1 = __macro_func_pref.format(pair[1])
 
@@ -98,7 +111,8 @@ def __operation_is_in_backward_relation(mascm, operation: Operation):
 
 def __operation_is_in_symmetric_relation(mascm, operation: Operation):
     """Function check the operation can be a part of symmetric relation, and create it"""
-    for pair in relations["symmetric"]:
+    symmetric_relations = set(relations["symmetric"] + c.relations["symmetric"])
+    for pair in symmetric_relations:
         __func_name0 = __macro_func_pref.format(pair[0])
         __func_name1 = __macro_func_pref.format(pair[1])
 
@@ -106,12 +120,14 @@ def __operation_is_in_symmetric_relation(mascm, operation: Operation):
             symmetric_operations_handler.append({'pair': pair, 1: operation})
         if operation.name in (pair[1], __func_name1):
             try:
-                data = next((d for d in symmetric_operations_handler if d["pair"][1] in (pair[1], __func_name1)))
+                data = next(
+                    (d for d in symmetric_operations_handler
+                     if (d["pair"][0] in (pair[0], __func_name0)) and (d["pair"][1] in (pair[1], __func_name1)))
+                )
             except StopIteration:
                 continue
-            # TODO Check it for this relation
-            # if not __operations_used_this_same_shared_resources(data[1], operation, mascm.resources):
-            #     continue
+            if not __operations_used_this_same_shared_resources(data[1], operation, mascm.resources, True):
+                continue
             mascm.relations.symmetric.append(Edge(data[1], operation))
             symmetric_operations_handler.remove(data)
 
@@ -142,7 +158,6 @@ def __add_operation_and_edge(mascm, node, thread) -> Operation:
     :return: Operation object
     """
     operation = Operation(node, thread, mascm.threads.index(thread), __is_loop_body)
-    keep_operation = __wait_for_operation
     __add_operation_to_mascm(mascm, operation)
     __operation_is_in_forward_relation(mascm, operation)
     __operation_is_in_backward_relation(mascm, operation)
@@ -178,7 +193,7 @@ def __add_resource_to_mascm(mascm, node) -> None:
     """Add Resource object into MASCM's R set
     :param node: AST Node
     """
-    r = Resource(node, len(mascm.r) + 1, node.name)
+    r = Resource(node, len(mascm.r) + 1)
     mascm.r.append(r)
 
 
@@ -309,8 +324,8 @@ def __parse_global_trees(mascm, asts: deque) -> dict:
                 __add_resource_to_mascm(mascm, node)
             elif isinstance(node, Decl) and isinstance(node.type, FuncDecl):
                 expected_definitions.append(node)
-            elif c.DEBUG:
-                print(node, "is not expected", file=sys.stderr)
+            else:
+                logging.debug(f"{node} is not expected")
     return functions_definition
 
 
@@ -573,10 +588,9 @@ def __parse_statement(mascm, node: t_Union[Compound, FuncCall], functions_defini
         elif isinstance(child, UnaryOp) and (child.op in expected_unary_operations):
             __parse_unary_operator(mascm, child, thread)
         elif isinstance(child, ignored_types):
-            if c.DEBUG:
-                print("Ignored node: ", child, file=sys.stderr)
-        elif c.DEBUG:
-            print("Not expected node:", child, file=sys.stderr)
+            logging.warning(f"Ignored node: {child}")
+        else:
+            logging.warning(f"Not expected node: {child}")
 
     return functions_call
 

@@ -3,9 +3,7 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.2"
-
-DEBUG = True
+__version__ = "0.3"
 
 main_function_name: str = "main"  # Name of main function in application
 # Builtin elemental functions

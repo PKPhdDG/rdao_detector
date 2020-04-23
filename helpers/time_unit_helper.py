@@ -3,11 +3,12 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.2"
+__version__ = "0.3"
 
 from collections import defaultdict
 import config as c
 from helpers import expressions as e
+import logging
 from mascm import Operation, TimeUnit
 import re
 from types import coroutine
@@ -25,8 +26,8 @@ def get_time_unit_edges(time_unit: TimeUnit, edges: list) -> coroutine:
                 yield edge
             elif isinstance(edge.second, Operation) and edge.second.is_operation_of_thread(thread):
                 yield edge
-            elif c.DEBUG:
-                print(f"Skipping edge: {edge}")
+            else:
+                logging.debug(f"Skipping edge: {edge}")
 
 
 def get_time_units_graphs(time_units: list, edges: list) -> defaultdict:
@@ -47,6 +48,6 @@ def get_time_units_graphs(time_units: list, edges: list) -> defaultdict:
                 graphs[key].append(edge)
             elif is_mutex:
                 graphs[key].append(edge)
-            elif c.DEBUG:
-                print(f"Skipping edge: {edge}")
+            else:
+                logging.debug(f"Skipping edge: {edge}")
     return graphs

@@ -3,11 +3,12 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.2"
+__version__ = "0.3"
 
 import config as c
 from helpers import get_time_units_graphs, expressions as e
 from itertools import combinations
+import logging
 from mascm import MultithreadedApplicationSourceCodeModel as MASCM
 import re
 from typing import Optional
@@ -54,8 +55,8 @@ class GraphComparator:
                     resource_edges[index].append(edge)
                     if possible_race_condition:
                         possible_conflicts.append(edge)
-                elif c.DEBUG:
-                    print(f"Skipped edge: {edge}")
+                else:
+                    logging.debug(f"Skipping edge: {edge}")
 
         if (not possible_conflicts) and not set(locks[0]).intersection(locks[1]):
             intersection = set(resources[0]).intersection(resources[1])
@@ -108,8 +109,7 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
     for s1, s2 in combinations(subgraphs, 2):
         comparator = GraphComparator(s1, s2)
         if not comparator.can_be_compared():
-            if c.DEBUG:
-                print(f"Skipping compare of pair: {s1}, {s2}")
+            logging.debug(f"Skipping compare of pair: {s1}, {s2}")
             continue
         for op in comparator.locate_race_condition():
             if op not in reported_op:
