@@ -63,6 +63,13 @@ class Thread:
         """
         return self.__depth
 
+    @property
+    def operations(self):
+        """ Getter
+        :return: Operations
+        """
+        return self.__operations
+
     def set_always_parallel(self):
         """ Mark thread as always parallel """
         self.__thread_does_not_care_about_anything = True

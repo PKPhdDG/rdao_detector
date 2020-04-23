@@ -7,6 +7,7 @@ from collections import deque, defaultdict
 import config as c
 from copy import deepcopy
 import logging
+from itertools import combinations
 from mascm.edge import Edge
 from mascm.lock import Lock
 from mascm.mascm import MultithreadedApplicationSourceCodeModel
@@ -17,7 +18,6 @@ from mascm.thread import Thread
 from mascm.time_unit import TimeUnit
 from parsing_utils import Function
 from pycparser.c_ast import *
-import sys
 from typing import Optional, Union as t_Union
 import warnings
 
@@ -51,6 +51,23 @@ RECURSION_MAX_DEPTH = 1
 operations_for_return_from_recursion = defaultdict(deque)
 
 
+def extract_resource_name(node) -> str:
+    """Function return resource name extracted from node"""
+    try:
+        if isinstance(node, ID):
+            return node.name
+        elif hasattr(node, 'lvalue'):
+            return extract_resource_name(node.lvalue)
+        elif hasattr(node, 'expr'):
+            return extract_resource_name(node.expr)
+        else:
+            logging.WARNING(f"Trying extract name from node: {node}")
+            return node.lvalue.expr.name
+    except AttributeError as ae:
+        logging.CRITICAL(f"Undefined resource node: {node}")
+        raise ae
+
+
 def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation, resources: list,
                                                  local_resource: bool = False) -> bool:
     """If both functions this same resource than they are in relation
@@ -71,7 +88,21 @@ def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation,
     return False
 
 
-def __operation_is_in_forward_relation(mascm, operation: Operation):
+def __find_multithreaded_relations(mascm):
+    """Function check some of the operations of two threads are in relation"""
+    time_units = [unit for unit in mascm.time_units if len(unit) > 1]  # Do not check units with one thread only
+    if not time_units:
+        return
+
+    for time_unit in time_units:
+        for t1, t2 in combinations(time_unit, 2):
+            for op in t1.operations + t2.operations:
+                __operation_is_in_forward_relation(mascm, op, check_thread=False)
+                __operation_is_in_backward_relation(mascm, op, check_thread=False)
+                __operation_is_in_symmetric_relation(mascm, op, check_thread=False)
+
+
+def __operation_is_in_forward_relation(mascm, operation: Operation, check_thread: bool = True):
     """Function check the operation can be a part of forward relation, and create it"""
     forward_relations = set(relations["forward"] + c.relations["forward"])
     for pair in forward_relations:
@@ -87,11 +118,16 @@ def __operation_is_in_forward_relation(mascm, operation: Operation):
                 continue
             if not __operations_used_this_same_shared_resources(data[1], operation, mascm.resources):
                 continue
-            mascm.relations.forward.append(Edge(data[1], operation))
-            forward_operations_handler.remove(data)
+            if check_thread and data[1].thread_index != operation.thread_index:
+                continue
+            edge = Edge(data[1], operation)
+            if (edge not in mascm.relations.forward) and \
+                    not any([pair for pair in mascm.relations.symmetric if data[1] == pair[0]]):
+                mascm.relations.forward.append(edge)
+                forward_operations_handler.remove(data)
 
 
-def __operation_is_in_backward_relation(mascm, operation: Operation):
+def __operation_is_in_backward_relation(mascm, operation: Operation, check_thread: bool = True):
     """Function check the operation can be a part of backward relation, and create it"""
     backward_relations = set(relations["backward"] + c.relations["backward"])
     for pair in backward_relations:
@@ -101,15 +137,20 @@ def __operation_is_in_backward_relation(mascm, operation: Operation):
         if operation.name in (pair[0], __func_name0):
             backward_operations_handler[pair] = operation
         elif operation.name in (pair[1], __func_name1) and (pair in backward_operations_handler.keys()):
+            if check_thread and backward_operations_handler[pair].thread_index != operation.thread_index:
+                continue
             first_operation = backward_operations_handler[pair]
-            del backward_operations_handler[pair]
             # TODO Check it for this relation
             # if not __operations_used_this_same_shared_resources(first_operation, operation, mascm.resources):
             #     continue
-            mascm.relations.backward.append(Edge(first_operation, operation))
+            edge = Edge(first_operation, operation)
+            if (edge not in mascm.relations.backward) and \
+                    not any([pair for pair in mascm.relations.symmetric if first_operation == pair[0]]):
+                mascm.relations.backward.append(edge)
+                del backward_operations_handler[pair]
 
 
-def __operation_is_in_symmetric_relation(mascm, operation: Operation):
+def __operation_is_in_symmetric_relation(mascm, operation: Operation, check_thread: bool = True):
     """Function check the operation can be a part of symmetric relation, and create it"""
     symmetric_relations = set(relations["symmetric"] + c.relations["symmetric"])
     for pair in symmetric_relations:
@@ -128,8 +169,13 @@ def __operation_is_in_symmetric_relation(mascm, operation: Operation):
                 continue
             if not __operations_used_this_same_shared_resources(data[1], operation, mascm.resources, True):
                 continue
-            mascm.relations.symmetric.append(Edge(data[1], operation))
-            symmetric_operations_handler.remove(data)
+            if check_thread and data[1].thread_index != operation.thread_index:
+                continue
+            edge = Edge(data[1], operation)
+            if (edge not in mascm.relations.symmetric) and \
+                    not any([pair for pair in mascm.relations.symmetric if data[1] == pair[0]]):
+                mascm.relations.symmetric.append(edge)
+                symmetric_operations_handler.remove(data)
 
 
 def __add_edge_to_mascm(mascm, edge: Edge) -> None:
@@ -208,7 +254,7 @@ def __parse_assignment(mascm, node: Assignment, functions_definition: dict, thre
     :return: deque object with functions to parse
     """
     functions_call = list()
-    resource_name = node.lvalue.name if isinstance(node.lvalue, ID) else node.lvalue.expr.name
+    resource_name = extract_resource_name(node)
     resource = None
     for shared_resource in mascm.r:
         if resource_name in shared_resource:
@@ -601,7 +647,7 @@ def __parse_unary_operator(mascm, node: UnaryOp, thread: Thread) -> None:
     :param node: Assignment object
     :param thread: Thread object
     """
-    resource_name = node.expr.name
+    resource_name = extract_resource_name(node)
     resource = None
     for shared_resource in mascm.r:
         if resource_name in shared_resource:
@@ -645,11 +691,15 @@ def __put_main_thread_to_model(mascm) -> None:
 def __restore_global_variable() -> None:
     """Function restore global variable to default state
     """
-    global __new_time_unit
-    global __wait_for_operation
+    global __new_time_unit, __wait_for_operation
+    global forward_operations_handler, backward_operations_handler, symmetric_operations_handler, function_call_stack
 
     __new_time_unit = True
     __wait_for_operation = None
+    forward_operations_handler = list()
+    backward_operations_handler = dict()
+    symmetric_operations_handler = list()
+    function_call_stack = deque()
 
 
 def __unexpected_declarations(defined_functions: dict):
@@ -693,6 +743,8 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
 
     if len(mascm.u) > 1:
         __put_main_thread_to_model(mascm)
+
+    __find_multithreaded_relations(mascm)
 
     __restore_global_variable()
     return mascm

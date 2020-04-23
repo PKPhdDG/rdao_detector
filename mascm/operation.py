@@ -38,7 +38,10 @@ class Operation:
         if isinstance(self.__operation_obj, Return):
             self.__is_last_action = True
 
-
+    @property
+    def thread_index(self):
+        """ Thread index """
+        return self.__thread_index
 
     @property
     def index(self):

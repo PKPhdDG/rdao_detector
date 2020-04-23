@@ -10,7 +10,6 @@ from itertools import combinations
 import logging
 from mascm import MultithreadedApplicationSourceCodeModel as MASCM
 import re
-import sys
 from typing import Iterable, Sequence
 from types import coroutine
 
