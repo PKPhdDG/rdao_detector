@@ -6,6 +6,7 @@ __version__ = "0.3"
 from collections import deque, defaultdict
 import config as c
 from copy import deepcopy
+from helpers.mascm_helper import extract_resource_name
 import logging
 from itertools import combinations
 from mascm.edge import Edge
@@ -35,6 +36,7 @@ ignored_c_functions = list()
 ignored_c_functions.extend(c.ignored_c_functions)
 ignored_types = (Constant, ID, Typename, ExprList)
 main_function_name = c.main_function_name if hasattr(c, "main_function_name") else "main"
+memory_allocation_ops = ('malloc', 'calloc', 'realloc')
 relations: dict = {  # Names of functions between which there are sequential relationships
     'forward': [('calloc', 'free'), ('malloc', 'free')],
     'backward': [('fopen', 'strerror'), ('fgetpos', 'strerror'), ('fsetpos', 'strerror'), ('fell', 'strerror'),
@@ -49,23 +51,6 @@ symmetric_operations_handler = list()
 function_call_stack = deque()
 RECURSION_MAX_DEPTH = 1
 operations_for_return_from_recursion = defaultdict(deque)
-
-
-def extract_resource_name(node) -> str:
-    """Function return resource name extracted from node"""
-    try:
-        if isinstance(node, ID):
-            return node.name
-        elif hasattr(node, 'lvalue'):
-            return extract_resource_name(node.lvalue)
-        elif hasattr(node, 'expr'):
-            return extract_resource_name(node.expr)
-        else:
-            logging.WARNING(f"Trying extract name from node: {node}")
-            return node.lvalue.expr.name
-    except AttributeError as ae:
-        logging.CRITICAL(f"Undefined resource node: {node}")
-        raise ae
 
 
 def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation, resources: list,
@@ -83,7 +68,7 @@ def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation,
             return True
     if local_resource:
         for arg in op1.args:
-            if op2.has_func_use_the_resource(Resource(arg, -1)):
+            if op2.has_func_use_the_resource(arg):
                 return True
     return False
 
@@ -96,6 +81,7 @@ def __find_multithreaded_relations(mascm):
 
     for time_unit in time_units:
         for t1, t2 in combinations(time_unit, 2):
+            logging.debug(f"Searching relation between: {t1}, {t2}")
             for op in t1.operations + t2.operations:
                 __operation_is_in_forward_relation(mascm, op, check_thread=False)
                 __operation_is_in_backward_relation(mascm, op, check_thread=False)
@@ -109,8 +95,9 @@ def __operation_is_in_forward_relation(mascm, operation: Operation, check_thread
         __func_name0 = __macro_func_pref.format(pair[0])
         __func_name1 = __macro_func_pref.format(pair[1])
 
-        if operation.name in (pair[0], __func_name0):
-            forward_operations_handler.append({'pair': pair, 1: operation})
+        foo = {'pair': pair, 1: operation}
+        if (operation.name in (pair[0], __func_name0)) and (foo not in forward_operations_handler):
+            forward_operations_handler.append(foo)
         elif operation.name in (pair[1], __func_name1):
             try:
                 data = next((d for d in forward_operations_handler if d["pair"][1] in (pair[1], __func_name1)))
@@ -239,6 +226,9 @@ def __add_resource_to_mascm(mascm, node) -> None:
     """Add Resource object into MASCM's R set
     :param node: AST Node
     """
+    # Constant objects not declared by user does not contains shared values
+    if isinstance(node, Constant):
+        return
     r = Resource(node, len(mascm.r) + 1)
     mascm.r.append(r)
 
@@ -267,11 +257,11 @@ def __parse_assignment(mascm, node: Assignment, functions_definition: dict, thre
         __add_operation_and_edge(mascm, node, thread)
         return functions_call
     operation = __add_operation_and_edge(mascm, node, thread)
-    __add_edge_to_mascm(mascm, Edge(operation, resource))
+    __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
 
     # Dirty hack to link malloc and other function with correct resource
     prev_op = mascm.operations[-2]
-    if isinstance(node, Assignment) and resource.has_name(node.lvalue.name):
+    if isinstance(node, Assignment) and resource.has_name(resource_name) and (prev_op.name in memory_allocation_ops):
         prev_op.add_use_resource(resource)
     return functions_call
 
@@ -390,17 +380,17 @@ def __parse_compound_statement(mascm, cond: Node, operation: Operation):
     if hasattr(cond, 'left') and isinstance(cond.left, ID):
         for resource in mascm.resources:
             if resource.has_name(cond.left.name):
-                __add_edge_to_mascm(mascm, Edge(resource, operation))
+                __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
 
     if hasattr(cond, 'right') and isinstance(cond.right, ID):
         for resource in mascm.resources:
             if resource.has_name(cond.right.name):
-                __add_edge_to_mascm(mascm, Edge(resource, operation))
+                __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
 
     if isinstance(cond, ID):
         for resource in mascm.resources:
             if resource.has_name(cond.name):
-                __add_edge_to_mascm(mascm, Edge(resource, operation))
+                __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
 
 
 def __parse_if_statement(mascm, node: If, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> list:
@@ -445,6 +435,7 @@ def __parse_pthread_create(mascm, node: FuncCall, time_unit: TimeUnit, func: Fun
         mascm.u.append(TimeUnit(time_unit + 1))
         always_parallel = (t for t in mascm.threads if t.is_always_parallel())
         mascm.u[-1].extend(always_parallel)
+        __add_resource_to_mascm(mascm, node.args.exprs[3])
     thread_depth = main_thread.depth + 1 if main_thread is not None else 0
     for i in range(2 if __is_loop_body else 1):
         new_thread = Thread(len(mascm.threads), node.args, mascm.u[-1], thread_depth)
@@ -588,14 +579,19 @@ def __parse_statement(mascm, node: t_Union[Compound, FuncCall], functions_defini
                 operation: Operation = __add_operation_and_edge(mascm, child, thread)
                 if child.name.name in ignored_c_functions:
                     for builtin_resource in child.args.exprs:
-                        if isinstance(builtin_resource, ID):  # For values
-                            for shared_resource in mascm.r:
-                                if builtin_resource.name in shared_resource:
-                                    __add_edge_to_mascm(mascm, Edge(shared_resource, operation))
-                        if isinstance(builtin_resource, UnaryOp):  # For pointers to values
-                            for shared_resource in mascm.r:
-                                if builtin_resource.expr.name.name in shared_resource:
-                                    __add_edge_to_mascm(mascm, Edge(shared_resource, operation))
+                        if isinstance(builtin_resource, BinaryOp):
+                            resource_names = (
+                                extract_resource_name(builtin_resource.left),
+                                extract_resource_name(builtin_resource.right)
+                            )
+                        else:
+                            resource_names = (extract_resource_name(builtin_resource),)
+                        if not resource_names:
+                            continue
+                        for shared_resource in mascm.r:
+                            for name in resource_names:
+                                if name in shared_resource:
+                                    __add_edge_to_mascm(mascm, operation.create_edge_with_resource(shared_resource))
 
         elif isinstance(child, expected_operation):
             if isinstance(child, Decl) and isinstance(child.init, FuncCall):
@@ -653,7 +649,8 @@ def __parse_unary_operator(mascm, node: UnaryOp, thread: Thread) -> None:
         if resource_name in shared_resource:
             resource = shared_resource
     operation = __add_operation_and_edge(mascm, node, thread)
-    __add_edge_to_mascm(mascm, Edge(operation, resource))
+    if resource:
+        __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
 
 
 def __parse_while_loop(mascm, node: While, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> list:
@@ -730,7 +727,7 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
     __put_main_thread_to_model(mascm)
 
     functions_definition = __parse_global_trees(mascm, asts)
-    __unexpected_declarations(functions_definition)
+    __unexpected_declarations(functions_definition)  # TODO if there is no declaration it can be atomic operation
     functions = __parse_function_call(mascm, functions_definition[main_function_name], functions_definition,
                                       mascm.t[-1], mascm.u[-1])
 

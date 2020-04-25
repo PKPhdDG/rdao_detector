@@ -3,14 +3,20 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.3"
 
+from helpers.exceptions import MASCMException
+from helpers.mascm_helper import extract_resource_name
 from pycparser.c_ast import Node
 
 
 class Resource:
     """ Resource class """
-    def __init__(self, node, num: int):
+    def __init__(self, node, num: int = -1):
+        """ Ctor
+        :param node: Node from code
+        :param num: order number of resource if share, in other case -1
+        """
         self.__node = node
-        self.__names = {node.name}
+        self.__names = {extract_resource_name(node)}
         self.__num = num
 
     def add_name(self, name: str):
@@ -25,6 +31,13 @@ class Resource:
         :return: Boolean value with result
         """
         return name in self.__names
+
+    @property
+    def name(self) -> str:
+        """ Getter return name if resource is argument """
+        if self.__num != -1:
+            raise MASCMException(f"Resource {self} is not an argument resource")
+        return next(iter(self.__names))
 
     @property
     def node(self) -> Node:
