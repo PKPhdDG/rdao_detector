@@ -135,6 +135,3 @@ class Operation:
 
     def __repr__(self):
         return "o{},{}".format(self.__thread_index, self.__operation_number)
-
-    def __lt__(self, other):
-        return self.__operation_number < other.__operation_number

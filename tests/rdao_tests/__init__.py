@@ -7,6 +7,7 @@ __version__ = "0.4"
 
 from tests.rdao_tests.atomicity_violation_test import DetectAtomicityViolationTest
 from tests.rdao_tests.deadlock_test import DetectDeadlockTest
+from tests.rdao_tests.order_violation_test import DetectOrderViolationTest
 from tests.rdao_tests.race_condition_test import DetectRaceConditionTest
 import unittest
 

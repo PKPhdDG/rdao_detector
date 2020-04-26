@@ -46,17 +46,6 @@ class Thread:
         return self.__thread_index
 
     @property
-    def time_unit(self):
-        """ Getter
-        :return: Time unit
-        """
-        return self.__time_unit
-
-    @time_unit.setter
-    def time_unit(self, new_time_unit):
-        self.__time_unit = new_time_unit
-
-    @property
     def depth(self):
         """ Getter
         :return: Depth value

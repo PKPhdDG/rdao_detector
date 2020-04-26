@@ -50,3 +50,7 @@ venv/
 for_articles/
 *.pure
 *.log
+
+# code coerage
+.coverage
+coverage.xml
