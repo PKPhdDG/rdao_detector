@@ -12,7 +12,8 @@ from helpers.rdao_helper import get_operation_from_edge, get_operation_name_from
 from itertools import chain
 import logging
 from mascm_generator import create_ast, create_mascm
-from rdao import detect_atomicity_violation, detect_deadlock, detect_race_condition
+from os.path import join, dirname
+from rdao import detect_atomicity_violation, detect_deadlock, detect_order_violation, detect_race_condition
 
 
 def functions_pair(arg) -> tuple:
@@ -23,17 +24,15 @@ def functions_pair(arg) -> tuple:
         "increment_operator": "++",
         "decrement_operator": "--"
     }
-    if arg:
-        result = set()
-        for pair in arg.split(","):
-            if pair[0] in safe_replaces:
-                result.add((safe_replaces[pair[0]], pair[1]))
-            elif pair[1] in safe_replaces:
-                result.add((pair[0], safe_replaces[pair[1]]))
-            else:
-                result.add(pair)
-        return tuple(result)
-    return tuple()
+    if not arg:
+        return tuple()
+    result = list()
+    for pair in arg.split(","):
+        if pair in safe_replaces:
+            result.append(safe_replaces[pair])
+        else:
+            result.append(pair)
+    return tuple(result)
 
 
 parser = argparse.ArgumentParser(description='Detect RDAO Bugs')
@@ -61,7 +60,7 @@ def main():
     c.relations['forward'].extend(args.forward_rel_pairs)
     c.relations['backward'].extend(args.backward_rel_pairs)
     c.relations['symmetric'].extend(args.symmetric_rel_pairs)
-    logging.basicConfig(filename="rdao.log", level=args.log_level)
+    logging.basicConfig(filename=join(dirname(__file__), "rdao.log"), level=args.log_level)
     mascm = create_mascm(create_ast(args.path))
 
     print("Race conditions:")
@@ -69,14 +68,14 @@ def main():
         print(f"\tRace condition detected in element: {edge}")
         print("\tError can be found in")
         print(f"\t\t{edge.first.node.coord}")
-        print("\tDetected race condition is linked with ")
-        print(f"\t\tresource {get_resource_name_from_edge(edge)} ")
+        print("\tDetected race condition is linked with")
+        print(f"\t\tresource: {get_resource_name_from_edge(edge)}")
         print(f"\t\tdeclared in {edge.second.node.coord}\n")
     print("="*60)
 
     print("Deadlocks:")
     for cause, edges in detect_deadlock(mascm):
-        print(f"\tDeadlock detected involving a set of locks: {set((edge.first for edge in chain(*el)))}")
+        print(f"\tDeadlock detected involving a set of locks: {set((edge.first for edge in chain(*edges)))}")
         print("\t\tDeadlock cause:", deadlock_causes_str[cause])
         print("\tLocking operations can be found in:")
         for edge in chain(*edges):
@@ -96,6 +95,15 @@ def main():
                 print(f"\t\tViolation is cause by: {get_operation_name_from_edge(edge)}")
                 print(f"\t\tViolating operation is located in: {get_operation_from_edge(edge).node.coord}")
     print("="*60)
+
+    print("Order violations:")
+    for op1, op2, resource in detect_order_violation(mascm):
+        print(f"\tOrder violation detected for pair: {op1.name}, {op2.name}")
+        print(f"\t\t{op1.name} is located in {op1.node.coord}")
+        print(f"\t\t{op2.name} is located in {op2.node.coord}")
+        print("\tDetected order violation is linked with ")
+        print(f"\t\tresource: {resource.get_resource_names_set()}")
+        print(f"\t\tdeclared in {resource.node.coord}\n")
 
 
 if "__main__" == __name__:

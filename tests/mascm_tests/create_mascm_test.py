@@ -259,9 +259,10 @@ class CreateMamTest(unittest.TestCase, TestBase):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
                          "o1,9, o1,10, o1,11], mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), "\
-                         "(o1,3, o1,4), (o1,4, o1,5), (o1,5, r1), (o1,5, o1,6), (o1,6, r1), (o1,6, o1,7), (o1,7, r1), "\
-                         "(o1,7, o1,8), (o1,8, o1,9), (r1, o1,9), (o1,9, o1,8), (o1,8, o1,10), (o1,9, o1,10), " \
-                         "(o1,10, r1), (o1,10, o1,11)], relations=(forward=[(o1,4, o1,10)], backward=[], symmetric=[]))"
+                         "(o1,3, o1,4), (o1,4, r1), (o1,4, o1,5), (o1,5, r1), (o1,5, o1,6), (o1,6, r1), (o1,6, o1,7), "\
+                         "(o1,7, r1), (o1,7, o1,8), (o1,8, o1,9), (r1, o1,9), (o1,9, o1,8), (o1,8, o1,10), " \
+                         "(o1,9, o1,10), (o1,10, r1), (o1,10, o1,11)], " \
+                         "relations=(forward=[(o1,4, o1,10)], backward=[], symmetric=[]))"
         file_to_parse = "forward_relation.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
@@ -275,12 +276,12 @@ class CreateMamTest(unittest.TestCase, TestBase):
                          "resources=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
                          "o1,9, o1,10, o1,11, o1,12, o1,13, o1,14, o1,15, o1,16, o1,17, o1,18, o1,19, o1,20, o1,21, "\
                          "o1,22], mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), "\
-                         "(o1,4, o1,5), (o1,5, o1,6), (o1,6, o1,7), (o1,7, o1,8), (o1,8, r1), (o1,8, o1,9), "\
-                         "(o1,9, o1,10), (o1,10, r2), (o1,10, o1,11), (o1,11, r1), (o1,11, o1,12), (o1,12, r2), "\
-                         "(o1,12, o1,13), (o1,13, r1), (o1,13, o1,14), (o1,14, r2), (o1,14, o1,15), (o1,15, o1,16), "\
-                         "(r1, o1,16), (o1,16, o1,15), (o1,15, o1,17), (o1,16, o1,17), (o1,17, o1,18), " \
-                         "(o1,18, o1,19), (r2, o1,19), (o1,19, o1,18), (o1,18, o1,20), (o1,19, o1,20), (o1,20, r1), " \
-                         "(o1,20, o1,21), (o1,21, r2), (o1,21, o1,22)], " \
+                         "(o1,4, o1,5), (o1,5, o1,6), (o1,6, o1,7), (o1,7, r1), (o1,7, o1,8), (o1,8, r1), " \
+                         "(o1,8, o1,9), (o1,9, r2), (o1,9, o1,10), (o1,10, r2), (o1,10, o1,11), (o1,11, r1), " \
+                         "(o1,11, o1,12), (o1,12, r2), (o1,12, o1,13), (o1,13, r1), (o1,13, o1,14), (o1,14, r2), " \
+                         "(o1,14, o1,15), (o1,15, o1,16), (r1, o1,16), (o1,16, o1,15), (o1,15, o1,17), (o1,16, o1,17),"\
+                         " (o1,17, o1,18), (o1,18, o1,19), (r2, o1,19), (o1,19, o1,18), (o1,18, o1,20), " \
+                         "(o1,19, o1,20), (o1,20, r1), (o1,20, o1,21), (o1,21, r2), (o1,21, o1,22)], " \
                          "relations=(forward=[(o1,7, o1,20), (o1,9, o1,21)], backward=[], symmetric=[]))"
         file_to_parse = "two_forward_relation.c"
         file_path = join(self.source_path_prefix, file_to_parse)
@@ -509,7 +510,7 @@ class CreateMamTest(unittest.TestCase, TestBase):
                          "[t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o1,1, o1,2, o1,3, "\
                          "o1,4, o1,5, o1,6, o1,7, o2,1, o2,2, o2,3, o2,4, o2,5, o2,6], mutexes=[(m, PMN)], " \
                          "edges=[(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (r1, o0,4), (o0,4, o0,5), (o0,5, r1), " \
-                         "(o0,5, o0,6), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (o1,4, r1), " \
+                         "(o0,5, o0,6), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), (o1,3, o1,4), (o1,4, r1), "\
                          "(o1,4, o1,5), (o1,5, r1), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o1,7, q1), (o2,1, o2,2), "\
                          "(q1, o2,2), (o2,2, o2,3), (o2,3, o2,4), (o2,4, r1), (o2,4, o2,3), (o2,3, o2,5), " \
                          "(o2,4, o2,5), (o2,5, q1), (o2,5, o2,6)], " \
@@ -531,7 +532,7 @@ class CreateMamTest(unittest.TestCase, TestBase):
                          "[t1, t2, t3], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o1,1, " \
                          "o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o2,1, o2,2, o2,3, o2,4, o2,5, o2,6, o3,1, o3,2, o3,3, " \
                          "o3,4, o3,5], mutexes=[(m, PMN)], edges=[(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), " \
-                         "(o0,4, o0,5), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (o1,4, r1), " \
+                         "(o0,4, o0,5), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), (o1,3, o1,4), (o1,4, r1), "\
                          "(o1,4, o1,5), (o1,5, r1), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o1,7, q1), " \
                          "(o2,1, o2,2), (q1, o2,2), (o2,2, o2,3), (o2,3, o2,4), (o2,4, r1), (o2,4, o2,3), " \
                          "(o2,3, o2,5), (o2,4, o2,5), (o2,5, q1), (o2,5, o2,6), (q1, o3,1), (o3,1, o3,2), " \

@@ -7,4 +7,5 @@ __version__ = "0.3"
 
 from rdao.atomicity_violation import detect_atomicity_violation
 from rdao.deadlock import detect_deadlock
+from rdao.order_violation import detect_order_violation
 from rdao.race_condition import detect_race_condition

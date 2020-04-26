@@ -32,11 +32,15 @@ class Resource:
         """
         return name in self.__names
 
+    def get_resource_names_set(self) -> set:
+        """ Method return set of names
+        :return: Set
+        """
+        return self.__names
+
     @property
     def name(self) -> str:
         """ Getter return name if resource is argument """
-        if self.__num != -1:
-            raise MASCMException(f"Resource {self} is not an argument resource")
         return next(iter(self.__names))
 
     @property

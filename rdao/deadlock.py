@@ -131,7 +131,8 @@ def detect_deadlock(mascm: MASCM) -> coroutine:
         for thread_num in (mascm.threads.index(thread) for thread in unit):
             thread_edges = [edge for edge in edges if f"o{thread_num}" in str(edge)]
             if not thread_edges:
-                raise ValueError(f"Unexpected situation for thread no. {thread_num} in time unit {unit}")
+                logging.debug(f"Unexpected situation for thread no. {thread_num} in time unit {unit}")
+                continue
 
             collection = list()
             for edge in thread_edges:

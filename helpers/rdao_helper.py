@@ -38,4 +38,4 @@ def get_operation_name_from_edge(edge: Edge) -> str:
 
 def get_resource_name_from_edge(edge: Edge) -> str:
     """ Function return name of the given operaiont """
-    return get_resource_from_edge(edge).node.name
+    return get_resource_from_edge(edge).get_resource_names_set()
