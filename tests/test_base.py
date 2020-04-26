@@ -9,11 +9,11 @@ from helpers.path import get_project_path
 import logging
 from os.path import join
 
-logging.disable(logging.CRITICAL)
+logging.disable()
 
 
 class TestBase:
     """ Class which is tests base """
     project_dir = get_project_path()
-    source_path_prefix = join(project_dir, "tests\\example_c_sources")
+    source_path_prefix = join(project_dir, "tests/example_c_sources")
     multiple_files_app_path_prefix = join(source_path_prefix, "multiple_files_apps")
