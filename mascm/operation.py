@@ -3,22 +3,26 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.3"
 
+import config as c
+from helpers.mascm_helper import extract_resource_name
 import logging
+from mascm.edge import Edge
 from mascm.resource import Resource
-from pycparser.c_ast import Constant, Decl, FuncCall, ID, Node, Return, UnaryOp
-import sys
+from pycparser.c_ast import *
 
 
 class Operation:
     """Operation class"""
-    def __init__(self, operation_obj: Node, thread, thread_index: int, called_in_loop: bool):
+    __dependency_operation_types = (If,)
+
+    def __init__(self, node: Node, thread, thread_index: int, called_in_loop: bool):
         """Ctor
-        :param operation_obj: Node obj
+        :param node: Node obj
         :param thread: Thread object
         :param thread_index: Thread index in the mascm
         :param called_in_loop: Boolean value  which is True if operation is part of loop body
         """
-        self.__operation_obj = operation_obj
+        self.__node = node
         self.__thread = thread
         self.__thread_index = thread_index
         self.__thread.add_operation(self)
@@ -28,17 +32,34 @@ class Operation:
         self.__ignored_arg_types = (Constant,)
         self.__is_last_action = False
         self.is_multiple_called = called_in_loop  # Used generally for pthread_mutex_lock/unlock
-        if isinstance(self.__operation_obj, FuncCall):
-            self.__name = self.__operation_obj.name.name
-            if self.__operation_obj.args is not None:
-                self.__args.extend(self.__operation_obj.args.exprs)
-        elif isinstance(self.__operation_obj, UnaryOp):
-            self.__name = self.__operation_obj.op
-            self.__args.append(self.__operation_obj.expr)
-        if isinstance(self.__operation_obj, Return):
+        if isinstance(self.__node, FuncCall):
+            self.__name = self.__node.name.name
+            if self.__node.args is not None:
+                self.__add_resources(self.__node.args.exprs)
+        elif isinstance(self.__node, UnaryOp):
+            self.__name = self.__node.op
+            self.__add_resources([self.__node.expr])
+        elif isinstance(self.__node, Return):
+            self.__name = "return"
             self.__is_last_action = True
+        elif isinstance(self.__node, If):
+            self.__name = "if"
 
+    def __add_resources(self, resources: list) -> None:
+        """ Method extract from objects resources
+        :param resources: list of objects which can contains resources
+        """
+        for arg in resources:
+            if isinstance(arg, BinaryOp):
+                self.__args.append(Resource(arg.left))
+                self.__args.append(Resource(arg.right))
+            else:
+                self.__args.append(Resource(arg))
 
+    @property
+    def thread_index(self) -> int:
+        """ Thread index """
+        return self.__thread_index
 
     @property
     def index(self):
@@ -64,7 +85,7 @@ class Operation:
         """ Node getter
         :return: Node
         """
-        return self.__operation_obj
+        return self.__node
 
     def is_last_action(self) -> bool:
         """ If this is return operation this method return true
@@ -74,7 +95,7 @@ class Operation:
 
     def add_use_resource(self, resource: Resource) -> None:
         """ Method add resource to resource list """
-        self.__args.append(resource.node)
+        self.__add_resources([resource.node])
 
     def has_func_use_the_resource(self, resource: Resource) -> bool:
         """ Method check given resource is used by operation
@@ -82,22 +103,35 @@ class Operation:
         :return: Boolean value
         """
         for arg in self.__args:
-            if isinstance(arg, ID):
-                if hasattr(arg, "left") and hasattr(arg.left, "name") and resource.has_name(arg.left.name):
-                    return True
-                elif hasattr(arg, "name") and resource.has_name(arg.name):
-                    return True
-            elif isinstance(arg, Decl) and hasattr(arg, "name"):
-                if resource.has_name(arg.name):
-                    return True
+            if resource.has_name(arg.name):
+                return True
             else:
                 if not isinstance(arg, self.__ignored_arg_types):
-                    logging.warning(f"Cannot handle arg: {arg}")
+                    logging.warning(f"Operation {self} do not uses resource: {arg}")
         return False
 
     def is_operation_of_thread(self, other_thread) -> bool:
         """ Method check operation is operation of a given thread """
         return self.__thread == other_thread
+
+    def create_usage_edge(self, resource: Resource) -> Edge:
+        """ Method create usage edge """
+        return Edge(self, resource)
+
+    def create_dependency_edge(self, resource: Resource) -> Edge:
+        """ Method create dependency edge """
+        return Edge(resource, self)
+
+    def create_edge_with_resource(self, resource: Resource) -> Edge:
+        """ Method create correct edge for relation operation - edge """
+        if isinstance(self.__node, FuncCall) and (self.name in c.function_using_resources):
+            return self.create_dependency_edge(resource)
+        elif isinstance(self.__node, self.__dependency_operation_types):
+            return self.create_dependency_edge(resource)
+        elif isinstance(self.__node, FuncCall) and (self.name in ('memcpy', 'memset')) \
+                and resource.has_name(self.__args[1].name):
+            return self.create_dependency_edge(resource)
+        return self.create_usage_edge(resource)
 
     def __repr__(self):
         return "o{},{}".format(self.__thread_index, self.__operation_number)

@@ -7,14 +7,12 @@ __version__ = "0.3"
 
 from copy import copy
 from collections import defaultdict
-import config as c
 from helpers import get_time_units_graphs, expressions as e
 from helpers.exceptions import RDAOException
 from itertools import combinations
 import logging
 from mascm import MultithreadedApplicationSourceCodeModel as MASCM, Resource
 import re
-import sys
 from types import coroutine
 
 
