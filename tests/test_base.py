@@ -6,7 +6,10 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
 from helpers.path import get_project_path
+import logging
 from os.path import join
+
+logging.disable(logging.CRITICAL)
 
 
 class TestBase:
