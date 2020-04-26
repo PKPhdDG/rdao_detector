@@ -1,9 +1,9 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3.8
 
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.3"
+__version__ = "0.4"
 
 from helpers.exceptions import RDAOException
 from mascm.edge import Edge
@@ -38,4 +38,4 @@ def get_operation_name_from_edge(edge: Edge) -> str:
 
 def get_resource_name_from_edge(edge: Edge) -> str:
     """ Function return name of the given operaiont """
-    return get_resource_from_edge(edge).node.name
+    return get_resource_from_edge(edge).get_resource_names_set()

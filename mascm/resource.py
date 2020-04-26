@@ -1,7 +1,7 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.3"
+__version__ = "0.4"
 
 from helpers.exceptions import MASCMException
 from helpers.mascm_helper import extract_resource_name
@@ -32,11 +32,15 @@ class Resource:
         """
         return name in self.__names
 
+    def get_resource_names_set(self) -> set:
+        """ Method return set of names
+        :return: Set
+        """
+        return self.__names
+
     @property
     def name(self) -> str:
         """ Getter return name if resource is argument """
-        if self.__num != -1:
-            raise MASCMException(f"Resource {self} is not an argument resource")
         return next(iter(self.__names))
 
     @property

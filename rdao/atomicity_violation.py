@@ -1,9 +1,9 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3.8
 
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.3"
+__version__ = "0.4"
 
 from copy import copy
 from collections import defaultdict
@@ -11,7 +11,7 @@ from helpers import get_time_units_graphs, expressions as e
 from helpers.exceptions import RDAOException
 from itertools import combinations
 import logging
-from mascm import MultithreadedApplicationSourceCodeModel as MASCM, Resource
+from mascm import MultithreadedApplicationSourceCodeModel as MASCM
 import re
 from types import coroutine
 

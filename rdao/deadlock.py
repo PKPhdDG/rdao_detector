@@ -1,9 +1,9 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3.8
 
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.3"
+__version__ = "0.4"
 
 from helpers import DeadlockType, get_time_units_graphs, expressions as e
 from itertools import combinations
@@ -131,7 +131,8 @@ def detect_deadlock(mascm: MASCM) -> coroutine:
         for thread_num in (mascm.threads.index(thread) for thread in unit):
             thread_edges = [edge for edge in edges if f"o{thread_num}" in str(edge)]
             if not thread_edges:
-                raise ValueError(f"Unexpected situation for thread no. {thread_num} in time unit {unit}")
+                logging.debug(f"Unexpected situation for thread no. {thread_num} in time unit {unit}")
+                continue
 
             collection = list()
             for edge in thread_edges:

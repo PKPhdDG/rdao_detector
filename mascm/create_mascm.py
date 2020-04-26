@@ -1,7 +1,7 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.3"
+__version__ = "0.4"
 
 from collections import deque, defaultdict
 import config as c
@@ -256,13 +256,16 @@ def __parse_assignment(mascm, node: Assignment, functions_definition: dict, thre
     if resource is None:
         __add_operation_and_edge(mascm, node, thread)
         return functions_call
-    operation = __add_operation_and_edge(mascm, node, thread)
-    __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
 
     # Dirty hack to link malloc and other function with correct resource
-    prev_op = mascm.operations[-2]
+    prev_op = mascm.operations[-1]
     if isinstance(node, Assignment) and resource.has_name(resource_name) and (prev_op.name in memory_allocation_ops):
         prev_op.add_use_resource(resource)
+        __add_edge_to_mascm(mascm, prev_op.create_edge_with_resource(resource))
+    # End of dirty hack
+
+    operation = __add_operation_and_edge(mascm, node, thread)
+    __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
     return functions_call
 
 

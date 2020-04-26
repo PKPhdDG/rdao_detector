@@ -1,7 +1,7 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.3"
+__version__ = "0.4"
 
 import config as c
 from helpers.mascm_helper import extract_resource_name
@@ -95,7 +95,7 @@ class Operation:
 
     def add_use_resource(self, resource: Resource) -> None:
         """ Method add resource to resource list """
-        self.__add_resources([resource.node])
+        self.__args.append(resource)
 
     def has_func_use_the_resource(self, resource: Resource) -> bool:
         """ Method check given resource is used by operation
