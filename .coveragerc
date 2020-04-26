@@ -1,6 +1,7 @@
 [run]
 omit = tests, venv, csources
 
+[report]
 exclude_lines =
     logging
     sys.exit
