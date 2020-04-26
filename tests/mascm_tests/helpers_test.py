@@ -14,7 +14,7 @@ import unittest
 
 class HelpersTest(unittest.TestCase):
     project_dir = get_project_path()
-    source_path_prefix = join(project_dir, "tests\example_c_sources")
+    source_path_prefix = join(project_dir, "tests/example_c_sources")
     multiple_files_app_path_prefix = join(source_path_prefix, "multiple_files_apps")
 
     def test_purify_file_with_path_to_file(self):
