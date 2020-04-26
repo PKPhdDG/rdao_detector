@@ -1,2 +1,9 @@
-pycparser==2.19
+certifi==2020.4.5.1
+chardet==3.0.4
+codecov==2.0.22
+coverage==5.1
+idna==2.9
 pathlib==1.0.1
+pycparser==2.19
+requests==2.23.0
+urllib3==1.25.9
