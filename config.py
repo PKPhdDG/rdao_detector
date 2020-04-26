@@ -5,6 +5,8 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
+import platform
+
 compiler_cmd = "gcc"
 main_function_name: str = "main"  # Name of main function in application
 
@@ -20,4 +22,5 @@ relations: dict = {  # Names of functions between which there are sequential rel
 }
 
 PTHREAD_MUTEX_DEFAULT_VAL = "PTHREAD_MUTEX_NORMAL"
+OS = platform.system()
 
