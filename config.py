@@ -5,6 +5,7 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
+compiler_cmd = "gcc"
 main_function_name: str = "main"  # Name of main function in application
 
 function_using_resources = {'printf'}

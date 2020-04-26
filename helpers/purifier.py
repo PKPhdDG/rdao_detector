@@ -6,6 +6,7 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
 from collections import deque
+import config as c
 from contextlib import contextmanager
 from helpers.path import get_project_path
 from os import remove
@@ -27,7 +28,7 @@ def purify_file(path: str, headers: Iterable[str] = tuple()) -> str:
         raise IsADirectoryError(f"Given path is not a file: '{path}'")
     dir_path = get_project_path()
     output_file: str = f"{path}.pure"
-    command: list = ["gcc.exe", "-Wall", "-I", join(dir_path, "utils/fake_libc_include")]
+    command: list = [c.compiler_cmd, "-Wall", "-I", join(dir_path, "utils/fake_libc_include")]
     if headers:
         for header_path in headers:
             command.extend(["-I", header_path])
