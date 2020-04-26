@@ -9,10 +9,12 @@ from collections import deque
 import config as c
 from contextlib import contextmanager
 from helpers.path import get_project_path
+import logging
 from os import remove
 from os.path import exists, isfile, join
 from pathlib import Path
-from subprocess import run
+from subprocess import Popen, PIPE
+import sys
 from typing import Iterable
 
 
@@ -32,8 +34,14 @@ def purify_file(path: str, headers: Iterable[str] = tuple()) -> str:
     if headers:
         for header_path in headers:
             command.extend(["-I", header_path])
-    command.extend(["-E", path, ">", output_file])
-    run(command, check=True, shell=True)
+    command.extend(["-E", path])
+    o, e = Popen(' '.join(command), stdout=PIPE, stderr=PIPE, shell=True).communicate()
+    if e:
+        logging.critical(f"Critical error during purifizing file: {path}")
+        logging.critical("Terminating application")
+        sys.exit(1)
+    with open(output_file, "wb") as f:
+        f.write(o)
     return output_file
 
 
