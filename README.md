@@ -1,4 +1,4 @@
-# Race condition/Deadlock/Atomicity violation/Order violation Detector [![Build Status](https://travis-ci.org/Draqun/rdao_detector.svg?branch=master)](https://travis-ci.org/Draqun/rdao_detector)
+# Race condition/Deadlock/Atomicity violation/Order violation Detector [![Build Status](https://travis-ci.org/Draqun/rdao_detector.svg?branch=master)](https://travis-ci.org/Draqun/rdao_detector) [![codecov](https://codecov.io/gh/Draqun/rdao_detector/branch/master/graph/badge.svg)](https://codecov.io/gh/Draqun/rdao_detector)
 
 This simple application convert C source code to Multithreaded Application Source Code Model via AST, and using MASCM detecting RDAO bugs.
 
