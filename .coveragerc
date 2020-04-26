@@ -1,5 +1,8 @@
 [run]
-omit = tests, venv, csources
+omit =
+    tests/*
+    venv/*
+    csources/*
 
 [report]
 exclude_lines =
