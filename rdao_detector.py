@@ -1,9 +1,9 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3.8
 
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.3"
+__version__ = "0.4"
 
 import argparse
 import config as c
@@ -51,6 +51,7 @@ parser.add_argument(
     '--symmetric-rel-pairs', type=functions_pair, help="Pairs of functions with symmetric relation", default="",
     nargs="+"
 )
+parser.add_argument('--version', action='version', version=f"%(prog)s {__version__}")
 
 
 def main():

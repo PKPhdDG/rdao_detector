@@ -1,7 +1,7 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.3"
+__version__ = "0.4"
 
 from helpers.exceptions import MASCMException
 from helpers.mascm_helper import extract_resource_name
