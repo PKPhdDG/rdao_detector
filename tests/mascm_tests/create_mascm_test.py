@@ -440,14 +440,29 @@ class CreateMamTest(unittest.TestCase, TestBase):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0], time_units=[[t0]], resources=[r1], " \
                          "operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o0,7, o0,8, o0,9, o0,10, o0,11, o0,12, " \
                          "o0,13, o0,14, o0,15, o0,16], mutexes=[], edges=[(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), " \
-                         "(o0,4, o0,5), (o0,5, o0,6), (o0,7, o0,8), (o0,8, o0,9), (o0,10, o0,7), (o0,10, o0,11), " \
-                         "(o0,11, o0,9), (o0,12, o0,13), (o0,14, r1), (o0,14, o0,15), (r1, o0,15), " \
-                         "(o0,15, o0,16)], relations=(forward=[], backward=[], symmetric=[]))"
+                         "(o0,4, o0,5), (o0,5, o0,6), (o0,6, o0,7), (o0,7, o0,8), (o0,8, o0,9), (o0,9, o0,10), " \
+                         "(o0,10, o0,7), (o0,10, o0,11), (o0,11, o0,9), (o0,11, o0,12), (o0,12, o0,13), " \
+                         "(o0,13, o0,14), (o0,14, r1), (o0,14, o0,15), (r1, o0,15), (o0,15, o0,16)], " \
+                         "relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "recursion0.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
+
+        self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))
+
+    def test_recursion0a(self):
+        expected_mascm = ""
+        file_to_parse = "recursion0a.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        for op in result.operations:
+            print(str(op.node).replace('\n', ''))
 
         self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
