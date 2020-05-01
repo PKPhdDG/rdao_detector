@@ -4,7 +4,6 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
 import config as c
-from helpers.mascm_helper import extract_resource_name
 import logging
 from mascm.edge import Edge
 from mascm.resource import Resource
@@ -15,11 +14,12 @@ class Operation:
     """Operation class"""
     __dependency_operation_types = (If,)
 
-    def __init__(self, node: Node, thread, thread_index: int, called_in_loop: bool):
+    def __init__(self, node: Node, thread, thread_index: int, function: str, called_in_loop: bool):
         """Ctor
         :param node: Node obj
         :param thread: Thread object
         :param thread_index: Thread index in the mascm
+        :param function name in which operation is called
         :param called_in_loop: Boolean value  which is True if operation is part of loop body
         """
         self.__node = node
@@ -30,7 +30,8 @@ class Operation:
         self.__name = ""
         self.__args = list()
         self.__ignored_arg_types = (Constant,)
-        self.__is_last_action = False
+        self.__is_return = False
+        self.__function = function
         self.is_multiple_called = called_in_loop  # Used generally for pthread_mutex_lock/unlock
         if isinstance(self.__node, FuncCall):
             self.__name = self.__node.name.name
@@ -41,7 +42,7 @@ class Operation:
             self.__add_resources([self.__node.expr])
         elif isinstance(self.__node, Return):
             self.__name = "return"
-            self.__is_last_action = True
+            self.__is_return = True
         elif isinstance(self.__node, If):
             self.__name = "if"
 
@@ -87,17 +88,27 @@ class Operation:
         """
         return self.__node
 
-    def is_last_action(self) -> bool:
+    @property
+    def function(self) -> str:
+        """ Function name str """
+        return self.__function
+
+    @property
+    def is_return(self) -> bool:
         """ If this is return operation this method return true
-        :return: Boolean value
         """
-        return self.__is_last_action
+        return self.__is_return
+
+    @property
+    def use_resources(self):
+        """ Operation use some resources """
+        return bool(self.__args)
 
     def add_use_resource(self, resource: Resource) -> None:
         """ Method add resource to resource list """
         self.__args.append(resource)
 
-    def has_func_use_the_resource(self, resource: Resource) -> bool:
+    def use_the_resource(self, resource: Resource) -> bool:
         """ Method check given resource is used by operation
         :param resource: Resource object
         :return: Boolean value
