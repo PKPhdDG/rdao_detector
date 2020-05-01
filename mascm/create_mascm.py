@@ -446,17 +446,16 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, time_unit: TimeUni
     """
     functions_call = list()
     resource_name = extract_resource_name(node)
-    resource = None
-    for shared_resource in mascm.r:
-        if resource_name in shared_resource:
-            resource = shared_resource
     rvalue = node.rvalue
     if isinstance(rvalue, FuncCall):
         functions_call.extend(parse_func_call(mascm, rvalue, thread, time_unit, functions_definition))
     else:
         logging.critical(f"When parsing a aasignment, an unsupported item of type '{type(rvalue)}' was encountered.")
-    # if isinstance(node.rvalue, FuncCall):
-    #     __add_operation_and_edge(mascm, node.rvalue, thread)
+
+    resource = None
+    for shared_resource in mascm.r:
+        if resource_name in shared_resource:
+            resource = shared_resource
 
     if resource is None:
         add_operation_to_mascm(mascm, node, thread, function)
@@ -466,11 +465,10 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, time_unit: TimeUni
     prev_op = mascm.operations[-1]
     if isinstance(node, Assignment) and resource.has_name(resource_name) and (prev_op.name in memory_allocation_ops):
         prev_op.add_use_resource(resource)
-        # __add_edge_to_mascm(mascm, prev_op.create_edge_with_resource(resource))
     # End of dirty hack
 
-    add_operation_to_mascm(mascm, node, thread, function)
-    # __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
+    o = add_operation_to_mascm(mascm, node, thread, function)
+    o.add_use_resource(resource)
     return functions_call
 
 
@@ -604,6 +602,8 @@ def parse_return(mascm, node: Return, thread: Thread, time_unit: TimeUnit, funct
         parse_id(expr, function)
     elif isinstance(expr, BinaryOp):
         function_calls.extend(parse_binary_op(mascm, expr, thread, time_unit, functions_definition, function))
+    elif isinstance(expr, FuncCall):
+        function_calls.extend(parse_func_call(mascm, expr, thread, time_unit, functions_definition))
     else:
         logging.critical(f"When parsing a return, an unsupported item of type '{type(expr)}' was encountered.")
     add_operation_to_mascm(mascm, node, thread, function)
