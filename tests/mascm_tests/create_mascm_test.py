@@ -26,15 +26,19 @@ class CreateMamTest(unittest.TestCase, TestBase):
 
     def test_single_thread_global_variable_if_statement(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3], mutexes=[(m, PMN)], "\
-                         "edges=[(o0,1, o0,2), (r1, o1,1), (o1,1, o1,2), (o1,2, r1), (o1,1, o1,3), (o1,2, o1,3)], "\
+                         "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4], mutexes=[(m, PMN)], "\
+                         "edges=[(o0,1, o0,2), (r1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), (o1,3, o1,4)], "\
                          "relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "single_thread_global_variable_if_statement.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
-            self.__test_thread_nesting(result.threads)
+
+        for o in result.o:
+            print(str(o.node).replace("\n", ''))
+
+        self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_single_thread_global_variable_if_else_statement(self):

@@ -142,6 +142,8 @@ class Operation:
         elif isinstance(self.__node, FuncCall) and (self.name in ('memcpy', 'memset')) \
                 and resource.has_name(self.__args[1].name):
             return self.create_dependency_edge(resource)
+        elif isinstance(self.__node, ID):
+            return self.create_dependency_edge(resource)
         return self.create_usage_edge(resource)
 
     def __repr__(self):
