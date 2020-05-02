@@ -330,7 +330,7 @@ def parse_if_statement(mascm, node: If, thread: Thread, time_unit: TimeUnit, fun
     else:
         logging.critical(f"When parsing an if, an unsupported item of type '{type(cond)}' was encountered.")
 
-    add_operation_to_mascm(mascm, node, thread, function)
+    if_o = add_operation_to_mascm(mascm, node, thread, function)
     if hasattr(node, 'iftrue') and (node.iftrue is not None):
         op = node.iftrue
         if isinstance(op, Return):
@@ -345,9 +345,15 @@ def parse_if_statement(mascm, node: If, thread: Thread, time_unit: TimeUnit, fun
         op = node.iffalse
         if isinstance(op, Return):
             functions_call.extend(parse_return(mascm, op, thread, time_unit, functions_definition, function))
+        elif isinstance(op, Compound):
+            functions_call.extend(parse_compound_statement(mascm, op, thread, time_unit, functions_definition, function))
         else:
             logging.critical(f"When parsing an if false, an unsupported item of type '{type(cond)}' was encountered.")
 
+    # Mechanism for detecting where if/else is finished
+    if_o_index = mascm.operations.index(if_o)
+    for o in mascm.operations[if_o_index:]:
+        o.is_if_else_block_operation = True
     return functions_call
 
 
@@ -776,14 +782,24 @@ def create_correct_edges(mascm):
             is_first = False
             continue
 
-        if not mascm.o[i-1].is_return:  # Cannot link current action with return (return action are linked later)
+        if not mascm.o[i-1].is_return:
+            # Cannot link current action with return (return action are linked later)
             __add_edge_to_mascm(mascm, Edge(mascm.o[i-1], o))
 
         if isinstance(o.node, If):  # Detecting if/else statement
+            is_else = True
             for op in mascm.o[i+1:]:
                 if isinstance(o.node, If) and (o.node == op.node):
                     __add_edge_to_mascm(mascm, Edge(o, op))
+                    is_else = False
                     break
+            if is_else:
+                # Last operation in if statement should be linked with first operation after else block
+                last_edge = mascm.edges.pop()
+                for op in mascm.o[i+1:]:
+                    if not op.is_if_else_block_operation:
+                        mascm.f.append(Edge(last_edge.first, op))
+                        break
         elif o.is_return and o.function in recursion_function:  # Detecting recursion
             first_op = None
             o_subset = mascm.o[:i]
@@ -805,6 +821,7 @@ def create_correct_edges(mascm):
                     __add_edge_to_mascm(mascm, Edge(o, op))
                     break
         add_usage_dependencies_edge(mascm, o)
+
 
 def parse_global_trees(mascm, asts: deque) -> dict:
     """Function parse all AST:s give as deque.

@@ -33,6 +33,7 @@ class Operation:
         self.__is_return = False
         self.__function = function
         self.is_multiple_called = called_in_loop  # Used generally for pthread_mutex_lock/unlock
+        self.__is_if_else_block_operation = False
         if isinstance(self.__node, FuncCall):
             self.__name = self.__node.name.name
             if self.__node.args is not None:
@@ -100,9 +101,24 @@ class Operation:
         return self.__is_return
 
     @property
-    def use_resources(self):
+    def use_resources(self) -> bool:
         """ Operation use some resources """
         return bool(self.__args)
+
+    @property
+    def is_if_else_block_operation(self) -> bool:
+        """ Getter
+        :return: Boolean value
+        """
+        return self.__is_if_else_block_operation
+
+    @is_if_else_block_operation.setter
+    def is_if_else_block_operation(self, value: bool):
+        """Setter
+        :param value: Boolean value
+        """
+        logging.debug(f"Setting new value for is_if_else_bock_operation: {value}")
+        self.__is_if_else_block_operation = value
 
     def add_use_resource(self, resource: Resource) -> None:
         """ Method add resource to resource list """
