@@ -14,13 +14,12 @@ class Operation:
     """Operation class"""
     __dependency_operation_types = (If,)
 
-    def __init__(self, node: Node, thread, thread_index: int, function: str, called_in_loop: bool):
+    def __init__(self, node: Node, thread, thread_index: int, function: str):
         """Ctor
         :param node: Node obj
         :param thread: Thread object
         :param thread_index: Thread index in the mascm
         :param function name in which operation is called
-        :param called_in_loop: Boolean value  which is True if operation is part of loop body
         """
         self.__node = node
         self.__thread = thread
@@ -32,7 +31,7 @@ class Operation:
         self.__ignored_arg_types = (Constant,)
         self.__is_return = False
         self.__function = function
-        self.is_multiple_called = called_in_loop  # Used generally for pthread_mutex_lock/unlock
+        self.__is_loop_body_operation = False  # Used generally for pthread_mutex_lock/unlock
         self.__is_if_else_block_operation = False
         if isinstance(self.__node, FuncCall):
             self.__name = self.__node.name.name
@@ -120,6 +119,20 @@ class Operation:
         logging.debug(f"Setting new value for is_if_else_bock_operation: {value}")
         self.__is_if_else_block_operation = value
 
+    @property
+    def is_loop_body_operation(self):
+        """ Getter
+        :return: Boolean value
+        """
+        return self.__is_loop_body_operation
+
+    @is_loop_body_operation.setter
+    def is_loop_body_operation(self, value):
+        """ Setter
+        :param value: Boolean value
+        """
+        self.__is_loop_body_operation = value
+
     def add_use_resource(self, resource: Resource) -> None:
         """ Method add resource to resource list """
         self.__args.append(resource)
@@ -159,6 +172,8 @@ class Operation:
                 and resource.has_name(self.__args[1].name):
             return self.create_dependency_edge(resource)
         elif isinstance(self.__node, ID):
+            return self.create_dependency_edge(resource)
+        elif isinstance(self.__node, BinaryOp):
             return self.create_dependency_edge(resource)
         return self.create_usage_edge(resource)
 

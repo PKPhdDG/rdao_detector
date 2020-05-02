@@ -26,8 +26,8 @@ import warnings
 __new_time_unit = True
 __macro_func_pref = "__builtin_{}"
 
-# Flag used to detect there are thread creation into loop
-__is_loop_body = False
+# List of boolean value which contains only True value to know about nesting loops
+__is_loop_body = []
 
 expected_definitions = list()
 main_function_name = c.main_function_name if hasattr(c, "main_function_name") else "main"
@@ -202,7 +202,7 @@ def __add_mutex_to_mascm(mascm, node) -> None:
 #     return operation
 
 
-def add_operation_to_mascm(mascm, node: Node, thread: Thread, function: str, called_in_loop: bool = False) -> Operation:
+def add_operation_to_mascm(mascm, node: Node, thread: Thread, function: str) -> Operation:
     """ Function add operation into mascm.
     If there is waiting operation object there is created edge beetwen actual operation and waiting operation
 
@@ -212,7 +212,7 @@ def add_operation_to_mascm(mascm, node: Node, thread: Thread, function: str, cal
     :param function: Function name str
     :param called_in_loop: Is operation of loop, default False
     """
-    op = Operation(node, thread, thread.index, function, called_in_loop)
+    op = Operation(node, thread, thread.index, function)
     mascm.o.append(op)
     return op
 
@@ -513,9 +513,13 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, time_unit: TimeUni
 def parse_binary_op(mascm, node: BinaryOp, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
                     function: str, skip_add_operation: bool = False) -> list:
     function_calls = list()
+    resource = None
     for item in [node.left, node.right]:
         if isinstance(item, ID):
-            parse_id(item, function)
+            resource_name = parse_id(item, function)
+            for shared_resource in mascm.r:
+                if resource_name in shared_resource:
+                    resource = shared_resource
         elif isinstance(item, Constant):
             parse_constant(mascm, item, function)
         elif isinstance(item, FuncCall):
@@ -526,7 +530,9 @@ def parse_binary_op(mascm, node: BinaryOp, thread: Thread, time_unit: TimeUnit, 
     if skip_add_operation:
         return function_calls
 
-    add_operation_to_mascm(mascm, node, thread, function)
+    o = add_operation_to_mascm(mascm, node, thread, function)
+    if resource:
+        o.add_use_resource(resource)
     return function_calls
 
 
@@ -661,6 +667,8 @@ def parse_compound_statement(mascm, node: Compound, thread: Thread, time_unit: T
             functions_call.extend(parse_return(mascm, item, thread, time_unit, functions_definition, function))
         elif isinstance(item, If):
             functions_call.extend(parse_if_statement(mascm, item, thread, time_unit, functions_definition, function))
+        elif isinstance(item, While):
+            functions_call.extend(parse_while_loop(mascm, item, thread, time_unit, functions_definition, function))
         else:
             logging.critical(f"When parsing a compound, an unsupported item of type '{type(item)}' was encountered.")
     return functions_call
@@ -701,22 +709,35 @@ def __parse_unary_operator(mascm, node: UnaryOp, thread: Thread) -> None:
         __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
 
 
-def __parse_while_loop(mascm, node: While, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> list:
+def parse_while_loop(mascm, node: While, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
+                     function: str) -> list:
     """Function parsing if statement
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: If object
-    :param functions_definition: dict with user functions
     :param thread: Thread object
     :param time_unit: TimeUnit object
+    :param functions_definition: dict with user functions
+    :param function: Current function name
     :return: deque with function calls
     """
     global __is_loop_body
-    __is_loop_body = True
-    functions_call = parse_statement(mascm, node.cond, functions_definition, thread, time_unit)
-    operation = __add_operation_and_edge(mascm, node, thread)
-    functions_call.extend(parse_statement(mascm, node.stmt, functions_definition, thread, time_unit))
-    __add_edge_to_mascm(mascm, Edge(mascm.o[-1], operation))  # Add return loop edge
-    __is_loop_body = False
+    __is_loop_body.append(True)
+    o = add_operation_to_mascm(mascm, node, thread, function)
+    cond = node.cond
+    if isinstance(cond, BinaryOp):
+        functions_call = parse_binary_op(mascm, cond, thread, time_unit, functions_definition, function)
+    else:
+        logging.critical(f"When parsing a while condition, an unsupported item of type '{type(cond)}' was encountered.")
+
+    stmt = node.stmt
+    if isinstance(stmt, Compound):
+        functions_call.extend(parse_compound_statement(mascm, stmt, thread, time_unit, functions_definition, function))
+    else:
+        logging.critical(f"When parsing a while body, an unsupported item of type '{type(cond)}' was encountered.")
+    o_index = mascm.o.index(o)
+    for o in mascm.o[o_index:]:
+        o.is_loop_body_operation = __is_loop_body[-1]
+    __is_loop_body.pop()
     return functions_call
 
 
@@ -774,32 +795,54 @@ def add_usage_dependencies_edge(mascm, o):
 
 def create_correct_edges(mascm):
     global recursion_function
-    is_first = True
+    there_was_if = []
+    is_for_while_loop = False
 
     for i, o in enumerate(mascm.operations):
-        if is_first:
-            add_usage_dependencies_edge(mascm, o)
-            is_first = False
-            continue
-
-        if not mascm.o[i-1].is_return:
+        if i and (not mascm.o[i-1].is_return):
             # Cannot link current action with return (return action are linked later)
             __add_edge_to_mascm(mascm, Edge(mascm.o[i-1], o))
 
+            # Linking last operation of for/while loop with first
+            if is_for_while_loop and o.is_loop_body_operation and (not mascm.o[i+1].is_loop_body_operation):
+                for op in mascm.o[i-1:0:-1]:
+                    # Backward search first operation of loop for creating correct return edge
+                    if isinstance(op.node, While):
+                        __add_edge_to_mascm(mascm, Edge(o, op))
+                        break
+
         if isinstance(o.node, If):  # Detecting if/else statement
-            is_else = True
+            is_else = False
+            # Searching else operation
             for op in mascm.o[i+1:]:
-                if isinstance(o.node, If) and (o.node == op.node):
+                if o.node == op.node:
                     __add_edge_to_mascm(mascm, Edge(o, op))
-                    is_else = False
+                    is_else = True
                     break
-            if is_else:
+            if not is_else and there_was_if:
                 # Last operation in if statement should be linked with first operation after else block
+                there_was_if.pop()
                 last_edge = mascm.edges.pop()
                 for op in mascm.o[i+1:]:
                     if not op.is_if_else_block_operation:
-                        mascm.f.append(Edge(last_edge.first, op))
+                        __add_edge_to_mascm(mascm, Edge(last_edge.first, op))
                         break
+            elif is_else:
+                there_was_if.append(True)
+            else:
+                # Last operation in if statement should be linked with first operation after else block
+                last_edge = mascm.edges[-1]
+                for op in mascm.o[i+1:]:
+                    if not op.is_if_else_block_operation:
+                        __add_edge_to_mascm(mascm, Edge(last_edge.second, op))
+                        break
+
+        elif isinstance(o.node, While):
+            is_for_while_loop = True
+            for op in mascm.o[i+1:]:
+                if not op.is_loop_body_operation:
+                    __add_edge_to_mascm(mascm, Edge(o, op))
+                    break
         elif o.is_return and o.function in recursion_function:  # Detecting recursion
             first_op = None
             o_subset = mascm.o[:i]
