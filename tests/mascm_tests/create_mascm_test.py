@@ -105,16 +105,18 @@ class CreateMamTest(unittest.TestCase, TestBase):
 
     def test_single_thread_operation_in_main_thread_for_loop_without_body(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t0, t1], [t0]],"\
-                         " resources=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4], mutexes=[(m, PMN)], "\
-                         "edges=[(o0,1, o0,2), (r1, o0,2), (o0,2, o0,3), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,2),"\
-                         " (o1,2, o1,3), (o1,3, q1), (o1,3, o1,4)], relations=(forward=[], backward=[],"\
-                         " symmetric=[]))"
+                         " resources=[r1], operations=[o0,1, o0,2, o0,3, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6], " \
+                         "mutexes=[(m, PMN)], edges=[(o0,1, o0,2), (r1, o0,2), (o0,2, o0,3), (q1, o1,1), " \
+                         "(o1,1, o1,2), (o1,2, o1,5), (o1,2, o1,3), (r1, o1,3), (o1,3, o1,4), (o1,4, o1,2), " \
+                         "(o1,4, r1), (o1,4, o1,5), (o1,5, q1), (o1,5, o1,6)], " \
+                         "relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "single_thread_operation_in_main_thread_for_loop_without_body.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
-            self.__test_thread_nesting(result.threads)
+
+        self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_single_thread_for_loop(self):

@@ -176,32 +176,6 @@ def __add_mutex_to_mascm(mascm, node) -> None:
     mascm.q.append(lock)
 
 
-# def __add_operation_and_edge(mascm, node, thread, function) -> Operation:
-#     """Wrapper for adding operation and edge between operation and last operation.
-#     Function return Operation object created from given node
-#
-#     :param mascm: MultithreadedApplicationSourceCodeModel object
-#     :param node: AST node
-#     :param thread: Thread object
-#     :param function: Function name
-#     :return: Operation object
-#     """
-#     operation = Operation(node, thread, mascm.threads.index(thread), __is_loop_body, function)
-#     add_operation_to_mascm(mascm, operation)
-#     __operation_is_in_forward_relation(mascm, operation)
-#     __operation_is_in_backward_relation(mascm, operation)
-#     __operation_is_in_symmetric_relation(mascm, operation)
-#     if operation.index <= 1:  # If it is first operation than cannot create edge
-#         return operation
-#     last_operation: Operation = mascm.o[-2]
-#     if last_operation.is_return():
-#         return operation
-#     new_edge = Edge(last_operation, operation)
-#     if (not mascm.edges) or ((len(mascm.edges) > 0) and (str(mascm.edges[-1]) != str(new_edge))):
-#         __add_edge_to_mascm(mascm, new_edge)
-#     return operation
-
-
 def add_operation_to_mascm(mascm, node: Node, thread: Thread, function: str) -> Operation:
     """ Function add operation into mascm.
     If there is waiting operation object there is created edge beetwen actual operation and waiting operation
@@ -262,33 +236,70 @@ def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, time_unit: TimeUni
     while_operation = add_operation_to_mascm(mascm, node, thread, function)
     if resource:
         while_operation.add_use_resource(resource)
+    o_index = mascm.o.index(while_operation)
+    for o in mascm.o[:o_index:-1]:
+        o.is_loop_body_operation = __is_loop_body[-1]
+        if o.node == while_operation.node:
+            break
+
     __is_loop_body.pop()
     return functions_call
 
 
-def __parse_for_loop(mascm, node: For, functions_definition: dict, thread: Thread, time_unit: TimeUnit) -> list:
+def parse_for_loop(mascm, node: For, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
+                   function: str) -> list:
     """Function parsing Assignment node
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: Assignment object
-    :param functions_definition: dict with user functions definition
     :param thread: Thread object
     :param time_unit: TimeUnit object
+    :param functions_definition: dict with user functions definition
+    :param function: Current function
     :return: deque with function calls
     """
     global __is_loop_body
-    __is_loop_body = True
+    __is_loop_body.append(True)
     functions_call = list()
-    operation = __add_operation_and_edge(mascm, node, thread)
-    # functions_call.extend(parse_statement(mascm, node.init, functions_definition, thread, time_unit))
-    # functions_call.extend(parse_statement(mascm, node.cond, functions_definition, thread, time_unit))
-    functions_call.extend(parse_statement(mascm, node.stmt, functions_definition, thread, time_unit))
-    # functions_call.extend(parse_statement(mascm, node.next, functions_definition, thread, time_unit))
-    # For loop with empty body return to itself
-    if isinstance(node.stmt, EmptyStatement):
-        __add_edge_to_mascm(mascm, Edge(operation, operation))
+    init = node.init
+    if isinstance(init, Decl):
+        parse_decl(mascm, init, thread, function)
+    elif init is None:
+        logging.debug("For loop has empty init section.")
     else:
-        __add_edge_to_mascm(mascm, Edge(mascm.o[-1], operation))  # Add return loop edge
-    __is_loop_body = False
+        logging.critical(f"When parsing an for init, an unsupported item of type '{type(init)}' was encountered.")
+
+    operation = add_operation_to_mascm(mascm, node, thread, function)
+
+    cond = node.cond
+    if isinstance(cond, ID):
+        cond_op = add_operation_to_mascm(mascm, cond, thread, function)
+        resource_name = parse_id(cond, function)
+        for shared_resource in mascm.r:
+            if resource_name in shared_resource:
+                cond_op.add_use_resource(shared_resource)
+                break
+    else:
+        logging.critical(f"When parsing a for cond, an unsupported item of type '{type(cond)}' was encountered.")
+
+    stmt = node.stmt
+    if isinstance(stmt, Compound):
+        functions_call.extend(parse_compound_statement(mascm, stmt, thread, time_unit, functions_definition, function))
+    elif isinstance(stmt, EmptyStatement):
+        logging.debug("Function has an empty body.")
+    else:
+        logging.critical(f"When parsing a for body, an unsupported item of type '{type(stmt)}' was encountered.")
+
+    n = node.next
+    if isinstance(n, UnaryOp):
+        parse_unary_op(mascm, n, thread, time_unit, functions_definition, function)
+    else:
+        logging.critical(f"When parsing a for step, an unsupported item of type '{type(n)}' was encountered.")
+
+    o_index = mascm.o.index(operation)
+    for o in mascm.o[o_index:]:
+        o.is_loop_body_operation = __is_loop_body[-1]
+
+    __is_loop_body.pop()
     return functions_call
 
 
@@ -459,7 +470,7 @@ def parse_pthread_create(mascm, node: FuncCall, thread: Thread, time_unit: TimeU
     if isinstance(thread_func, ID):
         threadf_name = parse_id(thread_func, function)
     elif isinstance(thread_func, UnaryOp):
-        threadf_name = parse_unary_op(thread_func, function)
+        threadf_name = parse_unary_op(mascm, thread_func, thread, time_unit, functions_definition, function)
         # If there are multiple threads created in the loop it is needed
     for result in __parse_pthread_create(mascm, node, time_unit, functions_definition[threadf_name], thread):
         functions_call.append(result)
@@ -553,18 +564,19 @@ def parse_binary_op(mascm, node: BinaryOp, thread: Thread, time_unit: TimeUnit, 
     return function_calls
 
 
-def parse_unary_op(mascm, node: UnaryOp, thread: Thread, time_unit: TimeUnit, functions_definition: dict) -> list:
+def parse_unary_op(mascm, node: UnaryOp, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
+                   function: str) -> list:
     logging.debug(f"Encountered UnaryOp node: {node}")
     expr = node.expr
     function_calls = list()
     if isinstance(expr, ID):
         logging.debug(f"Encountered ID node: {expr}")
-        resource_name = parse_id(node)
+        resource_name = parse_id(expr, function)
         resource = None
         for shared_resource in mascm.r:
             if resource_name in shared_resource:
                 resource = shared_resource
-        o = add_operation_to_mascm(mascm, node, thread)
+        o = add_operation_to_mascm(mascm, node, thread, function)
         if resource:
             o.add_use_resource(resource)
     elif isinstance(expr, FuncCall):
@@ -662,10 +674,10 @@ def parse_return(mascm, node: Return, thread: Thread, time_unit: TimeUnit, funct
     return function_calls
 
 
-def parse_decl(mascm, node: Decl, thread: Thread, function: str) -> None:
+def parse_decl(mascm, node: Decl, thread: Thread, function: str) -> Operation:
     logging.debug("Parse Decl")
     if node.init is None:
-        add_operation_to_mascm(mascm, node, thread, function)
+        return add_operation_to_mascm(mascm, node, thread, function)
     else:
         logging.critical(f"When parsing a declaration, an unsupported item of type '{type(node)}' was encountered.")
 
@@ -688,6 +700,8 @@ def parse_compound_statement(mascm, node: Compound, thread: Thread, time_unit: T
             functions_call.extend(parse_while_loop(mascm, item, thread, time_unit, functions_definition, function))
         elif isinstance(item, DoWhile):
             functions_call.extend(parse_do_while_loop(mascm, item, thread, time_unit, functions_definition, function))
+        elif isinstance(item, For):
+            functions_call.extend(parse_for_loop(mascm, item, thread, time_unit, functions_definition, function))
         else:
             logging.critical(f"When parsing a compound, an unsupported item of type '{type(item)}' was encountered.")
     return functions_call
@@ -825,11 +839,14 @@ def create_edges(mascm):
             __add_edge_to_mascm(mascm, Edge(mascm.o[i-1], o))
 
             # Linking last operation of for/while loop with first
-            if is_for_while_loop and o.is_loop_body_operation and (not prev_op.is_loop_body_operation):
+            next_op = mascm.o[i+1] if len(mascm.o) > i+1 else None
+            if is_for_while_loop and o.is_loop_body_operation and \
+                    ((next_op is None) or (not next_op.is_loop_body_operation)):
                 for op in mascm.o[i-1:0:-1]:
                     # Backward search first operation of loop for creating correct return edge
-                    if isinstance(op.node, While):
-                        __add_edge_to_mascm(mascm, Edge(o, op))
+                    if isinstance(op.node, While) or isinstance(op.node, For):
+                        __add_edge_to_mascm(mascm,  Edge(o, op))
+                        is_for_while_loop = False # disable flag if it is last operation
                         break
 
         if isinstance(o.node, If):  # Detecting if/else statement
@@ -858,7 +875,7 @@ def create_edges(mascm):
                         __add_edge_to_mascm(mascm, Edge(last_edge.second, op))
                         break
 
-        elif isinstance(o.node, While):
+        elif isinstance(o.node, While) or isinstance(o.node, For):
             is_for_while_loop = True
             for op in mascm.o[i+1:]:
                 if not op.is_loop_body_operation:
