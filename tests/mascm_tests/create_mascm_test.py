@@ -137,9 +137,11 @@ class CreateMamTest(unittest.TestCase, TestBase):
 
     def test_multiple_file_application(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resources=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5], "\
-                         "mutexes=[(m, PMN)], edges=[(o0,1, o0,2), (o1,1, o1,2), (q1, o1,2), (o1,2, o1,3), "\
-                         "(o1,3, r2), (o1,3, o1,4), (o1,4, q1), (o1,4, o1,1), (o1,1, o1,5), (o1,4, o1,5)], "\
+                         "resources=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, " \
+                         "o1,8, o1,9, o1,10, o1,11, o1,12], mutexes=[(m, PMN)], edges=[(o0,1, o0,2), (o1,1, o1,2), " \
+                         "(o1,2, o1,3), (o1,3, o1,12), (o1,3, o1,4), (r1, o1,4), (r2, o1,4), (o1,4, o1,5), " \
+                         "(r1, o1,5), (o1,5, o1,6), (o1,6, o1,7), (o1,7, o1,8), (q1, o1,8), (o1,8, o1,9), " \
+                         "(o1,9, r2), (o1,9, o1,10), (o1,10, q1), (o1,10, o1,11), (o1,11, o1,3), (o1,11, o1,12)], " \
                          "relations=(forward=[], backward=[], symmetric=[]))"
         dir_path: str = join(self.multiple_files_app_path_prefix, "1")
         collected_ast = list()
