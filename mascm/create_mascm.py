@@ -228,25 +228,41 @@ def add_resource_to_mascm(mascm, node) -> None:
     mascm.r.append(r)
 
 
-def __parse_do_while_loop(mascm, node: DoWhile, functions_definition: dict, thread: Thread, time_unit: TimeUnit)\
-        -> list:
+def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
+                        function: str) -> list:
     """Function parsing Assignment node
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: Assignment object
-    :param functions_definition: dict with user functions definition
     :param thread: Thread object
     :param time_unit: TimeUnit object
+    :param functions_definition: dict with user functions definition
+    :param function: Current function
     :return: deque with function calls
     """
     global __is_loop_body
-    __is_loop_body = True
+    __is_loop_body.append(True)
     functions_call = list()
-    do_operation = __add_operation_and_edge(mascm, node, thread)
-    functions_call.extend(parse_statement(mascm, node.stmt, functions_definition, thread, time_unit))
-    functions_call.extend(parse_statement(mascm, node.cond, functions_definition, thread, time_unit))
-    while_operation = __add_operation_and_edge(mascm, node, thread)
-    __add_edge_to_mascm(mascm, Edge(while_operation, do_operation))
-    __is_loop_body = False
+    add_operation_to_mascm(mascm, node, thread, function)
+    stmt = node.stmt
+    if isinstance(stmt, Compound):
+        functions_call.extend(parse_compound_statement(mascm, stmt, thread, time_unit, functions_definition, function))
+    else:
+        logging.critical(f"When parsing an do while body, an unsupported item of type '{type(stmt)}' was encountered.")
+
+    cond = node.cond
+    resource = None
+    if isinstance(cond, ID):
+        resource_name = parse_id(cond, function)
+        for shared_resource in mascm.r:
+            if resource_name in shared_resource:
+                resource = shared_resource
+    else:
+        logging.critical(f"When parsing an do while cond, an unsupported item of type '{type(cond)}' was encountered.")
+
+    while_operation = add_operation_to_mascm(mascm, node, thread, function)
+    if resource:
+        while_operation.add_use_resource(resource)
+    __is_loop_body.pop()
     return functions_call
 
 
@@ -670,6 +686,8 @@ def parse_compound_statement(mascm, node: Compound, thread: Thread, time_unit: T
             functions_call.extend(parse_if_statement(mascm, item, thread, time_unit, functions_definition, function))
         elif isinstance(item, While):
             functions_call.extend(parse_while_loop(mascm, item, thread, time_unit, functions_definition, function))
+        elif isinstance(item, DoWhile):
+            functions_call.extend(parse_do_while_loop(mascm, item, thread, time_unit, functions_definition, function))
         else:
             logging.critical(f"When parsing a compound, an unsupported item of type '{type(item)}' was encountered.")
     return functions_call
@@ -723,10 +741,11 @@ def parse_while_loop(mascm, node: While, thread: Thread, time_unit: TimeUnit, fu
     """
     global __is_loop_body
     __is_loop_body.append(True)
+    functions_call = list()
     o = add_operation_to_mascm(mascm, node, thread, function)
     cond = node.cond
     if isinstance(cond, BinaryOp):
-        functions_call = parse_binary_op(mascm, cond, thread, time_unit, functions_definition, function)
+        functions_call.extend(parse_binary_op(mascm, cond, thread, time_unit, functions_definition, function))
     else:
         logging.critical(f"When parsing a while condition, an unsupported item of type '{type(cond)}' was encountered.")
 
@@ -843,6 +862,11 @@ def create_edges(mascm):
             is_for_while_loop = True
             for op in mascm.o[i+1:]:
                 if not op.is_loop_body_operation:
+                    __add_edge_to_mascm(mascm, Edge(o, op))
+                    break
+        elif isinstance(o.node, DoWhile):
+            for op in mascm.o[:i]:
+                if op.node == o.node:
                     __add_edge_to_mascm(mascm, Edge(o, op))
                     break
         elif o.is_return and o.function in recursion_function:  # Detecting recursion
