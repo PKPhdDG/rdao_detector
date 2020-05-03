@@ -258,8 +258,8 @@ def parse_for_loop(mascm, node: For, thread: Thread, time_unit: TimeUnit, functi
     __is_loop_body.append(True)
     functions_call = list()
     init = node.init
-    if isinstance(init, Decl):
-        parse_decl(mascm, init, thread, function)
+    if isinstance(init, DeclList):
+        functions_call.extend(parse_decl_list(mascm, init, thread, time_unit, functions_definition, function))
     elif init is None:
         logging.debug("For loop has empty init section.")
     else:
@@ -271,6 +271,8 @@ def parse_for_loop(mascm, node: For, thread: Thread, time_unit: TimeUnit, functi
     if isinstance(cond, ID):
         cond_op = add_operation_to_mascm(mascm, cond, thread, function)
         parse_id(mascm, cond, cond_op)
+    elif isinstance(cond, BinaryOp):
+        parse_binary_op(mascm, cond, thread, time_unit, functions_definition, function)
     else:
         logging.critical(f"When parsing a for cond, an unsupported item of type '{type(cond)}' was encountered.")
 
@@ -544,14 +546,18 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, time_unit: TimeUni
 def parse_binary_op(mascm, node: BinaryOp, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
                     function: str, skip_add_operation: bool = False) -> list:
     function_calls = list()
-    resource = None
+    resources = list()
     for item in [node.left, node.right]:
         if isinstance(item, ID):
             resource_name, resource = parse_id(mascm, item, None)
+            if resource:
+                resources.append(resource)
         elif isinstance(item, Constant):
             parse_constant(mascm, item, function)
         elif isinstance(item, FuncCall):
             function_calls.extend(parse_func_call(mascm, item, thread, time_unit, functions_definition))
+        elif isinstance(item, BinaryOp):
+            function_calls.extend(parse_binary_op(mascm, item, thread, time_unit, functions_definition, function))
         else:
             msg = f"When parsing a binary operator, an unsupported item of type '{type(item)}' was encountered."
             logging.critical(msg)
@@ -559,7 +565,7 @@ def parse_binary_op(mascm, node: BinaryOp, thread: Thread, time_unit: TimeUnit, 
         return function_calls
 
     o = add_operation_to_mascm(mascm, node, thread, function)
-    if resource:
+    for resource in resources:
         o.add_use_resource(resource)
     return function_calls
 
@@ -669,12 +675,27 @@ def parse_return(mascm, node: Return, thread: Thread, time_unit: TimeUnit, funct
     return function_calls
 
 
-def parse_decl(mascm, node: Decl, thread: Thread, function: str) -> Operation:
+def parse_decl(mascm, node: Decl, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
+               function: str) -> list:
     logging.debug("Parse Decl")
-    if node.init is None:
-        return add_operation_to_mascm(mascm, node, thread, function)
+    functions_call = list()
+    init = node.init
+    if isinstance(init, FuncCall):
+        functions_call.extend(parse_func_call(mascm, init, thread, time_unit, functions_definition))
+    elif init is None:
+        add_operation_to_mascm(mascm, node, thread, function)
     else:
         logging.critical(f"When parsing a declaration, an unsupported item of type '{type(node)}' was encountered.")
+    return functions_call
+
+
+def parse_decl_list(mascm, node: Decl, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
+               function: str):
+    logging.debug("Parse DeclList")
+    functions_call = list()
+    for decl in node.decls:
+        functions_call.extend(parse_decl(mascm, decl, thread, time_unit, functions_definition, function))
+    return functions_call
 
 
 def parse_compound_statement(mascm, node: Compound, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
@@ -682,7 +703,7 @@ def parse_compound_statement(mascm, node: Compound, thread: Thread, time_unit: T
     functions_call = list()
     for item in node.block_items:
         if isinstance(item, Decl):
-            parse_decl(mascm, item, thread, function)
+            functions_call.extend(parse_decl(mascm, item, thread, time_unit, functions_definition, function))
         elif isinstance(item, FuncCall):
             functions_call.extend(parse_func_call(mascm, item, thread, time_unit, functions_definition))
         elif isinstance(item, Assignment):
