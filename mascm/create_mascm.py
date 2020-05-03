@@ -23,7 +23,6 @@ from pycparser.c_ast import *
 from typing import Optional, Union as t_Union
 import warnings
 
-__new_time_unit = True
 __macro_func_pref = "__builtin_{}"
 
 # List of boolean value which contains only True value to know about nesting loops
@@ -161,7 +160,7 @@ def __operation_is_in_symmetric_relation(mascm, operation: Operation, check_thre
                 symmetric_operations_handler.remove(data)
 
 
-def __add_edge_to_mascm(mascm, edge: Edge) -> None:
+def add_edge_to_mascm(mascm, edge: Edge) -> None:
     """Function add edge to MASCM
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param edge: Edge object
@@ -169,7 +168,7 @@ def __add_edge_to_mascm(mascm, edge: Edge) -> None:
     mascm.f.append(edge)
 
 
-def __add_mutex_to_mascm(mascm, node) -> None:
+def add_mutex_to_mascm(mascm, node) -> None:
     """Add Lock object into MASCM's Q set
     :param node: AST Node
     """
@@ -300,34 +299,6 @@ def parse_for_loop(mascm, node: For, thread: Thread, time_unit: TimeUnit, functi
     return functions_call
 
 
-def __old_parse_compound_statement(mascm, cond: Node, operation: Operation):
-    """ Compound statement has a lot of branches, and all of the have to be checked
-    :param mascm: MultithreadedApplicationSourceCodeModel
-    :param cond: BinaryOb with branches
-    :param operation: MASCM Operation object to link resource with correct operation
-    """
-    if hasattr(cond, 'left') and isinstance(cond.left, BinaryOp):
-        parse_compound_statement(mascm, cond.left, operation)
-
-    if hasattr(cond, 'right') and isinstance(cond.right, BinaryOp):
-        parse_compound_statement(mascm, cond.right, operation)
-
-    if hasattr(cond, 'left') and isinstance(cond.left, ID):
-        for resource in mascm.resources:
-            if resource.has_name(cond.left.name):
-                __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
-
-    if hasattr(cond, 'right') and isinstance(cond.right, ID):
-        for resource in mascm.resources:
-            if resource.has_name(cond.right.name):
-                __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
-
-    if isinstance(cond, ID):
-        for resource in mascm.resources:
-            if resource.has_name(cond.name):
-                __add_edge_to_mascm(mascm, operation.create_edge_with_resource(resource))
-
-
 def parse_if_statement(mascm, node: If, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
                        function: str) -> list:
     """Function parsing if statement
@@ -439,71 +410,65 @@ def parse_id(mascm, node: ID, operation: Optional[Operation]) -> tuple:
     return resource_name, None
 
 
-def __parse_pthread_create(mascm, node: FuncCall, time_unit: TimeUnit, func: Function,
-                         main_thread: Optional[Thread] = None) -> tuple:
-    """Parse node FuncCall with pthread_mutex_create.
-    Function return 3 elements tuple with TimeUnit, Thread and Function
-
-    :param mascm: MultithreadedApplicationSourceCodeModel object
-    :param node: FuncCall object
-    :param time_unit: TimeUnit object
-    :param func: Function object
-    :param main_thread: Thread object used to nesting check
-    :return: Tuple with TimeUnit, Thread, Function
-    """
-    global __new_time_unit, __is_loop_body
-    if __new_time_unit:
-        __new_time_unit = False
-        mascm.u.append(TimeUnit(time_unit + 1))
-        always_parallel = (t for t in mascm.threads if t.is_always_parallel())
-        mascm.u[-1].extend(always_parallel)
-        add_resource_to_mascm(mascm, node.args.exprs[3])
-    thread_depth = main_thread.depth + 1 if main_thread is not None else 0
-    for i in range(2 if __is_loop_body else 1):
-        new_thread = Thread(len(mascm.threads), node.args, mascm.u[-1], thread_depth)
-        mascm.t.append(new_thread)
-        mascm.u[-1].append(new_thread)
-        yield mascm.u[-1], new_thread, func
-
-
 def parse_pthread_create(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
                          function: str) -> list:
-    global threads_stack
+    global __is_loop_body
     functions_call = list()
-    thread_func = node.args.exprs[2]
-    threadf_name = None
-    if isinstance(thread_func, ID):
-        threadf_name, _ = parse_id(mascm, thread_func, None)
-    elif isinstance(thread_func, UnaryOp):
-        threadf_name = parse_unary_op(mascm, thread_func, thread, time_unit, functions_definition, function)
-        # If there are multiple threads created in the loop it is needed
-    else:
-        m = f"When parsing a pthread_create, an unsupported item of type '{type(thread_func)}' was encountered."
-        logging.critical(m)
 
-    for result in __parse_pthread_create(mascm, node, time_unit, functions_definition[threadf_name], thread):
-        functions_call.append(result)
-        threads_stack.append(result)
-        time_unit, *_ = result
+    o = add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    # TODO Unry operation is added to model which can cause problems
+    # args = parse_expr_list(mascm, node.args, thread, time_unit, functions_definition, function)
+    # if args[3] == '0':  # Is null value
+    #     pass
+    # else:
+    #     m = f"When parsing a pthread_create, an unsupported argument '{type(args[3])}' was encountered."
+    #     logging.critical(m)
+
+    function = node.args.exprs[2].name if isinstance(node.args.exprs[2], ID) else node.args.exprs[2].expr.name
+    for i in range(2 if __is_loop_body else 1):  # If threads use this same function and are created in loop
+        new_thread = Thread(len(mascm.threads), node.args, thread.depth + 1)
+        mascm.t.append(new_thread)
+        # mascm.u[-1].append(new_thread)
+        functions_call.append((None, new_thread, functions_definition[function]))
     return functions_call
 
 
 def parse_pthread_join(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
                          function: str) -> None:
-    global __new_time_unit, threads_stack
-    __new_time_unit = True
-    args = parse_expr_list(mascm, node.args, threads_stack, time_unit, functions_definition, function)
-    tu = deepcopy(threads_stack[0][0]) if (len(threads_stack) > 0) else []
-    threads = (call[1] for call in threads_stack)
-    for t in threads:
-        try:
-            tu.remove(t)
-        except ValueError:
-            # If there is no expected thread in time unit it means there is previous time unit
-            logging.debug(f"Value exception when trying remove {t} from {tu}")
-    if tu and len(tu) == 1 and mascm.threads[0] not in tu:
-        mascm.time_units.append(tu)
+    o = add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    # global __new_time_unit, threads_stack
+    # __new_time_unit = True
+    # args = parse_expr_list(mascm, node.args, threads_stack, time_unit, functions_definition, function)
+    # tu = deepcopy(threads_stack[0][0]) if (len(threads_stack) > 0) else []
+    # threads = (call[1] for call in threads_stack)
+    # for t in threads:
+    #     try:
+    #         tu.remove(t)
+    #     except ValueError:
+    #         # If there is no expected thread in time unit it means there is previous time unit
+    #         logging.debug(f"Value exception when trying remove {t} from {tu}")
+    # if tu and len(tu) == 1 and mascm.threads[0] not in tu:
+    #     mascm.time_units.append(tu)
 
+
+def parse_pthread_mutexattr_settype(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit,
+                                    functions_definition: dict, function: str) -> None:
+    args = parse_expr_list(mascm, node.args,thread, time_unit, functions_definition, function)
+    # TODO Check this args can be used
+    attrs_name = node.args.exprs[0].expr.name
+    attrs_type = node.args.exprs[1].name
+    mascm.mutex_attrs[attrs_name] = attrs_type
+    add_operation_to_mascm(mascm, node, thread, time_unit, function)
+
+
+def parse_pthread_mutex_init(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
+                             function: str) -> None:
+    args = parse_expr_list(mascm, node.args,thread, time_unit, functions_definition, function)
+    # TODO Check this args can be used
+    mutex = node.args.exprs[0].expr.name
+    attrs_identifier = node.args.exprs[1].expr.name
+    mascm.set_mutex_type(mutex, attrs_identifier)
+    add_operation_to_mascm(mascm, node, thread, time_unit, function)
 
 def parse_assignment(mascm, node: Assignment, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
                      function: str) -> list:
@@ -614,7 +579,6 @@ def parse_expr_list(mascm, node: ExprList, thread: Thread, time_unit: TimeUnit, 
 
 
 def parse_func_call(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, functions_definition: dict) -> list:
-    global __new_time_unit
     functions_call = list()
     func_name = node.name.name
     if func_name == "pthread_create":
@@ -625,9 +589,12 @@ def parse_func_call(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, 
         parse_pthread_mutex_lock(mascm, node, thread, time_unit, func_name)
     elif func_name == "pthread_mutex_unlock":
         parse_pthread_mutex_unlock(mascm, node, thread, time_unit, func_name)
+    elif func_name == "pthread_mutexattr_settype":
+        parse_pthread_mutexattr_settype(mascm, node, thread, time_unit, functions_definition, func_name)
+    elif func_name == "pthread_mutex_init":
+        parse_pthread_mutex_init(mascm, node, thread, time_unit, functions_definition, func_name)
     elif func_name in functions_definition.keys():
         add_operation_to_mascm(mascm, node, thread, time_unit, func_name)
-        __new_called_operation = func_name
         # To avoid crash on recursion
         num_of_calls = len([fname for fname in function_call_stack if fname == func_name])
         if num_of_calls > RECURSION_MAX_DEPTH:
@@ -639,24 +606,6 @@ def parse_func_call(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, 
         functions_call.extend(result)
         function_call_stack.remove(func_name)
     else:
-        if (thread not in mascm.u[-1]) and not __new_time_unit:
-            thread.set_always_parallel()
-        # If there are some operation between create and join pthread
-        if not __new_time_unit:
-            mascm.time_units[-1].insert(thread.index, thread)
-            mascm.time_units[-1] = sorted(
-                mascm.time_units[-1], key=lambda t: t.index
-            )
-
-        if func_name == "pthread_mutexattr_settype":
-            attrs_name = node.args.exprs[0].expr.name
-            attrs_type = node.args.exprs[1].name
-            mascm.mutex_attrs[attrs_name] = attrs_type
-        elif func_name == "pthread_mutex_init":
-            mutex = node.args.exprs[0].expr.name
-            attrs_identifier = node.args.exprs[1].expr.name
-            mascm.set_mutex_type(mutex, attrs_identifier)
-
         add_operation_to_mascm(mascm, node, thread, time_unit, func_name)
     return functions_call
 
@@ -790,12 +739,12 @@ def __put_main_thread_to_model(mascm) -> None:
     """Add to MASCM t0 as first/last thread in time units
     :param mascm: MultithreadedApplicationSourceCodeModel object
     """
-    unit = TimeUnit(len(mascm.u))
-    thread = Thread(0, None, unit)
-    unit.append(thread)
-    if thread not in mascm.t:
-        mascm.t.append(thread)
-    mascm.u.append(unit)
+    # unit = TimeUnit(len(mascm.u))
+    thread = Thread(0, None, 0)
+    #unit.append(thread)
+    #if thread not in mascm.t:
+    mascm.t.append(thread)
+    #mascm.u.append(unit)
 
 
 def __restore_global_variable() -> None:
@@ -830,12 +779,42 @@ def __unexpected_declarations(defined_functions: dict):
                       UserWarning)
 
 
+def create_time_units(mascm):
+    threads = deepcopy(mascm.threads)
+    threads = sorted(threads, key=lambda t: t.depth, reverse=True)
+    units = list()
+
+    last_deep = None
+    for t in threads:
+        is_create = False
+        for o in t.operations:
+            if o.name == "pthread_create":
+                is_create = True
+            elif o.name == "pthread_join":
+                is_create = False
+            elif is_create:  # If thread has a operation between create and join
+                units[-1].append(t)
+                break
+
+        if last_deep != t.depth:
+            units.append(TimeUnit())
+            last_deep = t.depth
+        units[-1].append(t)
+
+    first_part = deepcopy(units)
+    first_part.reverse()
+    first_part.pop()
+
+    for unit in first_part + units:
+        mascm.time_units.append(sorted(unit, key=lambda t: t.index))
+
+
 def add_usage_dependencies_edge(mascm, o):
     # Resource dependencies
     if o.use_resources:
         for r in mascm.resources:
             if o.use_the_resource(r):
-                __add_edge_to_mascm(mascm, o.create_edge_with_resource(r))
+                add_edge_to_mascm(mascm, o.create_edge_with_resource(r))
 
 
 def create_edges(mascm):
@@ -847,7 +826,7 @@ def create_edges(mascm):
         prev_op = mascm.o[i-1]
         if i and (not prev_op.is_return) and (prev_op.thread_index == o.thread_index):
             # Cannot link current action with return (return action are linked later)
-            __add_edge_to_mascm(mascm, Edge(mascm.o[i-1], o))
+            add_edge_to_mascm(mascm, Edge(mascm.o[i - 1], o))
 
             # Linking last operation of for/while loop with first
             next_op = mascm.o[i+1] if len(mascm.o) > i+1 else None
@@ -856,7 +835,7 @@ def create_edges(mascm):
                 for op in mascm.o[i-1:0:-1]:
                     # Backward search first operation of loop for creating correct return edge
                     if isinstance(op.node, While) or isinstance(op.node, For):
-                        __add_edge_to_mascm(mascm,  Edge(o, op))
+                        add_edge_to_mascm(mascm, Edge(o, op))
                         is_for_while_loop = False # disable flag if it is last operation
                         break
 
@@ -865,7 +844,7 @@ def create_edges(mascm):
             # Searching else operation
             for op in mascm.o[i+1:]:
                 if o.node == op.node:
-                    __add_edge_to_mascm(mascm, Edge(o, op))
+                    add_edge_to_mascm(mascm, Edge(o, op))
                     is_else = True
                     break
             if not is_else and there_was_if:
@@ -874,7 +853,7 @@ def create_edges(mascm):
                 last_edge = mascm.edges.pop()
                 for op in mascm.o[i+1:]:
                     if not op.is_if_else_block_operation:
-                        __add_edge_to_mascm(mascm, Edge(last_edge.first, op))
+                        add_edge_to_mascm(mascm, Edge(last_edge.first, op))
                         break
             elif is_else:
                 there_was_if.append(True)
@@ -883,19 +862,19 @@ def create_edges(mascm):
                 last_edge = mascm.edges[-1]
                 for op in mascm.o[i+1:]:
                     if not op.is_if_else_block_operation:
-                        __add_edge_to_mascm(mascm, Edge(last_edge.second, op))
+                        add_edge_to_mascm(mascm, Edge(last_edge.second, op))
                         break
 
         elif isinstance(o.node, While) or isinstance(o.node, For):
             is_for_while_loop = True
             for op in mascm.o[i+1:]:
                 if not op.is_loop_body_operation:
-                    __add_edge_to_mascm(mascm, Edge(o, op))
+                    add_edge_to_mascm(mascm, Edge(o, op))
                     break
         elif isinstance(o.node, DoWhile):
             for op in mascm.o[:i]:
                 if op.node == o.node:
-                    __add_edge_to_mascm(mascm, Edge(o, op))
+                    add_edge_to_mascm(mascm, Edge(o, op))
                     break
         elif o.is_return and o.function in recursion_function:  # Detecting recursion
             first_op = None
@@ -906,22 +885,22 @@ def create_edges(mascm):
                     first_op = op
                 else:
                     break
-            __add_edge_to_mascm(mascm, Edge(o, first_op))
+            add_edge_to_mascm(mascm, Edge(o, first_op))
             for op in mascm.o[i+1:]:
                 if op.function != o.function:
                     break
-            __add_edge_to_mascm(mascm, Edge(o, op))
+            add_edge_to_mascm(mascm, Edge(o, op))
         elif o.is_return and (o.function != c.main_function_name):
             # Link return with operation in operation in parent function if it is not return from main
             for op in mascm.o[i+1:]:
                 if (op.function != o.function) and (op.thread_index == o.thread_index):
-                    __add_edge_to_mascm(mascm, Edge(o, op))
+                    add_edge_to_mascm(mascm, Edge(o, op))
                     break
         elif o.name == "pthread_mutex_lock":
-            __add_edge_to_mascm(mascm, Edge(o.related_mutex, o))
+            add_edge_to_mascm(mascm, Edge(o.related_mutex, o))
             continue  # There is no need check usage/dependencies edge
         elif o.name == "pthread_mutex_unlock":
-            __add_edge_to_mascm(mascm, Edge(o, o.related_mutex))
+            add_edge_to_mascm(mascm, Edge(o, o.related_mutex))
             continue  # There is no need check usage/dependencies edge
 
         add_usage_dependencies_edge(mascm, o)
@@ -944,7 +923,7 @@ def parse_global_trees(mascm, asts: deque) -> dict:
                 continue
             elif isinstance(node, Decl) and isinstance(node.type.type, IdentifierType)\
                     and ("pthread_mutex_t" in node.type.type.names):
-                __add_mutex_to_mascm(mascm, node)
+                add_mutex_to_mascm(mascm, node)
             elif isinstance(node, FuncDef):
                 func = Function(node)
                 functions_definition[func.name] = func
@@ -997,7 +976,7 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
 
     functions_definition = parse_global_trees(mascm, asts)
     __unexpected_declarations(functions_definition)  # TODO if there is no declaration it can be atomic operation
-    functions = parse_function_definition(mascm, functions_definition[main_function_name], mascm.t[-1], mascm.u[-1],
+    functions = parse_function_definition(mascm, functions_definition[main_function_name], mascm.t[-1], None,
                                           functions_definition, main_function_name)
 
     while functions:
@@ -1007,10 +986,7 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
             new_functions.extend(result)
         functions = new_functions
 
-    if len(mascm.u) > 1:
-        __put_main_thread_to_model(mascm)
-
-
+    create_time_units(mascm)
     create_edges(mascm)
     __find_multithreaded_relations(mascm)
 

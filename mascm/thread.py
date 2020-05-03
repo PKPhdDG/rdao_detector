@@ -12,7 +12,7 @@ from typing import Optional
 class Thread:
     """Thread representation object
     """
-    def __init__(self, thread_index: int, expr_list: Optional[ExprList], time_unit: TimeUnit, depth: int = 0):
+    def __init__(self, thread_index: int, expr_list: Optional[ExprList], depth: int = 0):
         """C'tor
         :param expr_list: ExprList object
         :param time_unit: Time unit in which thread works
@@ -20,11 +20,10 @@ class Thread:
         """
         self.__name = expr_list.exprs[0].expr.name if expr_list is not None else "t0"
         self.__args = expr_list
-        self.__time_unit = time_unit
         self.__operations = list()
         self.__depth = depth
         self.__thread_index = thread_index
-        self.__thread_does_not_care_about_anything = False
+        self.time_units = list()
 
     def add_operation(self, operation: Operation):
         """ Add operation which is run in this thread
@@ -58,16 +57,6 @@ class Thread:
         :return: Operations
         """
         return self.__operations
-
-    def set_always_parallel(self):
-        """ Mark thread as always parallel """
-        self.__thread_does_not_care_about_anything = True
-
-    def is_always_parallel(self):
-        """ Method return True value if thread is always parallel
-        :return: Boolean value
-        """
-        return self.__thread_does_not_care_about_anything
 
     def __repr__(self) -> str:
         return f"t{self.__thread_index}"
