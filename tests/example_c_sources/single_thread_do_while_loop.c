@@ -3,7 +3,7 @@
 int shared_variable = 100;
 pthread_mutex_t m;
 
-void *tread(void *args)
+void *thread(void *args)
 {
 	pthread_mutex_lock(&m);
     do
@@ -18,7 +18,7 @@ void *tread(void *args)
 int main()
 {
     pthread_t t1;
-    pthread_create(&t1, NULL, tread, NULL);
+    pthread_create(&t1, NULL, thread, NULL);
     pthread_join(t1, NULL);
     return 0;
 }

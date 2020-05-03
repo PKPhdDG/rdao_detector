@@ -226,7 +226,7 @@ def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, time_unit: TimeUni
     cond = node.cond
     resource = None
     if isinstance(cond, ID):
-        resource_name = parse_id(cond, function)
+        resource_name = parse_id(mascm, cond, None)
         for shared_resource in mascm.r:
             if resource_name in shared_resource:
                 resource = shared_resource
@@ -273,11 +273,7 @@ def parse_for_loop(mascm, node: For, thread: Thread, time_unit: TimeUnit, functi
     cond = node.cond
     if isinstance(cond, ID):
         cond_op = add_operation_to_mascm(mascm, cond, thread, function)
-        resource_name = parse_id(cond, function)
-        for shared_resource in mascm.r:
-            if resource_name in shared_resource:
-                cond_op.add_use_resource(shared_resource)
-                break
+        parse_id(mascm, cond, cond_op)
     else:
         logging.critical(f"When parsing a for cond, an unsupported item of type '{type(cond)}' was encountered.")
 
@@ -347,13 +343,8 @@ def parse_if_statement(mascm, node: If, thread: Thread, time_unit: TimeUnit, fun
     if isinstance(cond, BinaryOp):
         functions_call.extend(parse_binary_op(mascm, cond, thread, time_unit, functions_definition, function, True))
     elif isinstance(cond, ID):
-        resource_name = parse_id(cond, function)
-        for shared_resource in mascm.r:
-            if resource_name in shared_resource:
-                # If shared resource is condition than dependecies operation should be added
-                o = add_operation_to_mascm(mascm, cond, thread, function)
-                o.add_use_resource(shared_resource)
-
+        o = add_operation_to_mascm(mascm, cond, thread, function)
+        parse_id(mascm, cond, o)
     else:
         logging.critical(f"When parsing an if, an unsupported item of type '{type(cond)}' was encountered.")
 
@@ -458,8 +449,17 @@ def parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread, function: 
     return operation
 
 
-def parse_id(node: ID, function: str) -> str:
-    return node.name
+def parse_id(mascm, node: ID, operation: Optional[Operation]) -> str:
+    resource_name = extract_resource_name(node)
+    if operation is None:
+        return resource_name
+
+    for shared_resource in mascm.r:
+        if resource_name in shared_resource:
+            # If shared resource is condition than dependencies operation should be added
+            operation.add_use_resource(shared_resource)
+            break
+    return resource_name
 
 
 def parse_pthread_create(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
@@ -468,7 +468,7 @@ def parse_pthread_create(mascm, node: FuncCall, thread: Thread, time_unit: TimeU
     thread_func = node.args.exprs[2]
     threadf_name = None
     if isinstance(thread_func, ID):
-        threadf_name = parse_id(thread_func, function)
+        threadf_name = parse_id(mascm, thread_func, None)
     elif isinstance(thread_func, UnaryOp):
         threadf_name = parse_unary_op(mascm, thread_func, thread, time_unit, functions_definition, function)
         # If there are multiple threads created in the loop it is needed
@@ -544,7 +544,7 @@ def parse_binary_op(mascm, node: BinaryOp, thread: Thread, time_unit: TimeUnit, 
     resource = None
     for item in [node.left, node.right]:
         if isinstance(item, ID):
-            resource_name = parse_id(item, function)
+            resource_name = parse_id(mascm, item, None)
             for shared_resource in mascm.r:
                 if resource_name in shared_resource:
                     resource = shared_resource
@@ -571,14 +571,8 @@ def parse_unary_op(mascm, node: UnaryOp, thread: Thread, time_unit: TimeUnit, fu
     function_calls = list()
     if isinstance(expr, ID):
         logging.debug(f"Encountered ID node: {expr}")
-        resource_name = parse_id(expr, function)
-        resource = None
-        for shared_resource in mascm.r:
-            if resource_name in shared_resource:
-                resource = shared_resource
         o = add_operation_to_mascm(mascm, node, thread, function)
-        if resource:
-            o.add_use_resource(resource)
+        parse_id(mascm, expr, o)
     elif isinstance(expr, FuncCall):
         logging.debug(f"Encountered FuncCall node: {expr}")
         function_calls.extend(parse_func_call(mascm, expr, thread, time_unit, functions_definition))
@@ -661,7 +655,7 @@ def parse_return(mascm, node: Return, thread: Thread, time_unit: TimeUnit, funct
     if isinstance(expr, Constant):
         parse_constant(mascm, expr, function)
     elif isinstance(expr, ID):
-        parse_id(expr, function)
+        parse_id(mascm, expr, None)
     elif isinstance(expr, BinaryOp):
         function_calls.extend(parse_binary_op(mascm, expr, thread, time_unit, functions_definition, function))
     elif isinstance(expr, FuncCall):
@@ -979,6 +973,8 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
     :param asts: AST's deque
     :return: MultithreadedApplicationSourceCodeModel object
     """
+    global __is_loop_body
+    __is_loop_body = []
     mascm = MultithreadedApplicationSourceCodeModel(list(), list(), list(), list(), list(), list(), Relations())
     __put_main_thread_to_model(mascm)
 
