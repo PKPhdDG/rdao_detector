@@ -682,10 +682,13 @@ def parse_decl(mascm, node: Decl, thread: Thread, time_unit: TimeUnit, functions
     init = node.init
     if isinstance(init, FuncCall):
         functions_call.extend(parse_func_call(mascm, init, thread, time_unit, functions_definition))
+    elif isinstance(init, Constant):
+        parse_constant(mascm, init, function)
+        add_operation_to_mascm(mascm, node, thread, function)
     elif init is None:
         add_operation_to_mascm(mascm, node, thread, function)
     else:
-        logging.critical(f"When parsing a declaration, an unsupported item of type '{type(node)}' was encountered.")
+        logging.critical(f"When parsing a declaration, an unsupported item of type '{type(init)}' was encountered.")
     return functions_call
 
 
