@@ -221,17 +221,14 @@ def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, time_unit: TimeUni
     if isinstance(stmt, Compound):
         functions_call.extend(parse_compound_statement(mascm, stmt, thread, time_unit, functions_definition, function))
     else:
-        logging.critical(f"When parsing an do while body, an unsupported item of type '{type(stmt)}' was encountered.")
+        logging.critical(f"When parsing a do-while body, an unsupported item of type '{type(stmt)}' was encountered.")
 
     cond = node.cond
     resource = None
     if isinstance(cond, ID):
-        resource_name = parse_id(mascm, cond, None)
-        for shared_resource in mascm.r:
-            if resource_name in shared_resource:
-                resource = shared_resource
+        resource_name, resource = parse_id(mascm, cond, None)
     else:
-        logging.critical(f"When parsing an do while cond, an unsupported item of type '{type(cond)}' was encountered.")
+        logging.critical(f"When parsing a do-while cond, an unsupported item of type '{type(cond)}' was encountered.")
 
     while_operation = add_operation_to_mascm(mascm, node, thread, function)
     if resource:
@@ -266,7 +263,7 @@ def parse_for_loop(mascm, node: For, thread: Thread, time_unit: TimeUnit, functi
     elif init is None:
         logging.debug("For loop has empty init section.")
     else:
-        logging.critical(f"When parsing an for init, an unsupported item of type '{type(init)}' was encountered.")
+        logging.critical(f"When parsing a for init, an unsupported item of type '{type(init)}' was encountered.")
 
     operation = add_operation_to_mascm(mascm, node, thread, function)
 
@@ -449,17 +446,18 @@ def parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread, function: 
     return operation
 
 
-def parse_id(mascm, node: ID, operation: Optional[Operation]) -> str:
+def parse_id(mascm, node: ID, operation: Optional[Operation]) -> tuple:
     resource_name = extract_resource_name(node)
-    if operation is None:
-        return resource_name
 
     for shared_resource in mascm.r:
         if resource_name in shared_resource:
             # If shared resource is condition than dependencies operation should be added
-            operation.add_use_resource(shared_resource)
-            break
-    return resource_name
+            if operation is not None:
+                operation.add_use_resource(shared_resource)
+                break
+            else:
+                return resource_name, shared_resource
+    return resource_name, None
 
 
 def parse_pthread_create(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
@@ -468,10 +466,14 @@ def parse_pthread_create(mascm, node: FuncCall, thread: Thread, time_unit: TimeU
     thread_func = node.args.exprs[2]
     threadf_name = None
     if isinstance(thread_func, ID):
-        threadf_name = parse_id(mascm, thread_func, None)
+        threadf_name, _ = parse_id(mascm, thread_func, None)
     elif isinstance(thread_func, UnaryOp):
         threadf_name = parse_unary_op(mascm, thread_func, thread, time_unit, functions_definition, function)
         # If there are multiple threads created in the loop it is needed
+    else:
+        m = f"When parsing a pthread_create, an unsupported item of type '{type(thread_func)}' was encountered."
+        logging.critical(m)
+
     for result in __parse_pthread_create(mascm, node, time_unit, functions_definition[threadf_name], thread):
         functions_call.append(result)
         time_unit, *_ = result
@@ -516,7 +518,8 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, time_unit: TimeUni
     elif isinstance(rvalue, Constant):
         parse_constant(mascm, rvalue, function)
     else:
-        logging.critical(f"When parsing a aasignment rvalue, an unsupported item of type '{type(rvalue)}' was encountered.")
+        msg = f"When parsing a assignment rvalue, an unsupported item of type '{type(rvalue)}' was encountered."
+        logging.critical(msg)
 
     resource = None
     for shared_resource in mascm.r:
@@ -544,16 +547,13 @@ def parse_binary_op(mascm, node: BinaryOp, thread: Thread, time_unit: TimeUnit, 
     resource = None
     for item in [node.left, node.right]:
         if isinstance(item, ID):
-            resource_name = parse_id(mascm, item, None)
-            for shared_resource in mascm.r:
-                if resource_name in shared_resource:
-                    resource = shared_resource
+            resource_name, resource = parse_id(mascm, item, None)
         elif isinstance(item, Constant):
             parse_constant(mascm, item, function)
         elif isinstance(item, FuncCall):
             function_calls.extend(parse_func_call(mascm, item, thread, time_unit, functions_definition))
         else:
-            msg = f"When parsing an unary operator, an unsupported item of type '{type(item)}' was encountered."
+            msg = f"When parsing a binary operator, an unsupported item of type '{type(item)}' was encountered."
             logging.critical(msg)
     if skip_add_operation:
         return function_calls
@@ -577,7 +577,7 @@ def parse_unary_op(mascm, node: UnaryOp, thread: Thread, time_unit: TimeUnit, fu
         logging.debug(f"Encountered FuncCall node: {expr}")
         function_calls.extend(parse_func_call(mascm, expr, thread, time_unit, functions_definition))
     else:
-        logging.critical(f"When parsing a unary operator, an unsupported item of type '{type(expr)}' was encountered.")
+        logging.critical(f"When parsing an unary operator, an unsupported item of type '{type(expr)}' was encountered.")
     return function_calls
 
 
@@ -595,7 +595,8 @@ def parse_expr_list(mascm, node: ExprList, thread: Thread, time_unit: TimeUnit, 
         elif isinstance(expr, UnaryOp):
             expr_names.append(parse_unary_op(mascm, expr, thread, time_unit, functions_definition, function))
         else:
-            logging.critical(f"When parsing a expressions, an unsupported item of type '{type(expr)}' was encountered.")
+            msg = f"When parsing an expressions, an unsupported item of type '{type(expr)}' was encountered."
+            logging.critical(msg)
     return expr_names
 
 
