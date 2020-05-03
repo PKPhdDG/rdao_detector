@@ -176,8 +176,8 @@ class CreateMamTest(unittest.TestCase, TestBase):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resources=[r1], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6], " \
                          "mutexes=[(m, PMN)], edges=[(o0,1, o0,2), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), " \
-                         "(o1,3, r1), (o1,3, o1,4), (o1,4, o1,2), (o1,4, o1,5), (o1,5, q1), (o1,5, o1,6)], " \
-                         "relations=(forward=[], backward=[], symmetric=[]))"
+                         "(o1,3, r1), (o1,3, o1,4), (o1,4, o1,2), (o1,4, r1), (o1,4, o1,5), (o1,5, q1), " \
+                         "(o1,5, o1,6)], relations=(forward=[], backward=[], symmetric=[]))"
         dir_path: str = join(self.multiple_files_app_path_prefix, "3")
         collected_ast = list()
         pure_files = purify_files(collect_c_project_files(dir_path))
