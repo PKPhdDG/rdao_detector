@@ -191,7 +191,7 @@ class CreateMamTest(unittest.TestCase, TestBase):
 
     def test_multiple_file_application_4(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], "\
-                         "time_units=[[t0], [t1], [t2], [t0]], resources=[], "\
+                         "time_units=[[t0], [t1], [t2], [t1], [t0]], resources=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o2,1, o2,2, o2,3, o2,4], mutexes=[], "\
                          "edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), "\
                          "(o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,4)], relations=(forward=[], backward=[], "\
@@ -233,7 +233,7 @@ class CreateMamTest(unittest.TestCase, TestBase):
 
     def test_multiple_file_application_6(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3, t4], "\
-                         "time_units=[[t0], [t1], [t2], [t3], [t4], [t0]], resources=[], "\
+                         "time_units=[[t0], [t1], [t2], [t3], [t4], [t3], [t2], [t1], [t0]], resources=[], "\
                          "operations=[o0,1, o0,2, o1,1, o1,2, o2,1, o2,2, o3,1, o3,2, o4,1], mutexes=[], "\
                          "edges=[(o0,1, o0,2), (o1,1, o1,2), (o2,1, o2,2), (o3,1, o3,2)], relations=("\
                          "forward=[], backward=[], symmetric=[]))"

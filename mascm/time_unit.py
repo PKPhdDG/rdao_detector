@@ -16,3 +16,10 @@ class TimeUnit(UserList):
 
     def __add__(self, other: int) -> int:
         return self.__number + other
+
+    @property
+    def number(self):
+        """ Number
+        :return: TimeUnit number
+        """
+        return self.__number
