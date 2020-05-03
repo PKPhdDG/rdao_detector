@@ -1,9 +1,10 @@
+""" Module with all elements needed to create MASCM object """
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
-from collections import deque, defaultdict
+from collections import deque
 import config as c
 from copy import deepcopy
 from helpers.exceptions import MASCMException
@@ -20,7 +21,7 @@ from mascm.thread import Thread
 from mascm.time_unit import TimeUnit
 from parsing_utils import Function
 from pycparser.c_ast import *
-from typing import Optional, Union as t_Union
+from typing import Optional
 import warnings
 
 __macro_func_pref = "__builtin_{}"
@@ -48,14 +49,14 @@ recursion_function = set()
 threads_stack = list()
 
 
-def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation, resources: list,
-                                                 local_resource: bool = False) -> bool:
-    """If both functions this same resource than they are in relation
+def is_resource_shared(op1: Operation, op2: Operation, resources: list, local_resource: bool = False) -> bool:
+    """ If both operations use this same resource than they are in relation
+
     :param op1: First operation
     :param op2: Second operation
-    :param resources: shared resource
+    :param resources: Shared resources list
     :param local_resource: Flag used to check operations share some local resources
-    :return: Boolean value if true
+    :return: Boolean value, true if share this any resource
     """
     # Check operations uses even one shared resource
     for resource in resources:
@@ -68,8 +69,11 @@ def __operations_used_this_same_shared_resources(op1: Operation, op2: Operation,
     return False
 
 
-def __find_multithreaded_relations(mascm):
-    """Function check some of the operations of two threads are in relation"""
+def find_multithreaded_relations(mascm) -> None:
+    """ Function check some of the operations of two threads are in relation
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    """
     time_units = [unit for unit in mascm.time_units if len(unit) > 1]  # Do not check units with one thread only
     if not time_units:
         return
@@ -78,13 +82,19 @@ def __find_multithreaded_relations(mascm):
         for t1, t2 in combinations(time_unit, 2):
             logging.debug(f"Searching relation between: {t1}, {t2}")
             for op in t1.operations + t2.operations:
-                __operation_is_in_forward_relation(mascm, op, check_thread=False)
-                __operation_is_in_backward_relation(mascm, op, check_thread=False)
-                __operation_is_in_symmetric_relation(mascm, op, check_thread=False)
+                operation_is_in_forward_relation(mascm, op, check_thread=False)
+                operation_is_in_backward_relation(mascm, op, check_thread=False)
+                operation_is_in_symmetric_relation(mascm, op, check_thread=False)
 
 
-def __operation_is_in_forward_relation(mascm, operation: Operation, check_thread: bool = True):
-    """Function check the operation can be a part of forward relation, and create it"""
+def operation_is_in_forward_relation(mascm, operation: Operation, check_thread: bool = True) -> None:
+    """ Function check the operation can be a part of forward relation, and create it
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param operation: Operation
+    :param check_thread: Flag used to force searching only within operation's thread
+    """
+
     forward_relations = set(relations["forward"] + c.relations["forward"])
     for pair in forward_relations:
         __func_name0 = __macro_func_pref.format(pair[0])
@@ -98,7 +108,7 @@ def __operation_is_in_forward_relation(mascm, operation: Operation, check_thread
                 data = next((d for d in forward_operations_handler if d["pair"][1] in (pair[1], __func_name1)))
             except StopIteration:
                 continue
-            if not __operations_used_this_same_shared_resources(data[1], operation, mascm.resources):
+            if not is_resource_shared(data[1], operation, mascm.resources):
                 continue
             if check_thread and data[1].thread_index != operation.thread_index:
                 continue
@@ -109,8 +119,13 @@ def __operation_is_in_forward_relation(mascm, operation: Operation, check_thread
                 forward_operations_handler.remove(data)
 
 
-def __operation_is_in_backward_relation(mascm, operation: Operation, check_thread: bool = True):
-    """Function check the operation can be a part of backward relation, and create it"""
+def operation_is_in_backward_relation(mascm, operation: Operation, check_thread: bool = True) -> None:
+    """ Function check the operation can be a part of backward relation, and create it
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param operation: Operation
+    :param check_thread: Flag used to force searching only within operation's thread
+    """
     backward_relations = set(relations["backward"] + c.relations["backward"])
     for pair in backward_relations:
         __func_name0 = __macro_func_pref.format(pair[0])
@@ -123,7 +138,7 @@ def __operation_is_in_backward_relation(mascm, operation: Operation, check_threa
                 continue
             first_operation = backward_operations_handler[pair]
             # TODO Check it for this relation
-            # if not __operations_used_this_same_shared_resources(first_operation, operation, mascm.resources):
+            # if not is_resource_shared(first_operation, operation, mascm.resources):
             #     continue
             edge = Edge(first_operation, operation)
             if (edge not in mascm.relations.backward) and \
@@ -132,8 +147,13 @@ def __operation_is_in_backward_relation(mascm, operation: Operation, check_threa
                 del backward_operations_handler[pair]
 
 
-def __operation_is_in_symmetric_relation(mascm, operation: Operation, check_thread: bool = True):
-    """Function check the operation can be a part of symmetric relation, and create it"""
+def operation_is_in_symmetric_relation(mascm, operation: Operation, check_thread: bool = True) -> None:
+    """ Function check the operation can be a part of symmetric relation, and create it
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param operation: Operation
+    :param check_thread: Flag used to force searching only within operation's thread
+    """
     symmetric_relations = set(relations["symmetric"] + c.relations["symmetric"])
     for pair in symmetric_relations:
         __func_name0 = __macro_func_pref.format(pair[0])
@@ -149,7 +169,7 @@ def __operation_is_in_symmetric_relation(mascm, operation: Operation, check_thre
                 )
             except StopIteration:
                 continue
-            if not __operations_used_this_same_shared_resources(data[1], operation, mascm.resources, True):
+            if not is_resource_shared(data[1], operation, mascm.resources, True):
                 continue
             if check_thread and data[1].thread_index != operation.thread_index:
                 continue
@@ -161,7 +181,8 @@ def __operation_is_in_symmetric_relation(mascm, operation: Operation, check_thre
 
 
 def add_edge_to_mascm(mascm, edge: Edge) -> None:
-    """Function add edge to MASCM
+    """ Function add edge to MASCM
+
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param edge: Edge object
     """
@@ -169,22 +190,21 @@ def add_edge_to_mascm(mascm, edge: Edge) -> None:
 
 
 def add_mutex_to_mascm(mascm, node) -> None:
-    """Add Lock object into MASCM's Q set
+    """ Add Lock object into MASCM's Q set
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: AST Node
     """
     lock = Lock(node, len(mascm.q) + 1)
     mascm.q.append(lock)
 
 
-def add_operation_to_mascm(mascm, node: Node, thread: Thread, time_unit: TimeUnit, function: str) -> Operation:
+def add_operation_to_mascm(mascm, node: Node, thread: Thread, function: str) -> Operation:
     """ Function add operation into mascm.
-    If there is waiting operation object there is created edge beetwen actual operation and waiting operation
 
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: Node obj
-    :param thread: Thread obj
-    :param function: Function name str
-    :param time_unit: TimeUnit obj
+    :param thread: Current thread obj
     :param function: Current function
     """
     op = Operation(node, thread, thread.index, function)
@@ -192,8 +212,10 @@ def add_operation_to_mascm(mascm, node: Node, thread: Thread, time_unit: TimeUni
     return op
 
 
-def add_resource_to_mascm(mascm, node) -> None:
-    """Add Resource object into MASCM's R set
+def add_resource_to_mascm(mascm, node: Node) -> None:
+    """ Add Resource object into MASCM's R set
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: AST Node
     """
     # Constant objects not declared by user does not contains shared values
@@ -203,24 +225,23 @@ def add_resource_to_mascm(mascm, node) -> None:
     mascm.r.append(r)
 
 
-def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                        function: str) -> list:
-    """Function parsing Assignment node
+def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse DoWhile node
+
     :param mascm: MultithreadedApplicationSourceCodeModel object
-    :param node: Assignment object
-    :param thread: Thread object
-    :param time_unit: TimeUnit object
-    :param functions_definition: dict with user functions definition
+    :param node: DoWhile node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
     :param function: Current function
-    :return: deque with function calls
+    :return: List with function calls
     """
     global __is_loop_body
     __is_loop_body.append(True)
     functions_call = list()
-    add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    add_operation_to_mascm(mascm, node, thread, function)
     stmt = node.stmt
     if isinstance(stmt, Compound):
-        functions_call.extend(parse_compound_statement(mascm, stmt, thread, time_unit, functions_definition, function))
+        functions_call.extend(parse_compound_statement(mascm, stmt, thread, functions_definition, function))
     else:
         logging.critical(f"When parsing a do-while body, an unsupported item of type '{type(stmt)}' was encountered.")
 
@@ -231,7 +252,7 @@ def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, time_unit: TimeUni
     else:
         logging.critical(f"When parsing a do-while cond, an unsupported item of type '{type(cond)}' was encountered.")
 
-    while_operation = add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    while_operation = add_operation_to_mascm(mascm, node, thread, function)
     if resource:
         while_operation.add_use_resource(resource)
     o_index = mascm.o.index(while_operation)
@@ -244,42 +265,41 @@ def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, time_unit: TimeUni
     return functions_call
 
 
-def parse_for_loop(mascm, node: For, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                   function: str) -> list:
-    """Function parsing Assignment node
+def parse_for_loop(mascm, node: For, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse For node
+
     :param mascm: MultithreadedApplicationSourceCodeModel object
-    :param node: Assignment object
-    :param thread: Thread object
-    :param time_unit: TimeUnit object
-    :param functions_definition: dict with user functions definition
+    :param node: For node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
     :param function: Current function
-    :return: deque with function calls
+    :return: List with function calls
     """
     global __is_loop_body
     __is_loop_body.append(True)
     functions_call = list()
     init = node.init
     if isinstance(init, DeclList):
-        functions_call.extend(parse_decl_list(mascm, init, thread, time_unit, functions_definition, function))
+        functions_call.extend(parse_decl_list(mascm, init, thread, functions_definition, function))
     elif init is None:
         logging.debug("For loop has empty init section.")
     else:
         logging.critical(f"When parsing a for init, an unsupported item of type '{type(init)}' was encountered.")
 
-    operation = add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    operation = add_operation_to_mascm(mascm, node, thread, function)
 
     cond = node.cond
     if isinstance(cond, ID):
-        cond_op = add_operation_to_mascm(mascm, cond, thread, time_unit, function)
+        cond_op = add_operation_to_mascm(mascm, cond, thread, function)
         parse_id(mascm, cond, cond_op)
     elif isinstance(cond, BinaryOp):
-        parse_binary_op(mascm, cond, thread, time_unit, functions_definition, function)
+        parse_binary_op(mascm, cond, thread, functions_definition, function)
     else:
         logging.critical(f"When parsing a for cond, an unsupported item of type '{type(cond)}' was encountered.")
 
     stmt = node.stmt
     if isinstance(stmt, Compound):
-        functions_call.extend(parse_compound_statement(mascm, stmt, thread, time_unit, functions_definition, function))
+        functions_call.extend(parse_compound_statement(mascm, stmt, thread, functions_definition, function))
     elif isinstance(stmt, EmptyStatement):
         logging.debug("Function has an empty body.")
     else:
@@ -287,7 +307,7 @@ def parse_for_loop(mascm, node: For, thread: Thread, time_unit: TimeUnit, functi
 
     n = node.next
     if isinstance(n, UnaryOp):
-        parse_unary_op(mascm, n, thread, time_unit, functions_definition, function)
+        parse_unary_op(mascm, n, thread, functions_definition, function)
     else:
         logging.critical(f"When parsing a for step, an unsupported item of type '{type(n)}' was encountered.")
 
@@ -299,44 +319,43 @@ def parse_for_loop(mascm, node: For, thread: Thread, time_unit: TimeUnit, functi
     return functions_call
 
 
-def parse_if_statement(mascm, node: If, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                       function: str) -> list:
-    """Function parsing if statement
+def parse_if_statement(mascm, node: If, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse If node
+
     :param mascm: MultithreadedApplicationSourceCodeModel object
-    :param node: If object
-    :param thread: Thread object
-    :param time_unit: TimeUnit object
-    :param functions_definition: dict with user functions
-    :param function: Current function name
-    :return: deque with function calls
+    :param node: If node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
     """
     functions_call = list()
     cond = node.cond
     if isinstance(cond, BinaryOp):
-        functions_call.extend(parse_binary_op(mascm, cond, thread, time_unit, functions_definition, function, True))
+        functions_call.extend(parse_binary_op(mascm, cond, thread, functions_definition, function, True))
     elif isinstance(cond, ID):
-        o = add_operation_to_mascm(mascm, cond, thread, time_unit, function)
+        o = add_operation_to_mascm(mascm, cond, thread, function)
         parse_id(mascm, cond, o)
     else:
         logging.critical(f"When parsing an if, an unsupported item of type '{type(cond)}' was encountered.")
 
-    if_o = add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    if_o = add_operation_to_mascm(mascm, node, thread, function)
     if hasattr(node, 'iftrue') and (node.iftrue is not None):
         op = node.iftrue
         if isinstance(op, Return):
-            functions_call.extend(parse_return(mascm, op, thread, time_unit, functions_definition, function))
+            functions_call.extend(parse_return(mascm, op, thread, functions_definition, function))
         elif isinstance(op, Compound):
-            functions_call.extend(parse_compound_statement(mascm, op, thread, time_unit, functions_definition, function))
+            functions_call.extend(parse_compound_statement(mascm, op, thread, functions_definition, function))
         else:
             logging.critical(f"When parsing an if true, an unsupported item of type '{type(cond)}' was encountered.")
 
     if hasattr(node, 'iffalse') and (node.iffalse is not None):
-        add_operation_to_mascm(mascm, node, thread, time_unit, function)
+        add_operation_to_mascm(mascm, node, thread, function)
         op = node.iffalse
         if isinstance(op, Return):
-            functions_call.extend(parse_return(mascm, op, thread, time_unit, functions_definition, function))
+            functions_call.extend(parse_return(mascm, op, thread, functions_definition, function))
         elif isinstance(op, Compound):
-            functions_call.extend(parse_compound_statement(mascm, op, thread, time_unit, functions_definition, function))
+            functions_call.extend(parse_compound_statement(mascm, op, thread, functions_definition, function))
         else:
             logging.critical(f"When parsing an if false, an unsupported item of type '{type(cond)}' was encountered.")
 
@@ -347,40 +366,13 @@ def parse_if_statement(mascm, node: If, thread: Thread, time_unit: TimeUnit, fun
     return functions_call
 
 
-def parse_pthread_mutex_lock(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, function: str) -> Operation:
-    """Function parse node FuncCall with pthread_mutex_lock.
-    Also function add to mascm.f edge between pthread_mutex_lock and last operation.
-    Also function add to mascm.f edge between pthread_mutex_lock and correct lock.
+def parse_pthread_mutex_lock(mascm, node: FuncCall, thread: Thread, function: str) -> Operation:
+    """ Function parse node FuncCall for pthread_mutex_lock function
 
-    :raises RuntimeError: If mutex ID is not registered in mascm.q.
-    :param mascm: MultithreadedApplicationSourceCodeModel
-    :param node: FuncCall object
-    :param thread: Thread object
-    :param function: Current function name
-    :return: Operation object
-    """
-    lock = None
-    mutex_name = node.args.exprs[0].expr.name
-    for m in mascm.q:
-        if mutex_name == m.name:
-            lock = m
-    if lock is None:
-        raise RuntimeError(f"Cannot find mutex: {mutex_name}")
-    operation = add_operation_to_mascm(mascm, node, thread, time_unit, function)
-    operation.related_mutex = lock
-    return operation
-
-
-def parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, function: str) -> Operation:
-    """Function parse node FuncCall with pthread_mutex_unlock.
-    Also function add to mascm.f edge between pthread_mutex_unlock and last operation.
-    Also function add to mascm.f edge between pthread_mutex_unlock and correct lock.
-
-    :raises RuntimeError: If mutex ID is not registered in mascm.q.
-    :param mascm: MultithreadedApplicationSourceCodeModel
-    :param node: FuncCall object
-    :param thread: Thread object
-    :param time_unit: TimeUnit
+    :raises RuntimeError: If mutex ID is not registered in mascm.q
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: FuncCall node object
+    :param thread: Current thread
     :param function: Current function
     :return: Operation object
     """
@@ -391,103 +383,146 @@ def parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread, time_unit:
             lock = m
     if lock is None:
         raise RuntimeError(f"Cannot find mutex: {mutex_name}")
-    operation = add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    operation = add_operation_to_mascm(mascm, node, thread, function)
+    operation.related_mutex = lock
+    return operation
+
+
+def parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread, function: str) -> Operation:
+    """ Function parse node FuncCall for pthread_mutex_unlock function
+
+    :raises RuntimeError: If mutex ID is not registered in mascm.q
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: FuncCall node object
+    :param thread: Current thread
+    :param function: Current function
+    :return: Operation object
+    """
+    lock = None
+    mutex_name = node.args.exprs[0].expr.name
+    for m in mascm.q:
+        if mutex_name == m.name:
+            lock = m
+    if lock is None:
+        raise RuntimeError(f"Cannot find mutex: {mutex_name}")
+    operation = add_operation_to_mascm(mascm, node, thread, function)
     operation.related_mutex = lock
     return operation
 
 
 def parse_id(mascm, node: ID, operation: Optional[Operation]) -> tuple:
-    resource_name = extract_resource_name(node)
+    """ Function parse ID node
 
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: ID node object
+    :param operation: Operation object or None
+    :return: Tuple with resource name given from ID node, and shared resource (or none) related with ID name.
+    """
+    resource_name = extract_resource_name(node)
+    resource = None
     for shared_resource in mascm.r:
         if resource_name in shared_resource:
             # If shared resource is condition than dependencies operation should be added
             if operation is not None:
                 operation.add_use_resource(shared_resource)
-                break
-            else:
-                return resource_name, shared_resource
-    return resource_name, None
+            resource = shared_resource
+            break
+
+    return resource_name, resource
 
 
-def parse_pthread_create(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                         function: str) -> list:
+def parse_pthread_create(mascm, node: FuncCall, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse FuncCall node for pthread_create function
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: FuncCall node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
     global __is_loop_body
     functions_call = list()
 
-    o = add_operation_to_mascm(mascm, node, thread, time_unit, function)
-    # TODO Unry operation is added to model which can cause problems
-    # args = parse_expr_list(mascm, node.args, thread, time_unit, functions_definition, function)
-    # if args[3] == '0':  # Is null value
-    #     pass
-    # else:
-    #     m = f"When parsing a pthread_create, an unsupported argument '{type(args[3])}' was encountered."
-    #     logging.critical(m)
+    # TODO Try parse args before adding operation
+    o = add_operation_to_mascm(mascm, node, thread, function)
+    args = parse_expr_list(mascm, node.args, thread, functions_definition, function)
+    if args[3] == '0':  # Is null value
+        pass
+    else:
+        m = f"When parsing a pthread_create, an unsupported argument '{type(args[3])}' was encountered."
+        logging.critical(m)
 
-    function = node.args.exprs[2].name if isinstance(node.args.exprs[2], ID) else node.args.exprs[2].expr.name
+    function = args[2]
     for i in range(2 if __is_loop_body else 1):  # If threads use this same function and are created in loop
         new_thread = Thread(len(mascm.threads), node.args, thread.depth + 1)
         mascm.t.append(new_thread)
-        # mascm.u[-1].append(new_thread)
-        functions_call.append((None, new_thread, functions_definition[function]))
+        functions_call.append((new_thread, functions_definition[function]))
     return functions_call
 
 
-def parse_pthread_join(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                         function: str) -> None:
-    o = add_operation_to_mascm(mascm, node, thread, time_unit, function)
-    # global __new_time_unit, threads_stack
-    # __new_time_unit = True
-    # args = parse_expr_list(mascm, node.args, threads_stack, time_unit, functions_definition, function)
-    # tu = deepcopy(threads_stack[0][0]) if (len(threads_stack) > 0) else []
-    # threads = (call[1] for call in threads_stack)
-    # for t in threads:
-    #     try:
-    #         tu.remove(t)
-    #     except ValueError:
-    #         # If there is no expected thread in time unit it means there is previous time unit
-    #         logging.debug(f"Value exception when trying remove {t} from {tu}")
-    # if tu and len(tu) == 1 and mascm.threads[0] not in tu:
-    #     mascm.time_units.append(tu)
+def parse_pthread_join(mascm, node: FuncCall, thread: Thread, function: str) -> None:
+    """ Function parse FuncCall node for pthread_join function
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: FuncCall node object
+    :param thread: Current thread
+    :param function: Current function
+    """
+    add_operation_to_mascm(mascm, node, thread, function)
 
 
-def parse_pthread_mutexattr_settype(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit,
-                                    functions_definition: dict, function: str) -> None:
-    args = parse_expr_list(mascm, node.args,thread, time_unit, functions_definition, function)
+def parse_pthread_mutexattr_settype(mascm, node: FuncCall, thread: Thread, functions_definition: dict, function: str):
+    """ Function parse FuncCall node for pthread_mutexattr_settype function
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: FuncCall node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    """
+    args = parse_expr_list(mascm, node.args,thread, functions_definition, function)
     # TODO Check this args can be used
     attrs_name = node.args.exprs[0].expr.name
     attrs_type = node.args.exprs[1].name
     mascm.mutex_attrs[attrs_name] = attrs_type
-    add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    add_operation_to_mascm(mascm, node, thread, function)
 
 
-def parse_pthread_mutex_init(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                             function: str) -> None:
-    args = parse_expr_list(mascm, node.args,thread, time_unit, functions_definition, function)
+def parse_pthread_mutex_init(mascm, node: FuncCall, thread: Thread, functions_definition: dict, function: str) -> None:
+    """ Function parse FuncCall node for pthread_mutex_init function
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: FuncCall node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    """
+    args = parse_expr_list(mascm, node.args,thread, functions_definition, function)
     # TODO Check this args can be used
     mutex = node.args.exprs[0].expr.name
     attrs_identifier = node.args.exprs[1].expr.name
     mascm.set_mutex_type(mutex, attrs_identifier)
-    add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    add_operation_to_mascm(mascm, node, thread, function)
 
-def parse_assignment(mascm, node: Assignment, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                     function: str) -> list:
+
+def parse_assignment(mascm, node: Assignment, thread: Thread, functions_definition: dict, function: str) -> list:
     """Function parsing Assignment node
+
     :param mascm: MultithreadedApplicationSourceCodeModel object
-    :param node: Assignment object
-    :param thread: Thread object
-    :param time_unit: TimeUnit object
-    :param functions_definition: dict with user functions definition
-    :param function: Current function name
-    :return: deque object with functions to parse
+    :param node: Assignment node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
     """
     functions_call = list()
     resource_name = extract_resource_name(node)  # If lvalue is ID of shared resource than it will be reported
     rvalue = node.rvalue
     if isinstance(rvalue, FuncCall):
-        functions_call.extend(parse_func_call(mascm, rvalue, thread, time_unit, functions_definition))
+        functions_call.extend(parse_func_call(mascm, rvalue, thread, functions_definition))
     elif isinstance(rvalue, Constant):
-        parse_constant(mascm, rvalue, function)
+        parse_constant(rvalue)
     else:
         msg = f"When parsing a assignment rvalue, an unsupported item of type '{type(rvalue)}' was encountered."
         logging.critical(msg)
@@ -498,7 +533,7 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, time_unit: TimeUni
             resource = shared_resource
 
     if resource is None:
-        add_operation_to_mascm(mascm, node, thread, time_unit, function)
+        add_operation_to_mascm(mascm, node, thread, function)
         return functions_call
 
     # Dirty hack to link malloc and other function with correct resource
@@ -507,13 +542,23 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, time_unit: TimeUni
         prev_op.add_use_resource(resource)
     # End of dirty hack
 
-    o = add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    o = add_operation_to_mascm(mascm, node, thread, function)
     o.add_use_resource(resource)
     return functions_call
 
 
-def parse_binary_op(mascm, node: BinaryOp, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                    function: str, skip_add_operation: bool = False) -> list:
+def parse_binary_op(mascm, node: BinaryOp, thread: Thread, functions_definition: dict, function: str,
+                    skip_add_operation: bool = False) -> list:
+    """ Function parse BinaryOp node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: BinaryOp node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :param skip_add_operation: In some cases there is need to skip report binary operation in MASCM, default False
+    :return: List with function calls
+    """
     function_calls = list()
     resources = list()
     for item in [node.left, node.right]:
@@ -522,210 +567,255 @@ def parse_binary_op(mascm, node: BinaryOp, thread: Thread, time_unit: TimeUnit, 
             if resource:
                 resources.append(resource)
         elif isinstance(item, Constant):
-            parse_constant(mascm, item, function)
+            parse_constant(item)
         elif isinstance(item, FuncCall):
-            function_calls.extend(parse_func_call(mascm, item, thread, time_unit, functions_definition))
+            function_calls.extend(parse_func_call(mascm, item, thread, functions_definition))
         elif isinstance(item, BinaryOp):
-            function_calls.extend(parse_binary_op(mascm, item, thread, time_unit, functions_definition, function))
+            function_calls.extend(parse_binary_op(mascm, item, thread, functions_definition, function))
         else:
             msg = f"When parsing a binary operator, an unsupported item of type '{type(item)}' was encountered."
             logging.critical(msg)
+
     if skip_add_operation:
         return function_calls
 
-    o = add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    o = add_operation_to_mascm(mascm, node, thread, function)
     for resource in resources:
         o.add_use_resource(resource)
     return function_calls
 
 
-def parse_unary_op(mascm, node: UnaryOp, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                   function: str) -> list:
+def parse_unary_op(mascm, node: UnaryOp, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse UnaryOp node.
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: FuncCall node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
     logging.debug(f"Encountered UnaryOp node: {node}")
     expr = node.expr
     function_calls = list()
     if isinstance(expr, ID):
         logging.debug(f"Encountered ID node: {expr}")
-        o = add_operation_to_mascm(mascm, node, thread, time_unit, function)
+        o = None
+        if (expr.name not in functions_definition.keys()) and ("pthread_create" != function):
+            o = add_operation_to_mascm(mascm, node, thread, function)
         parse_id(mascm, expr, o)
+
     elif isinstance(expr, FuncCall):
         logging.debug(f"Encountered FuncCall node: {expr}")
-        function_calls.extend(parse_func_call(mascm, expr, thread, time_unit, functions_definition))
+        function_calls.extend(parse_func_call(mascm, expr, thread, functions_definition))
     else:
         logging.critical(f"When parsing an unary operator, an unsupported item of type '{type(expr)}' was encountered.")
     return function_calls
 
 
-def parse_constant(mascm, node: Constant, function: str) -> str:
+def parse_constant(node: Constant) -> str:
+    """ Function parse Constant node
+
+    :param node: Constant Node
+    :return: Constant value
+    """
     logging.debug(f"Encountered Constant node: {node}")
     return node.value
 
 
-def parse_expr_list(mascm, node: ExprList, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                    function: str) -> list:
+def parse_expr_list(mascm, node: ExprList, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse ExprList node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: ExprList node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
     expr_names = list()
     for expr in node.exprs:
         if isinstance(expr, Constant):
-            expr_names.append(parse_constant(mascm, expr, function))
+            expr_names.append(parse_constant(expr))
         elif isinstance(expr, ID):
             name, _ = parse_id(mascm, expr, None)
             expr_names.append(name)
         elif isinstance(expr, UnaryOp):
-            expr_names.append(parse_unary_op(mascm, expr, thread, time_unit, functions_definition, function))
+            expr_names.append(parse_unary_op(mascm, expr, thread, functions_definition, function))
         else:
             msg = f"When parsing an expressions, an unsupported item of type '{type(expr)}' was encountered."
             logging.critical(msg)
     return expr_names
 
 
-def parse_func_call(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, functions_definition: dict) -> list:
+def parse_func_call(mascm, node: FuncCall, thread: Thread, functions_definition: dict) -> list:
+    """ Function parse FuncCall node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: ExprList node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :return: List with function calls
+    """
     functions_call = list()
     func_name = node.name.name
     if func_name == "pthread_create":
-        functions_call.extend(parse_pthread_create(mascm, node, thread, time_unit, functions_definition, func_name))
+        functions_call.extend(parse_pthread_create(mascm, node, thread, functions_definition, func_name))
     elif func_name == "pthread_join":
-        parse_pthread_join(mascm, node, thread, time_unit, functions_definition, func_name)
+        parse_pthread_join(mascm, node, thread, func_name)
     elif func_name == "pthread_mutex_lock":
-        parse_pthread_mutex_lock(mascm, node, thread, time_unit, func_name)
+        parse_pthread_mutex_lock(mascm, node, thread, func_name)
     elif func_name == "pthread_mutex_unlock":
-        parse_pthread_mutex_unlock(mascm, node, thread, time_unit, func_name)
+        parse_pthread_mutex_unlock(mascm, node, thread, func_name)
     elif func_name == "pthread_mutexattr_settype":
-        parse_pthread_mutexattr_settype(mascm, node, thread, time_unit, functions_definition, func_name)
+        parse_pthread_mutexattr_settype(mascm, node, thread, functions_definition, func_name)
     elif func_name == "pthread_mutex_init":
-        parse_pthread_mutex_init(mascm, node, thread, time_unit, functions_definition, func_name)
+        parse_pthread_mutex_init(mascm, node, thread, functions_definition, func_name)
     elif func_name in functions_definition.keys():
-        add_operation_to_mascm(mascm, node, thread, time_unit, func_name)
+        add_operation_to_mascm(mascm, node, thread, func_name)
         # To avoid crash on recursion
         num_of_calls = len([fname for fname in function_call_stack if fname == func_name])
         if num_of_calls > RECURSION_MAX_DEPTH:
             recursion_function.add(func_name)
             return functions_call
         function_call_stack.appendleft(func_name)
-        result = parse_function_definition(mascm, functions_definition[func_name], thread,time_unit,
-                                           functions_definition, func_name)
+        result = parse_function_definition(mascm, functions_definition[func_name], thread, functions_definition,
+                                           func_name)
         functions_call.extend(result)
         function_call_stack.remove(func_name)
     else:
-        add_operation_to_mascm(mascm, node, thread, time_unit, func_name)
+        add_operation_to_mascm(mascm, node, thread, func_name)
     return functions_call
 
 
-def parse_return(mascm, node: Return, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                 function: str) -> list:
+def parse_return(mascm, node: Return, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse Return node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: Return node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
     logging.debug("Parse Return")
     function_calls = list()
     expr = node.expr
     if isinstance(expr, Constant):
-        parse_constant(mascm, expr, function)
+        parse_constant(expr)
     elif isinstance(expr, ID):
         parse_id(mascm, expr, None)
     elif isinstance(expr, BinaryOp):
-        function_calls.extend(parse_binary_op(mascm, expr, thread, time_unit, functions_definition, function))
+        function_calls.extend(parse_binary_op(mascm, expr, thread, functions_definition, function))
     elif isinstance(expr, FuncCall):
-        function_calls.extend(parse_func_call(mascm, expr, thread, time_unit, functions_definition))
+        function_calls.extend(parse_func_call(mascm, expr, thread, functions_definition))
     elif isinstance(expr, Cast):
         logging.info(f"Casting operation handled in return!")
     else:
         logging.critical(f"When parsing a return, an unsupported item of type '{type(expr)}' was encountered.")
 
-    add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    add_operation_to_mascm(mascm, node, thread, function)
     return function_calls
 
 
-def parse_decl(mascm, node: Decl, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-               function: str) -> list:
+def parse_decl(mascm, node: Decl, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse Decl node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: Decl node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
     logging.debug("Parse Decl")
     functions_call = list()
     init = node.init
     if isinstance(init, FuncCall):
-        functions_call.extend(parse_func_call(mascm, init, thread, time_unit, functions_definition))
+        functions_call.extend(parse_func_call(mascm, init, thread, functions_definition))
     elif isinstance(init, Constant):
-        parse_constant(mascm, init, function)
-        add_operation_to_mascm(mascm, node, thread, time_unit, function)
+        parse_constant(init)
+        add_operation_to_mascm(mascm, node, thread, function)
     elif init is None:
-        add_operation_to_mascm(mascm, node, thread, time_unit, function)
+        add_operation_to_mascm(mascm, node, thread, function)
     else:
         logging.critical(f"When parsing a declaration, an unsupported item of type '{type(init)}' was encountered.")
     return functions_call
 
 
-def parse_decl_list(mascm, node: DeclList, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-               function: str):
+def parse_decl_list(mascm, node: DeclList, thread: Thread, functions_definition: dict, function: str):
+    """ Function parse DeclList node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: DeclList node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
     logging.debug("Parse DeclList")
     functions_call = list()
     for decl in node.decls:
-        functions_call.extend(parse_decl(mascm, decl, thread, time_unit, functions_definition, function))
+        functions_call.extend(parse_decl(mascm, decl, thread, functions_definition, function))
     return functions_call
 
 
-def parse_compound_statement(mascm, node: Compound, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                             function: str) -> list:
+def parse_compound_statement(mascm, node: Compound, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse Compound node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: Compound node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
     functions_call = list()
     for item in node.block_items:
         if isinstance(item, Decl):
-            functions_call.extend(parse_decl(mascm, item, thread, time_unit, functions_definition, function))
+            functions_call.extend(parse_decl(mascm, item, thread, functions_definition, function))
         elif isinstance(item, FuncCall):
-            functions_call.extend(parse_func_call(mascm, item, thread, time_unit, functions_definition))
+            functions_call.extend(parse_func_call(mascm, item, thread, functions_definition))
         elif isinstance(item, Assignment):
-            functions_call.extend(parse_assignment(mascm, item, thread, time_unit, functions_definition, function))
+            functions_call.extend(parse_assignment(mascm, item, thread, functions_definition, function))
         elif isinstance(item, Return):
-            functions_call.extend(parse_return(mascm, item, thread, time_unit, functions_definition, function))
+            functions_call.extend(parse_return(mascm, item, thread, functions_definition, function))
         elif isinstance(item, If):
-            functions_call.extend(parse_if_statement(mascm, item, thread, time_unit, functions_definition, function))
+            functions_call.extend(parse_if_statement(mascm, item, thread, functions_definition, function))
         elif isinstance(item, While):
-            functions_call.extend(parse_while_loop(mascm, item, thread, time_unit, functions_definition, function))
+            functions_call.extend(parse_while_loop(mascm, item, thread, functions_definition, function))
         elif isinstance(item, DoWhile):
-            functions_call.extend(parse_do_while_loop(mascm, item, thread, time_unit, functions_definition, function))
+            functions_call.extend(parse_do_while_loop(mascm, item, thread, functions_definition, function))
         elif isinstance(item, For):
-            functions_call.extend(parse_for_loop(mascm, item, thread, time_unit, functions_definition, function))
+            functions_call.extend(parse_for_loop(mascm, item, thread, functions_definition, function))
         else:
             logging.critical(f"When parsing a compound, an unsupported item of type '{type(item)}' was encountered.")
     return functions_call
 
 
-def parse_statement(mascm, node: Node, thread: Thread, time_unit: TimeUnit, functions_definition: dict) -> list:
-    """Function parsing Compound type node with functions/loops/if's body
+def parse_while_loop(mascm, node: While, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse While node
+
     :param mascm: MultithreadedApplicationSourceCodeModel object
-    :param node: If object
-    :param thread: Thread object
-    :param time_unit: TimeUnit object
-    :param functions_definition: dict with user functions
-    :return: deque with function calls
-    """
-    global __new_time_unit
-
-    functions_call = list()
-    if isinstance(node, Compound):
-        functions_call.extend(parse_compound_statement(mascm, node, thread, time_unit, functions_definition))
-    else:
-        logging.critical(f"When parsing a statement, an unsupported item of type '{type(node)}' was encountered.")
-    return functions_call
-
-
-def parse_while_loop(mascm, node: While, thread: Thread, time_unit: TimeUnit, functions_definition: dict,
-                     function: str) -> list:
-    """Function parsing if statement
-    :param mascm: MultithreadedApplicationSourceCodeModel object
-    :param node: If object
-    :param thread: Thread object
-    :param time_unit: TimeUnit object
-    :param functions_definition: dict with user functions
-    :param function: Current function name
-    :return: deque with function calls
+    :param node: While node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
     """
     global __is_loop_body
     __is_loop_body.append(True)
     functions_call = list()
-    o = add_operation_to_mascm(mascm, node, thread, time_unit, function)
+    o = add_operation_to_mascm(mascm, node, thread, function)
     cond = node.cond
     if isinstance(cond, BinaryOp):
-        functions_call.extend(parse_binary_op(mascm, cond, thread, time_unit, functions_definition, function))
+        functions_call.extend(parse_binary_op(mascm, cond, thread, functions_definition, function))
     else:
         logging.critical(f"When parsing a while condition, an unsupported item of type '{type(cond)}' was encountered.")
 
     stmt = node.stmt
     if isinstance(stmt, Compound):
-        functions_call.extend(parse_compound_statement(mascm, stmt, thread, time_unit, functions_definition, function))
+        functions_call.extend(parse_compound_statement(mascm, stmt, thread, functions_definition, function))
     else:
         logging.critical(f"When parsing a while body, an unsupported item of type '{type(cond)}' was encountered.")
     o_index = mascm.o.index(o)
@@ -735,25 +825,39 @@ def parse_while_loop(mascm, node: While, thread: Thread, time_unit: TimeUnit, fu
     return functions_call
 
 
-def __put_main_thread_to_model(mascm) -> None:
-    """Add to MASCM t0 as first/last thread in time units
+def parse_function_definition(mascm, node: Function, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parsing FuncCall node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: While node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
+    functions_call = list()
+    if isinstance(node.body, Compound):
+        logging.debug("Parsing function node nody.")
+        functions_call.extend(parse_compound_statement(mascm, node.body, thread, functions_definition, function))
+    else:
+        logging.critical("Function node has body if unknown instance.")
+        raise MASCMException(f"Unknown function body type: {type(node.body)}")
+    return functions_call
+
+
+def put_main_thread_to_model(mascm) -> None:
+    """ Add to MASCM t0 as first/last thread in time units
+
     :param mascm: MultithreadedApplicationSourceCodeModel object
     """
-    # unit = TimeUnit(len(mascm.u))
-    thread = Thread(0, None, 0)
-    #unit.append(thread)
-    #if thread not in mascm.t:
+    thread = Thread(0, None)
     mascm.t.append(thread)
-    #mascm.u.append(unit)
 
 
 def __restore_global_variable() -> None:
-    """Function restore global variable to default state
-    """
-    global __new_time_unit
+    """Function restore global variable to default state"""
     global forward_operations_handler, backward_operations_handler, symmetric_operations_handler, function_call_stack
 
-    __new_time_unit = True
     forward_operations_handler = list()
     backward_operations_handler = dict()
     symmetric_operations_handler = list()
@@ -761,8 +865,9 @@ def __restore_global_variable() -> None:
 
 
 def __unexpected_declarations(defined_functions: dict):
-    """ Function check there is some function declaration without definition
-    :param defined_functions: List of defined function
+    """ Function check there is some function declarations without definition
+
+    :param defined_functions: Dict with defined functions
     """
     to_remove = list()
     for name, func in defined_functions.items():
@@ -780,8 +885,12 @@ def __unexpected_declarations(defined_functions: dict):
 
 
 def create_time_units(mascm):
+    """ Function parse operations from MASCM to detect time units and add to them
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    """
     threads = deepcopy(mascm.threads)
-    threads = sorted(threads, key=lambda t: t.depth, reverse=True)
+    threads = sorted(threads, key=lambda thread: thread.depth, reverse=True)
     units = list()
 
     last_deep = None
@@ -806,18 +915,29 @@ def create_time_units(mascm):
     first_part.pop()
 
     for unit in first_part + units:
-        mascm.time_units.append(sorted(unit, key=lambda t: t.index))
+        mascm.time_units.append(sorted(unit, key=lambda thread: thread.index))
 
 
-def add_usage_dependencies_edge(mascm, o):
+def add_usage_dependencies_edge(mascm, o: Operation):
+    """ Function check operation uses some resources, and if true than build edges for shared resources
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param o: Operation object
+    """
     # Resource dependencies
-    if o.use_resources:
-        for r in mascm.resources:
-            if o.use_the_resource(r):
-                add_edge_to_mascm(mascm, o.create_edge_with_resource(r))
+    if not o.use_resources:
+        return
+
+    for r in mascm.resources:
+        if o.use_the_resource(r):
+            add_edge_to_mascm(mascm, o.create_edge_with_resource(r))
 
 
 def create_edges(mascm):
+    """ Function create correct edges between MASCM operations
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    """
     global recursion_function
     there_was_if = []
     is_for_while_loop = False
@@ -836,7 +956,7 @@ def create_edges(mascm):
                     # Backward search first operation of loop for creating correct return edge
                     if isinstance(op.node, While) or isinstance(op.node, For):
                         add_edge_to_mascm(mascm, Edge(o, op))
-                        is_for_while_loop = False # disable flag if it is last operation
+                        is_for_while_loop = False  # Disable flag if it is last operation
                         break
 
         if isinstance(o.node, If):  # Detecting if/else statement
@@ -880,16 +1000,18 @@ def create_edges(mascm):
             first_op = None
             o_subset = mascm.o[:i]
             o_subset.reverse()
-            for op in o_subset:
+            for op in o_subset:  # Backward search of operation from parent function
                 if (first_op is None) or (op.function == o.function):
+                    # First operation is always as last operation from recursion function
+                    # If op is operation from parent function than first_op is first operation of nested function
                     first_op = op
                 else:
                     break
             add_edge_to_mascm(mascm, Edge(o, first_op))
             for op in mascm.o[i+1:]:
                 if op.function != o.function:
+                    add_edge_to_mascm(mascm, Edge(o, op))
                     break
-            add_edge_to_mascm(mascm, Edge(o, op))
         elif o.is_return and (o.function != c.main_function_name):
             # Link return with operation in operation in parent function if it is not return from main
             for op in mascm.o[i+1:]:
@@ -940,30 +1062,6 @@ def parse_global_trees(mascm, asts: deque) -> dict:
     return functions_definition
 
 
-def parse_function_definition(mascm, node: Function, thread: Thread, time_unit: TimeUnit,
-                              functions_definition: dict, function: str) -> list:
-    """Function parsing FuncCall node
-    :param mascm: MultithreadedApplicationSourceCodeModel object
-    :param node: Function object
-    :param thread: Thread object
-    :param time_unit: TimeUnit object
-    :param functions_definition: dict with user functions definition
-    :param function: Current function name
-    :return: deque with function calls
-    """
-    global __new_time_unit
-    functions_call = list()
-    if isinstance(node.body, Compound):
-        logging.debug("Parsing function node nody.")
-        functions_call.extend(
-            parse_compound_statement(mascm, node.body, thread, time_unit, functions_definition, function)
-        )
-    else:
-        logging.critical("Function node has body if unknown instance.")
-        raise MASCMException(f"Unknown function body type: {type(node.body)}")
-    return functions_call
-
-
 def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
     """Function create MultithreadedApplicationSourceCodeModel
     :param asts: AST's deque
@@ -972,23 +1070,23 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
     global __is_loop_body
     __is_loop_body = []
     mascm = MultithreadedApplicationSourceCodeModel(list(), list(), list(), list(), list(), list(), Relations())
-    __put_main_thread_to_model(mascm)
+    put_main_thread_to_model(mascm)
 
     functions_definition = parse_global_trees(mascm, asts)
     __unexpected_declarations(functions_definition)  # TODO if there is no declaration it can be atomic operation
-    functions = parse_function_definition(mascm, functions_definition[main_function_name], mascm.t[-1], None,
+    functions = parse_function_definition(mascm, functions_definition[main_function_name], mascm.t[-1],
                                           functions_definition, main_function_name)
 
     while functions:
         new_functions = list()
-        for time_unit, thread, func in functions:
-            result = parse_function_definition(mascm, func, thread, time_unit, functions_definition, func.name)
+        for thread, func in functions:
+            result = parse_function_definition(mascm, func, thread, functions_definition, func.name)
             new_functions.extend(result)
         functions = new_functions
 
     create_time_units(mascm)
     create_edges(mascm)
-    __find_multithreaded_relations(mascm)
+    find_multithreaded_relations(mascm)
 
     __restore_global_variable()
     return mascm
