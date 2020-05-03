@@ -384,7 +384,7 @@ def __parse_pthread_create(mascm, node: FuncCall, time_unit: TimeUnit, func: Fun
         yield mascm.u[-1], new_thread, func
 
 
-def __parse_pthread_mutex_lock(mascm, node: FuncCall, thread: Thread) -> Operation:
+def parse_pthread_mutex_lock(mascm, node: FuncCall, thread: Thread, function: str) -> Operation:
     """Function parse node FuncCall with pthread_mutex_lock.
     Also function add to mascm.f edge between pthread_mutex_lock and last operation.
     Also function add to mascm.f edge between pthread_mutex_lock and correct lock.
@@ -393,6 +393,7 @@ def __parse_pthread_mutex_lock(mascm, node: FuncCall, thread: Thread) -> Operati
     :param mascm: MultithreadedApplicationSourceCodeModel
     :param node: FuncCall object
     :param thread: Thread object
+    :param function: Current function name
     :return: Operation object
     """
     lock = None
@@ -402,12 +403,12 @@ def __parse_pthread_mutex_lock(mascm, node: FuncCall, thread: Thread) -> Operati
             lock = m
     if lock is None:
         raise RuntimeError(f"Cannot find mutex: {mutex_name}")
-    operation = __add_operation_and_edge(mascm, node, thread)
-    __add_edge_to_mascm(mascm, Edge(lock, operation))
+    operation = add_operation_to_mascm(mascm, node, thread, function)
+    operation.related_mutex = lock
     return operation
 
 
-def __parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread) -> Operation:
+def parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread, function: str) -> Operation:
     """Function parse node FuncCall with pthread_mutex_unlock.
     Also function add to mascm.f edge between pthread_mutex_unlock and last operation.
     Also function add to mascm.f edge between pthread_mutex_unlock and correct lock.
@@ -425,8 +426,8 @@ def __parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread) -> Opera
             lock = m
     if lock is None:
         raise RuntimeError(f"Cannot find mutex: {mutex_name}")
-    operation = __add_operation_and_edge(mascm, node, thread)
-    __add_edge_to_mascm(mascm, Edge(operation, lock))
+    operation = add_operation_to_mascm(mascm, node, thread, function)
+    operation.related_mutex = lock
     return operation
 
 
@@ -585,9 +586,9 @@ def parse_func_call(mascm, node: FuncCall, thread: Thread, time_unit: TimeUnit, 
     elif func_name == "pthread_join":
         parse_pthread_join(mascm, node, thread, time_unit, functions_definition, func_name)
     elif func_name == "pthread_mutex_lock":
-        __parse_pthread_mutex_lock(mascm, node, thread)
+        parse_pthread_mutex_lock(mascm, node, thread, func_name)
     elif func_name == "pthread_mutex_unlock":
-        __parse_pthread_mutex_unlock(mascm, node, thread)
+        parse_pthread_mutex_unlock(mascm, node, thread, func_name)
     elif func_name in functions_definition.keys():
         add_operation_to_mascm(mascm, node, thread, func_name)
         __new_called_operation = func_name
@@ -793,18 +794,19 @@ def add_usage_dependencies_edge(mascm, o):
                 __add_edge_to_mascm(mascm, o.create_edge_with_resource(r))
 
 
-def create_correct_edges(mascm):
+def create_edges(mascm):
     global recursion_function
     there_was_if = []
     is_for_while_loop = False
 
     for i, o in enumerate(mascm.operations):
-        if i and (not mascm.o[i-1].is_return):
+        prev_op = mascm.o[i-1]
+        if i and (not prev_op.is_return) and (prev_op.thread_index == o.thread_index):
             # Cannot link current action with return (return action are linked later)
             __add_edge_to_mascm(mascm, Edge(mascm.o[i-1], o))
 
             # Linking last operation of for/while loop with first
-            if is_for_while_loop and o.is_loop_body_operation and (not mascm.o[i+1].is_loop_body_operation):
+            if is_for_while_loop and o.is_loop_body_operation and (not prev_op.is_loop_body_operation):
                 for op in mascm.o[i-1:0:-1]:
                     # Backward search first operation of loop for creating correct return edge
                     if isinstance(op.node, While):
@@ -860,9 +862,16 @@ def create_correct_edges(mascm):
         elif o.is_return and (o.function != c.main_function_name):
             # Link return with operation in operation in parent function if it is not return from main
             for op in mascm.o[i+1:]:
-                if op.function != o.function:
+                if (op.function != o.function) and (op.thread_index == o.thread_index):
                     __add_edge_to_mascm(mascm, Edge(o, op))
                     break
+        elif o.name == "pthread_mutex_lock":
+            __add_edge_to_mascm(mascm, Edge(o.related_mutex, o))
+            continue  # There is no need check usage/dependencies edge
+        elif o.name == "pthread_mutex_unlock":
+            __add_edge_to_mascm(mascm, Edge(o, o.related_mutex))
+            continue  # There is no need check usage/dependencies edge
+
         add_usage_dependencies_edge(mascm, o)
 
 
@@ -947,7 +956,7 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
     if len(mascm.u) > 1:
         __put_main_thread_to_model(mascm)
 
-    create_correct_edges(mascm)
+    create_edges(mascm)
     __find_multithreaded_relations(mascm)
 
     __restore_global_variable()

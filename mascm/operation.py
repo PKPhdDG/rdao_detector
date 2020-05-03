@@ -5,7 +5,9 @@ __version__ = "0.4"
 
 import config as c
 import logging
+from helpers.exceptions import MASCMException
 from mascm.edge import Edge
+from mascm.lock import Lock
 from mascm.resource import Resource
 from pycparser.c_ast import *
 
@@ -33,6 +35,7 @@ class Operation:
         self.__function = function
         self.__is_loop_body_operation = False  # Used generally for pthread_mutex_lock/unlock
         self.__is_if_else_block_operation = False
+        self.__related_mutex = None
         if isinstance(self.__node, FuncCall):
             self.__name = self.__node.name.name
             if self.__node.args is not None:
@@ -120,18 +123,35 @@ class Operation:
         self.__is_if_else_block_operation = value
 
     @property
-    def is_loop_body_operation(self):
+    def is_loop_body_operation(self) -> bool:
         """ Getter
         :return: Boolean value
         """
         return self.__is_loop_body_operation
 
     @is_loop_body_operation.setter
-    def is_loop_body_operation(self, value):
+    def is_loop_body_operation(self, value: bool):
         """ Setter
         :param value: Boolean value
         """
         self.__is_loop_body_operation = value
+
+    @property
+    def related_mutex(self) -> Lock:
+        """ Getter
+        :return: Boolean value
+        """
+        return self.__related_mutex
+
+    @related_mutex.setter
+    def related_mutex(self, value: Lock):
+        """ Setter
+        :param value: Boolean value
+        """
+        if self.__related_mutex is not None:
+            raise MASCMException("Trying link mutex and operation which locks other mutex")
+        logging.debug(f"Setting new value for related_mutex: {value}")
+        self.__related_mutex = value
 
     def add_use_resource(self, resource: Resource) -> None:
         """ Method add resource to resource list """

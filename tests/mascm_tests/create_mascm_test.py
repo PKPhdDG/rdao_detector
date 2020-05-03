@@ -84,7 +84,8 @@ class CreateMamTest(unittest.TestCase, TestBase):
         with purify(file_path) as pure_file_path:
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
-            self.__test_thread_nesting(result.threads)
+
+        self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_single_thread_do_while_loop(self):
