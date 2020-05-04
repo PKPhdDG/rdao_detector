@@ -444,7 +444,6 @@ def parse_pthread_create(mascm, node: FuncCall, thread: Thread, functions_defini
     global __is_loop_body
     functions_call = list()
 
-    # TODO Try parse args before adding operation
     args = parse_expr_list(mascm, node.args, thread, functions_definition, function)
     o = add_operation_to_mascm(mascm, node, thread, function)
     if args[3] == '0':  # Is null value
@@ -461,14 +460,16 @@ def parse_pthread_create(mascm, node: FuncCall, thread: Thread, functions_defini
     return functions_call
 
 
-def parse_pthread_join(mascm, node: FuncCall, thread: Thread, function: str) -> None:
+def parse_pthread_join(mascm, node: FuncCall, thread: Thread, functions_definition: dict, function: str) -> None:
     """ Function parse FuncCall node for pthread_join function
 
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: FuncCall node object
     :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
     :param function: Current function
     """
+    parse_expr_list(mascm, node.args, thread, functions_definition, function)
     add_operation_to_mascm(mascm, node, thread, function)
 
 
@@ -600,8 +601,6 @@ def parse_unary_op(mascm, node: UnaryOp, thread: Thread, functions_definition: d
     function_calls = list()
     if isinstance(expr, ID):
         logging.debug(f"Encountered ID node: {expr}")
-        # o = None
-        # if (expr.name not in functions_definition.keys()) and ("pthread_create" != function):
         o = add_operation_to_mascm(mascm, node, thread, function)
         parse_id(mascm, expr, o)
 
@@ -634,6 +633,9 @@ def parse_expr_list(mascm, node: ExprList, thread: Thread, functions_definition:
     :return: List with function calls
     """
     expr_names = list()
+    if node is None:  # If function call does not have a parameters
+        return expr_names
+
     for expr in node.exprs:
         if isinstance(expr, Constant):
             expr_names.append(parse_constant(expr))
@@ -662,7 +664,7 @@ def parse_func_call(mascm, node: FuncCall, thread: Thread, functions_definition:
     if func_name == "pthread_create":
         functions_call.extend(parse_pthread_create(mascm, node, thread, functions_definition, func_name))
     elif func_name == "pthread_join":
-        parse_pthread_join(mascm, node, thread, func_name)
+        parse_pthread_join(mascm, node, thread, functions_definition, func_name)
     elif func_name == "pthread_mutex_lock":
         parse_pthread_mutex_lock(mascm, node, thread, func_name)
     elif func_name == "pthread_mutex_unlock":
@@ -679,11 +681,13 @@ def parse_func_call(mascm, node: FuncCall, thread: Thread, functions_definition:
             recursion_function.add(func_name)
             return functions_call
         function_call_stack.appendleft(func_name)
+        parse_expr_list(mascm, node.args, thread, functions_definition, func_name)
         result = parse_function_definition(mascm, functions_definition[func_name], thread, functions_definition,
                                            func_name)
         functions_call.extend(result)
         function_call_stack.remove(func_name)
     else:
+        parse_expr_list(mascm, node.args, thread, functions_definition, func_name)
         add_operation_to_mascm(mascm, node, thread, func_name)
     return functions_call
 
