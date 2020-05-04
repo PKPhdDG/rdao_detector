@@ -808,11 +808,12 @@ def parse_decl(mascm, node: Decl, thread: Thread, functions_definition: dict, fu
         functions_call.extend(parse_func_call(mascm, init, thread, functions_definition, function))
     elif isinstance(init, Constant):
         parse_constant(init)
-        add_operation_to_mascm(mascm, node, thread, function)
     elif init is None:
-        add_operation_to_mascm(mascm, node, thread, function)
+        logging.debug("Handled declaration without initialisation.")
     else:
         logging.critical(f"When parsing a declaration, an unsupported item of type '{type(init)}' was encountered.")
+
+    add_operation_to_mascm(mascm, node, thread, function)
     return functions_call
 
 
