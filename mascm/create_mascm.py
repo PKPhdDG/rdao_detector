@@ -1058,6 +1058,7 @@ def create_edges(mascm):
                         break
 
         elif isinstance(o.node, While) or isinstance(o.node, For):
+            # TODO Except while/for node edge should go from condition node
             is_for_while_loop = True
             for op in mascm.o[i+1:]:
                 if not op.is_loop_body_operation:

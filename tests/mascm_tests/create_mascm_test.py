@@ -28,6 +28,13 @@ class CreateMamTest(unittest.TestCase, TestBase):
         for o in operations:
             print(o, str(o.node).replace("\n", ''))
 
+    def tearDown(self) -> None:
+        super(CreateMamTest, self).setUp()
+        c.relations["forward"] = []
+        c.relations["backward"] = []
+        c.relations["symmetric"] = []
+
+
     def test_single_thread_global_variable_if_statement(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
                          "resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o1,1, o1,2, o1,3, o1,4]," \
@@ -305,22 +312,25 @@ class CreateMamTest(unittest.TestCase, TestBase):
 
     def test_two_forward_relations(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], "\
-                         "resources=[r1, r2], operations=[o0,1, o0,2, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, "\
-                         "o1,9, o1,10, o1,11, o1,12, o1,13, o1,14, o1,15, o1,16, o1,17, o1,18, o1,19, o1,20, o1,21, "\
-                         "o1,22], mutexes=[], edges=[(o0,1, o0,2), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), "\
-                         "(o1,4, o1,5), (o1,5, o1,6), (o1,6, o1,7), (o1,7, r1), (o1,7, o1,8), (o1,8, r1), " \
-                         "(o1,8, o1,9), (o1,9, r2), (o1,9, o1,10), (o1,10, r2), (o1,10, o1,11), (o1,11, r1), " \
-                         "(o1,11, o1,12), (o1,12, r2), (o1,12, o1,13), (o1,13, r1), (o1,13, o1,14), (o1,14, r2), " \
-                         "(o1,14, o1,15), (o1,15, o1,16), (r1, o1,16), (o1,16, o1,15), (o1,15, o1,17), (o1,16, o1,17),"\
-                         " (o1,17, o1,18), (o1,18, o1,19), (r2, o1,19), (o1,19, o1,18), (o1,18, o1,20), " \
-                         "(o1,19, o1,20), (o1,20, r1), (o1,20, o1,21), (o1,21, r2), (o1,21, o1,22)], " \
-                         "relations=(forward=[(o1,7, o1,20), (o1,9, o1,21)], backward=[], symmetric=[]))"
+                         "resources=[r1, r2], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o1,1, o1,2, o1,3, o1,4, o1,5, "\
+                         "o1,6, o1,7, o1,8, o1,9, o1,10, o1,11, o1,12, o1,13, o1,14, o1,15, o1,16, o1,17, o1,18, " \
+                         "o1,19, o1,20, o1,21, o1,22, o1,23, o1,24, o1,25, o1,26, o1,27, o1,28], mutexes=[], " \
+                         "edges=[(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (o0,4, o0,5), (o1,1, o1,2), (o1,2, o1,3), " \
+                         "(o1,3, o1,4), (o1,4, o1,5), (o1,5, o1,6), (o1,6, r1), (o1,6, o1,7), (o1,7, o1,8), " \
+                         "(o1,8, r2), (o1,8, o1,9), (o1,9, r1), (o1,9, o1,10), (o1,10, r2), (o1,10, o1,11), " \
+                         "(o1,11, o1,12), (o1,12, r1), (o1,12, o1,13), (o1,13, o1,14), (o1,14, r2), (o1,14, o1,15), " \
+                         "(o1,15, o1,16), (o1,16, o1,20), (o1,16, o1,17), (o1,17, o1,18), (r1, o1,18), " \
+                         "(o1,18, o1,19), (o1,19, o1,16), (o1,19, o1,20), (o1,20, o1,21), (o1,21, o1,22), " \
+                         "(o1,22, o1,26), (o1,22, o1,23), (o1,23, o1,24), (r2, o1,24), (o1,24, o1,25), " \
+                         "(o1,25, o1,22), (o1,25, o1,26), (o1,26, r1), (o1,26, o1,27), (o1,27, r2), (o1,27, o1,28)], " \
+                         "relations=(forward=[(o1,6, o1,26), (o1,8, o1,27)], backward=[], symmetric=[]))"
         file_to_parse = "two_forward_relation.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
-            self.__test_thread_nesting(result.threads)
+
+        self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_backward_relation(self):
