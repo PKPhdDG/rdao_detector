@@ -445,8 +445,8 @@ def parse_pthread_create(mascm, node: FuncCall, thread: Thread, functions_defini
     functions_call = list()
 
     # TODO Try parse args before adding operation
-    o = add_operation_to_mascm(mascm, node, thread, function)
     args = parse_expr_list(mascm, node.args, thread, functions_definition, function)
+    o = add_operation_to_mascm(mascm, node, thread, function)
     if args[3] == '0':  # Is null value
         pass
     else:
@@ -600,9 +600,9 @@ def parse_unary_op(mascm, node: UnaryOp, thread: Thread, functions_definition: d
     function_calls = list()
     if isinstance(expr, ID):
         logging.debug(f"Encountered ID node: {expr}")
-        o = None
-        if (expr.name not in functions_definition.keys()) and ("pthread_create" != function):
-            o = add_operation_to_mascm(mascm, node, thread, function)
+        # o = None
+        # if (expr.name not in functions_definition.keys()) and ("pthread_create" != function):
+        o = add_operation_to_mascm(mascm, node, thread, function)
         parse_id(mascm, expr, o)
 
     elif isinstance(expr, FuncCall):
