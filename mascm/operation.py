@@ -197,5 +197,8 @@ class Operation:
             return self.create_dependency_edge(resource)
         return self.create_usage_edge(resource)
 
+    def __eq__(self, other):
+        return self.__thread_index == other.__thread_index and self.__operation_number == other.__operation_number
+
     def __repr__(self):
         return "o{},{}".format(self.__thread_index, self.__operation_number)

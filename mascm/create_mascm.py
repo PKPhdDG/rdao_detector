@@ -114,7 +114,7 @@ def operation_is_in_forward_relation(mascm, operation: Operation, check_thread: 
                 continue
             edge = Edge(data[1], operation)
             if (edge not in mascm.relations.forward) and \
-                    not any([pair for pair in mascm.relations.symmetric if data[1] == pair[0]]):
+                    not any(e for e in mascm.relations.forward if edge.first == e.first):
                 mascm.relations.forward.append(edge)
                 forward_operations_handler.remove(data)
 
@@ -138,11 +138,11 @@ def operation_is_in_backward_relation(mascm, operation: Operation, check_thread:
                 continue
             first_operation = backward_operations_handler[pair]
             # TODO Check it for this relation
-            # if not is_resource_shared(first_operation, operation, mascm.resources):
+            # if not is_resource_shared(first_operation, operation, mascm.resources, True):
             #     continue
             edge = Edge(first_operation, operation)
             if (edge not in mascm.relations.backward) and \
-                    not any([pair for pair in mascm.relations.symmetric if first_operation == pair[0]]):
+                    not any(e for e in mascm.relations.backward if first_operation == e.first):
                 mascm.relations.backward.append(edge)
                 del backward_operations_handler[pair]
 
@@ -174,8 +174,8 @@ def operation_is_in_symmetric_relation(mascm, operation: Operation, check_thread
             if check_thread and data[1].thread_index != operation.thread_index:
                 continue
             edge = Edge(data[1], operation)
-            if (edge not in mascm.relations.symmetric) and \
-                    not any([pair for pair in mascm.relations.symmetric if data[1] == pair[0]]):
+            if (edge not in mascm.relations.symmetric) and not \
+                    any(e for e in mascm.relations.symmetric if data[1] == e.first):
                 mascm.relations.symmetric.append(edge)
                 symmetric_operations_handler.remove(data)
 
@@ -347,6 +347,10 @@ def parse_for_loop(mascm, node: For, thread: Thread, functions_definition: dict,
         functions_call.extend(parse_compound_statement(mascm, stmt, thread, functions_definition, function))
     elif isinstance(stmt, EmptyStatement):
         logging.debug("Function has an empty body.")
+    elif isinstance(stmt, FuncCall):
+        functions_call.extend(parse_func_call(mascm, stmt, thread, functions_definition, function))
+    elif isinstance(stmt, Assignment):
+        functions_call.extend(parse_assignment(mascm, stmt, thread, functions_definition, function))
     else:
         logging.critical(f"When parsing a for body, an unsupported item of type '{type(stmt)}' was encountered.")
 
@@ -577,6 +581,8 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, functions_definiti
         parse_constant(rvalue)
     elif isinstance(rvalue, Cast):
         functions_call.extend(parse_cast(mascm, rvalue, thread, functions_definition, function))
+    elif isinstance(rvalue, BinaryOp):
+        functions_call.extend(parse_binary_op(mascm, rvalue, thread, functions_definition, function))
     else:
         msg = f"When parsing a assignment rvalue, an unsupported item of type '{type(rvalue)}' was encountered."
         logging.critical(msg)
@@ -848,6 +854,8 @@ def parse_compound_statement(mascm, node: Compound, thread: Thread, functions_de
     for item in node.block_items:
         if isinstance(item, Decl):
             functions_call.extend(parse_decl(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, UnaryOp):
+            functions_call.extend(parse_unary_op(mascm, item, thread, functions_definition, function))
         elif isinstance(item, FuncCall):
             functions_call.extend(parse_func_call(mascm, item, thread, functions_definition, function))
         elif isinstance(item, Assignment):

@@ -10,3 +10,6 @@ class Edge(namedtuple("Pair", ["first", "second"])):
     """ Edge class """
     def __repr__(self):
         return str((self.first, self.second))
+
+    def __eq__(self, other):
+        return self.first == other.first and self.second == other.second
