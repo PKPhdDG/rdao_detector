@@ -10,6 +10,7 @@ from mascm.edge import Edge
 from mascm.lock import Lock
 from mascm.resource import Resource
 from pycparser.c_ast import *
+from typing import Optional
 
 
 class Operation:
@@ -163,7 +164,7 @@ class Operation:
         :return: Boolean value
         """
         for arg in self.__args:
-            if resource.has_name(arg.name):
+            if resource.has_names(arg.names):
                 return True
             else:
                 if not isinstance(arg, self.__ignored_arg_types):
@@ -182,19 +183,21 @@ class Operation:
         """ Method create dependency edge """
         return Edge(resource, self)
 
-    def create_edge_with_resource(self, resource: Resource) -> Edge:
+    def create_edge_with_resource(self, resource: Resource) -> Optional[Edge]:
         """ Method create correct edge for relation operation - edge """
         if isinstance(self.__node, FuncCall) and (self.name in c.function_using_resources):
             return self.create_dependency_edge(resource)
         elif isinstance(self.__node, self.__dependency_operation_types):
             return self.create_dependency_edge(resource)
         elif isinstance(self.__node, FuncCall) and (self.name in ('memcpy', 'memset')) \
-                and resource.has_name(self.__args[1].name):
+                and resource.has_names(self.__args[1].names):
             return self.create_dependency_edge(resource)
         elif isinstance(self.__node, ID):
             return self.create_dependency_edge(resource)
         elif isinstance(self.__node, BinaryOp):
             return self.create_dependency_edge(resource)
+        elif self.name == '&':
+            return None
         return self.create_usage_edge(resource)
 
     def __eq__(self, other):
