@@ -456,14 +456,18 @@ class CreateMamTest(unittest.TestCase, TestBase):
         self.assertEqual(expected_mascm, str(result))
 
     def test_nested_threads_main_thread_is_parallel(self):
-        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3], time_units=[[t0], [t1], "\
-                         "[t1, t2, t3], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o1,1, o1,2, o1,3, "\
-                         "o1,4, o1,5, o1,6, o1,7, o2,1, o2,2, o2,3, o3,1, o3,2, o3,3], mutexes=[], "\
-                         "edges=[(o0,1, o0,2), (r1, o0,2), (o0,2, o0,3), (r1, o0,3), (o0,3, o0,4), (o1,1, o1,2), "\
-                         "(o1,2, o1,3), (o1,3, o1,3), (o1,3, o1,4), (r1, o1,4), (o1,4, o1,5), (o1,5, o1,5), "\
-                         "(o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o2,1, o2,2), (o2,2, r1), (o2,2, o2,1), " \
-                         "(o2,1, o2,3), (o2,2, o2,3), (o3,1, o3,2), (o3,2, r1), (o3,2, o3,1), (o3,1, o3,3), " \
-                         "(o3,2, o3,3)], relations=(forward=[], backward=[], symmetric=[]))"
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3], time_units=[[t0], [t1], " \
+                         "[t1, t2, t3], [t1], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, " \
+                         "o0,7, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, o1,9, o1,10, o1,11, o1,12, o1,13, " \
+                         "o1,14, o1,15, o2,1, o2,2, o2,3, o2,4, o2,5, o2,6, o3,1, o3,2, o3,3, o3,4, o3,5, o3,6], " \
+                         "mutexes=[], edges=[(o0,1, o0,2), (r1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (o0,4, o0,5), " \
+                         "(o0,5, o0,6), (r1, o0,6), (o0,6, o0,7), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), " \
+                         "(o1,4, o1,8), (o1,4, o1,5), (o1,5, o1,6), (o1,6, o1,7), (o1,7, o1,4), (o1,7, o1,8), " \
+                         "(r1, o1,8), (o1,8, o1,9), (o1,9, o1,10), (o1,10, o1,14), (o1,10, o1,11), (o1,11, o1,12), " \
+                         "(o1,12, o1,13), (o1,13, o1,10), (o1,13, o1,14), (r1, o1,14), (o1,14, o1,15), (o2,1, o2,2), " \
+                         "(o2,2, o2,6), (o2,2, o2,3), (o2,3, o2,4), (o2,4, r1), (o2,4, o2,5), (o2,5, o2,2), " \
+                         "(o2,5, o2,6), (o3,1, o3,2), (o3,2, o3,6), (o3,2, o3,3), (o3,3, o3,4), (o3,4, r1), " \
+                         "(o3,4, o3,5), (o3,5, o3,2), (o3,5, o3,6)], relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "race_condition10.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
