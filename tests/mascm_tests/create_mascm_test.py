@@ -76,9 +76,6 @@ class CreateMamTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
 
-        for o in result.o:
-            print(o, str(o.node).replace("\n", ''))
-
         self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
@@ -437,20 +434,25 @@ class CreateMamTest(unittest.TestCase, TestBase):
         self.assertEqual(expected_mascm, str(result))
 
     def test_loop_thread_creation(self):
-        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], time_units=[[t0], [t1, t2], "\
-                         "[t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o0,7, o1,1, o1,2, "\
-                         "o1,3, o1,4, o1,5, o2,1, o2,2, o2,3, o2,4, o2,5], mutexes=[], edges=[(o0,1, o0,2), "\
-                         "(o0,2, o0,3), (r1, o0,3), (o0,3, o0,4), (o0,4, o0,4), (o0,4, o0,5), (o0,5, o0,5), " \
-                         "(o0,5, o0,6), (r1, o0,6), (o0,6, o0,7), (r1, o1,1), (o1,1, o1,2), (o1,2, o1,3), " \
-                         "(o1,3, r1), (o1,3, o1,2), (o1,2, o1,4), (o1,3, o1,4), (r1, o1,4), (o1,4, o1,5), (r1, o2,1)," \
-                         " (o2,1, o2,2), (o2,2, o2,3), (o2,3, r1), (o2,3, o2,2), (o2,2, o2,4), (o2,3, o2,4), " \
-                         "(r1, o2,4), (o2,4, o2,5)], relations=(forward=[], backward=[], symmetric=[]))"
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], time_units=[[t0], [t0, t1, " \
+                         "t2], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o0,7, o0,8, " \
+                         "o0,9, o0,10, o0,11, o0,12, o0,13, o0,14, o0,15, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, " \
+                         "o1,8, o2,1, o2,2, o2,3, o2,4, o2,5, o2,6, o2,7, o2,8], mutexes=[], edges=[(o0,1, o0,2), " \
+                         "(o0,2, o0,3), (r1, o0,3), (o0,3, o0,4), (o0,4, o0,5), (o0,5, o0,9), (o0,5, o0,6), " \
+                         "(o0,6, o0,7), (o0,7, o0,8), (o0,8, o0,5), (o0,8, o0,9), (o0,9, o0,10), (o0,10, o0,14), " \
+                         "(o0,10, o0,11), (o0,11, o0,12), (o0,12, o0,13), (o0,13, o0,10), (o0,13, o0,14), " \
+                         "(r1, o0,14), (o0,14, o0,15), (r1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,7), " \
+                         "(o1,3, o1,4), (o1,4, o1,5), (o1,5, r1), (o1,5, o1,6), (o1,6, o1,3), (o1,6, o1,7), " \
+                         "(r1, o1,7), (o1,7, o1,8), (r1, o2,1), (o2,1, o2,2), (o2,2, o2,3), (o2,3, o2,7), " \
+                         "(o2,3, o2,4), (o2,4, o2,5), (o2,5, r1), (o2,5, o2,6), (o2,6, o2,3), (o2,6, o2,7), " \
+                         "(r1, o2,7), (o2,7, o2,8)], relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "race_condition8.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
-            self.__test_thread_nesting(result.threads)
+
+        self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_nested_threads_main_thread_is_parallel(self):
