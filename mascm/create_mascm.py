@@ -255,7 +255,7 @@ def parse_array_ref(mascm, node: ArrayRef, thread: Thread, functions_definition:
     return name
 
 
-def parse_cast(mascm, node: Cast, thread: Thread, functions_definition: dict, function: str) -> list:
+def parse_cast(mascm, node: Cast, thread: Thread, functions_definition: dict, function: str) -> tuple:
     """ Function parse Cast node
 
     :param mascm: MultithreadedApplicationSourceCodeModel object
@@ -263,21 +263,21 @@ def parse_cast(mascm, node: Cast, thread: Thread, functions_definition: dict, fu
     :param thread: Current thread
     :param functions_definition: Dict with user functions definition
     :param function: Current function
-    :return: List with function calls
+    :return: Name of casted resource and list with function calls
     """
     functions_call = list()
     logging.info(f"Handling Cast in {function}")
     expr = node.expr
+    name = None
     if isinstance(expr, ID):
         name, _ = parse_id(mascm, expr, None)
-        # TODO start here, function should return name and function calls -> it should be used to linking resources
     elif isinstance(expr, Constant):
-        parse_constant(expr)
+        name = parse_constant(expr)
     elif isinstance(expr, FuncCall):
         functions_call.extend(parse_func_call(mascm, expr, thread, functions_definition, function))
     else:
         logging.critical(f"When parsing a cast node, an unsupported item of type '{type(expr)}' was encountered.")
-    return functions_call
+    return name, functions_call
 
 
 def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, functions_definition: dict, function: str) -> list:
@@ -512,7 +512,7 @@ def parse_pthread_create(mascm, node: FuncCall, thread: Thread, functions_defini
     if args[3] == '0':  # Is null value
         pass
     elif isinstance(args[3], str):
-        resource = next(r for r in mascm.local_resources if r.has_names({args[3]}))
+        resource = next(r for r in mascm.local_resources if args[3] in r)
         for name in function_definition.function_args:
             resource.add_name(name)
         add_resource_to_mascm(mascm, resource.node, resource.names)
@@ -598,7 +598,8 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, functions_definiti
     elif isinstance(rvalue, Constant):
         parse_constant(rvalue)
     elif isinstance(rvalue, Cast):
-        functions_call.extend(parse_cast(mascm, rvalue, thread, functions_definition, function))
+        _, fc = parse_cast(mascm, rvalue, thread, functions_definition, function)
+        functions_call.extend(fc)
     elif isinstance(rvalue, BinaryOp):
         functions_call.extend(parse_binary_op(mascm, rvalue, thread, functions_definition, function))
     else:
@@ -694,7 +695,8 @@ def parse_unary_op(mascm, node: UnaryOp, thread: Thread, functions_definition: d
         logging.debug(f"Encountered TypeDecl node: {expr}")
         parse_typename(expr)
     elif isinstance(expr, Cast):
-        functions_call.extend(parse_cast(mascm, expr, thread, functions_definition, function))
+        name, fc = parse_cast(mascm, expr, thread, functions_definition, function)
+        functions_call.extend(fc)
     else:
         logging.critical(f"When parsing an unary operator, an unsupported item of type '{type(expr)}' was encountered.")
     return name, functions_call
@@ -772,20 +774,35 @@ def parse_func_call(mascm, node: FuncCall, thread: Thread, functions_definition:
     elif func_name == "pthread_mutex_init":
         functions_call.extend(parse_pthread_mutex_init(mascm, node, thread, functions_definition, function))
     elif func_name in functions_definition.keys():
+        num_of_calls = len([fname for fname in function_call_stack if fname == func_name])
+        calls = list()
+        if num_of_calls < 1:
+            args, calls = parse_expr_list(mascm, node.args, thread, functions_definition, func_name)
+            function_definition = functions_definition[func_name]
+            if any(arg for arg in args if isinstance(arg, str)):
+                for i, arg in enumerate(args):
+                    try:
+                        resource = next(r for r in mascm.resources if arg in r)
+                    except StopIteration:
+                        pass
+                    else:
+                        name = function_definition.function_args[i]
+                        resource.add_name(name)
+                # add_resource_to_mascm(mascm, resource.node, resource.names)
+                # mascm.local_resources.remove(resource)
         add_operation_to_mascm(mascm, node, thread, func_name)
         # To avoid crash on recursion
-        num_of_calls = len([fname for fname in function_call_stack if fname == func_name])
         if num_of_calls > RECURSION_MAX_DEPTH:
             recursion_function.add(func_name)
             return functions_call
         function_call_stack.appendleft(func_name)
-        _, calls = parse_expr_list(mascm, node.args, thread, functions_definition, func_name)
         functions_call.extend(calls)
         result = parse_function_definition(mascm, functions_definition[func_name], thread, functions_definition,
                                            func_name)
         functions_call.extend(result)
         function_call_stack.remove(func_name)
     else:
+        logging.debug(f"When parsing a FuncCall, undefined function '{func_name}' was encountered.")
         _, calls = parse_expr_list(mascm, node.args, thread, functions_definition, function)
         functions_call.extend(calls)
         add_operation_to_mascm(mascm, node, thread, function)
@@ -814,7 +831,8 @@ def parse_return(mascm, node: Return, thread: Thread, functions_definition: dict
     elif isinstance(expr, FuncCall):
         functions_call.extend(parse_func_call(mascm, expr, thread, functions_definition, function))
     elif isinstance(expr, Cast):
-        functions_call.extend(parse_cast(mascm, expr, thread, functions_definition, function))
+        _, fc = parse_cast(mascm, expr, thread, functions_definition, function)
+        functions_call.extend(fc)
     else:
         logging.critical(f"When parsing a return, an unsupported item of type '{type(expr)}' was encountered.")
 
@@ -822,7 +840,7 @@ def parse_return(mascm, node: Return, thread: Thread, functions_definition: dict
     return functions_call
 
 
-def parse_decl(mascm, node: Decl, thread: Thread, functions_definition: dict, function: str) -> list:
+def parse_decl(mascm, node: Decl, thread: Thread, functions_definition: dict, function: str) -> tuple:
     """ Function parse Decl node
 
     :param mascm: MultithreadedApplicationSourceCodeModel object
@@ -830,11 +848,12 @@ def parse_decl(mascm, node: Decl, thread: Thread, functions_definition: dict, fu
     :param thread: Current thread
     :param functions_definition: Dict with user functions definition
     :param function: Current function
-    :return: List with function calls
+    :return: Name of resource and list with function calls
     """
     logging.debug("Parse Decl")
     functions_call = list()
     init = node.init
+    name = None
     if isinstance(init, FuncCall):
         functions_call.extend(parse_func_call(mascm, init, thread, functions_definition, function))
     elif isinstance(init, Constant):
@@ -847,9 +866,20 @@ def parse_decl(mascm, node: Decl, thread: Thread, functions_definition: dict, fu
     else:
         logging.critical(f"When parsing a declaration, an unsupported item of type '{type(init)}' was encountered.")
 
-    mascm.local_resources.append(Resource(node))
+    try:
+        shared_resource = next(r for r in mascm.resources if name in r)
+    except StopIteration:
+        shared_resource = None
+    if (name is not None) and (shared_resource is not None):
+        shared_resource.add_name(node.name)
+    else:
+        local_resource = Resource(node)
+        if name is not None:
+            local_resource.add_name(name)
+        mascm.local_resources.append(local_resource)
+
     add_operation_to_mascm(mascm, node, thread, function)
-    return functions_call
+    return name, functions_call
 
 
 def parse_decl_list(mascm, node: DeclList, thread: Thread, functions_definition: dict, function: str):
@@ -865,7 +895,8 @@ def parse_decl_list(mascm, node: DeclList, thread: Thread, functions_definition:
     logging.debug("Parse DeclList")
     functions_call = list()
     for decl in node.decls:
-        functions_call.extend(parse_decl(mascm, decl, thread, functions_definition, function))
+        _, fc = parse_decl(mascm, decl, thread, functions_definition, function)
+        functions_call.extend(fc)
     return functions_call
 
 
@@ -882,7 +913,8 @@ def parse_compound_statement(mascm, node: Compound, thread: Thread, functions_de
     functions_call = list()
     for item in node.block_items:
         if isinstance(item, Decl):
-            functions_call.extend(parse_decl(mascm, item, thread, functions_definition, function))
+            _, fc = parse_decl(mascm, item, thread, functions_definition, function)
+            functions_call.extend(fc)
         elif isinstance(item, UnaryOp):
             _, fc = parse_unary_op(mascm, item, thread, functions_definition, function)
             functions_call.extend(fc)
@@ -1100,7 +1132,7 @@ def create_edges(mascm):
                         break
 
         elif isinstance(o.node, While) or isinstance(o.node, For):
-            # TODO Except while/for node edge should go from condition node
+            # TODO Except while/for node edge should go to condition node
             is_for_while_loop = True
             for op in mascm.o[i+1:]:
                 if not op.is_loop_body_operation:
@@ -1188,7 +1220,6 @@ def create_mascm(asts: deque) -> MultithreadedApplicationSourceCodeModel:
     put_main_thread_to_model(mascm)
 
     functions_definition = parse_global_trees(mascm, asts)
-    __unexpected_declarations(functions_definition)  # TODO if there is no declaration it can be atomic operation
     functions = parse_function_definition(mascm, functions_definition[main_function_name], mascm.t[-1],
                                           functions_definition, main_function_name)
 
