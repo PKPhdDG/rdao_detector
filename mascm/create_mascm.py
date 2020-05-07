@@ -273,6 +273,9 @@ def parse_cast(mascm, node: Cast, thread: Thread, functions_definition: dict, fu
         name, _ = parse_id(mascm, expr, None)
     elif isinstance(expr, Constant):
         name = parse_constant(expr)
+    elif isinstance(expr, UnaryOp):
+        name, fc = parse_unary_op(mascm, expr, thread, functions_definition, function)
+        functions_call.extend(fc)
     elif isinstance(expr, FuncCall):
         functions_call.extend(parse_func_call(mascm, expr, thread, functions_definition, function))
     else:
@@ -512,11 +515,13 @@ def parse_pthread_create(mascm, node: FuncCall, thread: Thread, functions_defini
     if args[3] == '0':  # Is null value
         pass
     elif isinstance(args[3], str):
-        resource = next(r for r in mascm.local_resources if args[3] in r)
+        resource = next(r for r in mascm.resources + mascm.local_resources if args[3] in r)
         for name in function_definition.function_args:
             resource.add_name(name)
-        add_resource_to_mascm(mascm, resource.node, resource.names)
-        mascm.local_resources.remove(resource)
+        if resource not in mascm.resources:
+            add_resource_to_mascm(mascm, resource.node, resource.names)
+        if resource in mascm.local_resources:
+            mascm.local_resources.remove(resource)
     else:
         m = f"When parsing a pthread_create, an unsupported argument '{type(args[3])}' was encountered."
         logging.critical(m)
@@ -697,6 +702,11 @@ def parse_unary_op(mascm, node: UnaryOp, thread: Thread, functions_definition: d
     elif isinstance(expr, Cast):
         name, fc = parse_cast(mascm, expr, thread, functions_definition, function)
         functions_call.extend(fc)
+    elif isinstance(expr, UnaryOp):
+        name, fc = parse_unary_op(mascm, expr, thread, functions_definition, function)
+        functions_call.extend(fc)
+        o = add_operation_to_mascm(mascm, node, thread, function)
+        name, _ = parse_id(mascm, expr.expr, o)
     else:
         logging.critical(f"When parsing an unary operator, an unsupported item of type '{type(expr)}' was encountered.")
     return name, functions_call
@@ -743,6 +753,10 @@ def parse_expr_list(mascm, node: ExprList, thread: Thread, functions_definition:
             functions_call.extend(parse_binary_op(mascm, expr, thread, functions_definition, function))
         elif isinstance(expr, ArrayRef):
             parse_array_ref(mascm, expr, thread, functions_definition,function)
+        elif isinstance(expr, Cast):
+            name, fc = parse_cast(mascm, expr, thread, functions_definition, function)
+            functions_call.extend(fc)
+            expr_names.append(name)
         else:
             msg = f"When parsing an expressions, an unsupported item of type '{type(expr)}' was encountered."
             logging.critical(msg)
@@ -788,8 +802,7 @@ def parse_func_call(mascm, node: FuncCall, thread: Thread, functions_definition:
                     else:
                         name = function_definition.function_args[i]
                         resource.add_name(name)
-                # add_resource_to_mascm(mascm, resource.node, resource.names)
-                # mascm.local_resources.remove(resource)
+
         add_operation_to_mascm(mascm, node, thread, func_name)
         # To avoid crash on recursion
         if num_of_calls > RECURSION_MAX_DEPTH:
@@ -860,6 +873,9 @@ def parse_decl(mascm, node: Decl, thread: Thread, functions_definition: dict, fu
         parse_constant(init)
     elif isinstance(init, UnaryOp):
         name, fc = parse_unary_op(mascm, init, thread, functions_definition, function)
+        functions_call.extend(fc)
+    elif isinstance(init, Cast):
+        name, fc = parse_cast(mascm, init, thread, functions_definition, function)
         functions_call.extend(fc)
     elif init is None:
         logging.debug("Handled declaration without initialisation.")

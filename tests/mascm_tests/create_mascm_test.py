@@ -601,15 +601,18 @@ class CreateMamTest(unittest.TestCase, TestBase):
         self.assertEqual(expected_mascm, str(result))
 
     def test_order_violation1(self):
-        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], time_units=[[t0], [t1, t2], "\
-                         "[t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o1,1, o1,2, o1,3, "\
-                         "o1,4, o1,5, o1,6, o1,7, o2,1, o2,2, o2,3, o2,4, o2,5, o2,6], mutexes=[(m, PMN)], " \
-                         "edges=[(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (r1, o0,4), (o0,4, o0,5), (o0,5, r1), " \
-                         "(o0,5, o0,6), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), (o1,3, o1,4), (o1,4, r1), "\
-                         "(o1,4, o1,5), (o1,5, r1), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o1,7, q1), (o2,1, o2,2), "\
-                         "(q1, o2,2), (o2,2, o2,3), (o2,3, o2,4), (o2,4, r1), (o2,4, o2,3), (o2,3, o2,5), " \
-                         "(o2,4, o2,5), (o2,5, q1), (o2,5, o2,6)], " \
-                         "relations=(forward=[], backward=[(o1,3, o2,4)], symmetric=[]))"
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2], time_units=[[t0], [t0, t1, " \
+                         "t2], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o0,7, o0,8, " \
+                         "o0,9, o0,10, o0,11, o0,12, o0,13, o0,14, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o2,1, " \
+                         "o2,2, o2,3, o2,4, o2,5, o2,6, o2,7, o2,8, o2,9, o2,10], mutexes=[(m, PMN)], edges=[" \
+                         "(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (o0,4, o0,5), (o0,5, o0,6), (o0,6, o0,7), " \
+                         "(o0,7, o0,8), (o0,8, o0,9), (o0,9, o0,10), (o0,10, o0,11), (o0,11, r1), (o0,11, o0,12), " \
+                         "(o0,12, o0,13), (o0,13, o0,14), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), " \
+                         "(o1,3, o1,4), (o1,4, r1), (o1,4, o1,5), (o1,5, r1), (o1,5, o1,6), (o1,6, o1,7), (o1,7, q1), "\
+                         "(o2,1, o2,2), (q1, o2,2), (o2,2, o2,3), (o2,3, o2,4), (o2,4, o2,9), (o2,4, o2,5), " \
+                         "(o2,5, o2,6), (o2,6, r1), (o2,6, o2,7), (o2,7, r1), (o2,7, o2,8), (o2,8, o2,4), " \
+                         "(o2,8, o2,9), (o2,9, q1), (o2,9, o2,10)], relations=(forward=[], backward=[(o1,3, o2,7)], " \
+                         "symmetric=[]))"
         c.relations["backward"].append(('malloc', '++'))
         file_to_parse = "order_violation1.c"
         file_path = join(self.source_path_prefix, file_to_parse)
@@ -617,6 +620,7 @@ class CreateMamTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
 
+        self._print_nodes(result.operations)
         self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
