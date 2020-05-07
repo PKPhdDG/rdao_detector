@@ -509,7 +509,7 @@ def parse_pthread_create(mascm, node: FuncCall, thread: Thread, functions_defini
 
     args, calls = parse_expr_list(mascm, node.args, thread, functions_definition, function)
     functions_call.extend(calls)
-    o = add_operation_to_mascm(mascm, node, thread, function)
+    add_operation_to_mascm(mascm, node, thread, function)
     thread_function = args[2]
     function_definition = functions_definition[thread_function]
     if args[3] == '0':  # Is null value
@@ -688,8 +688,24 @@ def parse_unary_op(mascm, node: UnaryOp, thread: Thread, functions_definition: d
     name = None
     if isinstance(expr, ID):
         logging.debug(f"Encountered ID node: {expr}")
-        o = add_operation_to_mascm(mascm, node, thread, function)
-        name, _ = parse_id(mascm, expr, o)
+        if node.op != '&':
+            o = add_operation_to_mascm(mascm, node, thread, function)
+            name, _ = parse_id(mascm, expr, o)
+        elif expr.name in functions_definition.keys():
+            logging.debug(f"Operation of getting pointer to function {expr.name} found!")
+            name, _ = parse_id(mascm, expr, None)
+        elif any(lr for lr in mascm.local_resources if expr.name in lr):
+            logging.debug(f"Operation of getting pointer to local variable {expr.name} found!")
+            name, _ = parse_id(mascm, expr, None)
+        elif any(r for r in mascm.resources if expr.name in r):
+            logging.debug(f"Operation of getting pointer to shared variable {expr.name} found!")
+            name, _ = parse_id(mascm, expr, None)
+        elif any(m for m in mascm.mutexes if expr.name == m.name):
+            logging.debug(f"Operation of getting pointer to mutex {expr.name} found!")
+            name, _ = parse_id(mascm, expr, None)
+        else:
+            msg = f"When parsing an unary operator &, an unsupported item of type '{type(expr)}' was encountered."
+            logging.critical(msg)
     elif isinstance(expr, FuncCall):
         logging.debug(f"Encountered FuncCall node: {expr}")
         functions_call.extend(parse_func_call(mascm, expr, thread, functions_definition, function))
