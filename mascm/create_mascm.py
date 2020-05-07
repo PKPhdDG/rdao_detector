@@ -1036,7 +1036,7 @@ def create_time_units(mascm):
     threads = deepcopy(mascm.threads)
     threads = sorted(threads, key=lambda thread: thread.depth, reverse=True)
     units = list()
-
+    is_always_active = list()
     last_deep = None
     for t in threads:
         is_create = False
@@ -1047,12 +1047,18 @@ def create_time_units(mascm):
                 is_create = False
             elif is_create:  # If thread has a operation between create and join
                 units[-1].append(t)
+                is_always_active.append(t)
                 break
 
         if last_deep != t.depth:
             units.append(TimeUnit())
             last_deep = t.depth
         units[-1].append(t)
+
+    for t in is_always_active:
+        for u in units:
+            if (t not in u) and any(tu for tu in u if tu.depth > t.depth):
+                u.append(t)
 
     first_part = deepcopy(units)
     first_part.reverse()

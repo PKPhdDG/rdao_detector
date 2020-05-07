@@ -24,11 +24,13 @@ class CreateMamTest(unittest.TestCase, TestBase):
         for thread in other_threads:
             self.assertEqual(1, thread.depth, "Nested thread does not have expected depth!")
 
-    def _print_nodes(self, operations: list):
+    @staticmethod
+    def _print_nodes(operations: list):
         for o in operations:
             print(o, str(o.node).replace("\n", ''))
 
     def tearDown(self) -> None:
+        """ Cleanup after test """
         super(CreateMamTest, self).setUp()
         c.relations["forward"] = []
         c.relations["backward"] = []
@@ -269,7 +271,7 @@ class CreateMamTest(unittest.TestCase, TestBase):
 
     def test_multiple_file_application_7(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3, t4, t5], time_units=[" \
-                         "[t0], [t1], [t1, t2, t3], [t4, t5], [t1, t2, t3], [t1], [t0]], resources=[], " \
+                         "[t0], [t1], [t1, t2, t3], [t1, t4, t5], [t1, t2, t3], [t1], [t0]], resources=[], " \
                          "operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, " \
                          "o1,9, o2,1, o2,2, o2,3, o2,4, o2,5, o3,1, o3,2, o3,3, o3,4, o3,5, o4,1, o5,1], mutexes=[], " \
                          "edges=[(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (o0,4, o0,5), (o1,1, o1,2), (o1,2, o1,3), " \
@@ -481,14 +483,19 @@ class CreateMamTest(unittest.TestCase, TestBase):
         self.assertEqual(expected_mascm, str(result))
 
     def test_ignoring_nested_threads(self):
-        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3], time_units=[[t0], "\
-                         "[t0, t1], [t0, t2, t3], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, o0,4, o1,1, "\
-                         "o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o2,1, o2,2, o2,3, o3,1, o3,2, o3,3], mutexes=[], "\
-                         "edges=[(o0,1, o0,2), (r1, o0,2), (o0,2, o0,3), (r1, o0,3), (o0,3, o0,4), (o1,1, o1,2), "\
-                         "(o1,2, o1,3), (r1, o1,3), (o1,3, o1,4), (o1,4, o1,4), (o1,4, o1,5), (o1,5, o1,5), " \
-                         "(o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o2,1, o2,2), (o2,2, r1), (o2,2, o2,1), " \
-                         "(o2,1, o2,3), (o2,2, o2,3), (o3,1, o3,2), (o3,2, r1), "\
-                         "(o3,2, o3,1), (o3,1, o3,3), (o3,2, o3,3)], relations=(forward=[], backward=[], symmetric=[]))"
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1, t2, t3], time_units=[[t0], " \
+                         "[t0, t1], [t0, t1, t2, t3], [t0, t1], [t0]], resources=[r1], operations=[o0,1, o0,2, o0,3, " \
+                         "o0,4, o0,5, o0,6, o0,7, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, o1,9, o1,10, o1,11, "\
+                         "o1,12, o1,13, o1,14, o1,15, o2,1, o2,2, o2,3, o2,4, o2,5, o2,6, o3,1, o3,2, o3,3, o3,4, " \
+                         "o3,5, o3,6], mutexes=[], edges=[(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (r1, o0,4), " \
+                         "(o0,4, o0,5), (o0,5, o0,6), (r1, o0,6), (o0,6, o0,7), (o1,1, o1,2), (o1,2, o1,3), " \
+                         "(r1, o1,3), (o1,3, o1,4), (o1,4, o1,5), (o1,5, o1,9), (o1,5, o1,6), (o1,6, o1,7), " \
+                         "(o1,7, o1,8), (o1,8, o1,5), (o1,8, o1,9), (o1,9, o1,10), (o1,10, o1,14), (o1,10, o1,11), " \
+                         "(o1,11, o1,12), (o1,12, o1,13), (o1,13, o1,10), (o1,13, o1,14), (r1, o1,14), (o1,14, o1,15),"\
+                         " (o2,1, o2,2), (o2,2, o2,6), (o2,2, o2,3), (o2,3, o2,4), (o2,4, r1), (o2,4, o2,5), " \
+                         "(o2,5, o2,2), (o2,5, o2,6), (o3,1, o3,2), (o3,2, o3,6), (o3,2, o3,3), (o3,3, o3,4), " \
+                         "(o3,4, r1), (o3,4, o3,5), (o3,5, o3,2), (o3,5, o3,6)], " \
+                         "relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "race_condition11.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
