@@ -1001,11 +1001,14 @@ def put_main_thread_to_model(mascm) -> None:
 def __restore_global_variable() -> None:
     """Function restore global variable to default state"""
     global forward_operations_handler, backward_operations_handler, symmetric_operations_handler, function_call_stack
+    global recursion_function, threads_stack
 
     forward_operations_handler = list()
     backward_operations_handler = dict()
     symmetric_operations_handler = list()
     function_call_stack = deque()
+    recursion_function = set()
+    threads_stack = list()
 
 
 def __unexpected_declarations(defined_functions: dict):

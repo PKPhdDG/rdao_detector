@@ -575,26 +575,28 @@ class CreateMamTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
 
-        self._print_nodes(result.operations)
         self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
     def test_recursion3(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0, t1], time_units=[[t0], [t1], [t0]], " \
                          "resources=[r1, r2], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o0,7, o0,8, o0,9, " \
-                         "o0,10, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, o1,9, o1,10, o1,11, o1,12, o1,13], " \
-                         "mutexes=[(m, PMR)], edges=[(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (o0,4, o0,5), " \
-                         "(o0,5, o0,6), (o0,6, o0,7), (o0,7, o0,8), (o0,8, o0,9), (r1, o0,9), (o0,9, o0,10), " \
-                         "(o1,1, o1,2), (q1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (q1, o1,4), (o1,4, o1,5), " \
-                         "(o1,5, o1,6), (o1,5, o1,7), (o1,6, o1,7), (o1,8, q1), (o1,8, o1,5), (o1,8, o1,9), " \
-                         "(o1,3, o1,10), (o1,9, o1,10), (o1,11, q1), (o1,11, o1,12), (o1,12, r1), (o1,12, o1,13)], " \
-                         "relations=(forward=[], backward=[], symmetric=[]))"
+                         "o0,10, o0,11, o0,12, o0,13, o0,14, o0,15, o0,16, o0,17, o0,18, o0,19, o1,1, o1,2, o1,3, " \
+                         "o1,4, o1,5, o1,6, o1,7, o1,8, o1,9, o1,10, o1,11, o1,12], mutexes=[(m, PMR)], edges=[" \
+                         "(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (o0,4, o0,5), (o0,5, o0,6), (o0,6, o0,7), " \
+                         "(o0,7, o0,8), (o0,8, o0,9), (o0,9, o0,10), (o0,10, o0,11), (o0,11, o0,12), (o0,12, o0,13), " \
+                         "(o0,13, o0,14), (o0,14, o0,15), (o0,15, o0,16), (o0,16, o0,17), (o0,17, o0,18), (r1, o0,18),"\
+                         " (o0,18, o0,19), (o1,1, o1,2), (o1,2, o1,3), (q1, o1,3), (o1,3, o1,4), (o1,4, o1,8), " \
+                         "(o1,4, o1,5), (o1,5, o1,6), (r2, o1,6), (o1,6, o1,7), (o1,7, o1,2), (o1,7, o1,10), " \
+                         "(o1,8, o1,9), (o1,9, o1,2), (o1,9, o1,11), (o1,10, q1), (o1,10, o1,11), (o1,11, r1), " \
+                         "(o1,11, o1,12)], relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "recursion3.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
 
+        self._print_nodes(result.operations)
         self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
