@@ -18,7 +18,7 @@ import unittest
 
 class DetectOrderViolationTest(unittest.TestCase, TestBase):
     def tearDown(self) -> None:
-        super(DetectOrderViolationTest, self).setUp()
+        super(DetectOrderViolationTest, self).tearDown()
         c.relations["forward"] = []
         c.relations["backward"] = []
         c.relations["symmetric"] = []

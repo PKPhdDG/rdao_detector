@@ -18,7 +18,7 @@ import unittest
 
 class DetectAtomicityViolationTest(unittest.TestCase, TestBase):
     def tearDown(self) -> None:
-        super(DetectAtomicityViolationTest, self).setUp()
+        super(DetectAtomicityViolationTest, self).tearDown()
         c.relations["forward"] = []
         c.relations["backward"] = []
         c.relations["symmetric"] = []

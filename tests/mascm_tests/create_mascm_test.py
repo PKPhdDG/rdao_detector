@@ -31,7 +31,7 @@ class CreateMamTest(unittest.TestCase, TestBase):
 
     def tearDown(self) -> None:
         """ Cleanup after test """
-        super(CreateMamTest, self).setUp()
+        super(CreateMamTest, self).tearDown()
         c.relations["forward"] = []
         c.relations["backward"] = []
         c.relations["symmetric"] = []
