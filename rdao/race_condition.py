@@ -143,6 +143,8 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
         ignored_edges = []
         if t1.depth < t2.depth:
             ignored_edges = prepare_ignored_edges(t1.index, mascm.edges)
+        elif t1.depth == t2.depth:
+            logging.debug(f"Comparing threads t1({t1}) and t2({t2}) with equal depth!")
         else:
             logging.critical(f"Unexpected situation t1({t1}) has greater depth than t2({t2})!")
         comparator = GraphComparator(s1, s2, ignored_edges)
