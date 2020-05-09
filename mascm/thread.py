@@ -18,7 +18,11 @@ class Thread:
         :param time_unit: Time unit in which thread works
         :param depth: Value increase when thread is nested
         """
-        self.__name = expr_list.exprs[0].expr.name if expr_list is not None else "t0"
+        self.__name = "t0"
+        if expr_list is not None:
+            name_obj = expr_list.exprs[0].expr.name
+            self.__name = name_obj if isinstance(name_obj, str) else name_obj.name
+
         self.__args = expr_list
         self.__operations = list()
         self.__depth = depth

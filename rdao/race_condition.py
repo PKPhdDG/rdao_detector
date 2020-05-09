@@ -83,8 +83,6 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
         return None
 
     graphs = get_time_units_graphs(time_units, mascm.edges)  # Build full graphs for every time unit
-
-    reported_op = list()
     subgraphs = list()
     for unit in time_units:
         edges = graphs[str(unit)]
@@ -92,8 +90,6 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
             thread_edges = [edge for edge in edges if f"o{thread_num}" in str(edge)]
             if not thread_edges:
                 raise ValueError(f"Unexpected situation for thread no. {thread_num} in time unit {unit}")
-            # if (len(thread_edges) == 1) and re.match(e.usage_edge_exp, str(thread_edges[0])):
-            #     yield thread_edges[0]
             subgraph = list()
             for edge in thread_edges:
                 if re.match(e.mutex_lock_edge_exp, str(edge)):
@@ -106,6 +102,7 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
                     subgraph.append(edge)
             subgraphs.append(subgraph)
 
+    reported_op = list()
     for s1, s2 in combinations(subgraphs, 2):
         comparator = GraphComparator(s1, s2)
         if not comparator.can_be_compared():

@@ -7,12 +7,12 @@ pthread_mutex_t m;
 void* deposit1(void *args) {
     pthread_mutex_lock(&m);
     printf("Status: %d\r\n", r1);
-    pthread_mutex_lock(&m);
+    pthread_mutex_unlock(&m);
     for (int i=0; i<1000000; i++)
     {
         ++r1;
     }
-    pthread_mutex_unlock(&m);
+    pthread_mutex_lock(&m);
     printf("Status: %d\r\n", r1);
     pthread_mutex_unlock(&m);
     return NULL;
