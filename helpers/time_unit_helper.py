@@ -20,8 +20,21 @@ def get_time_unit_edges(time_unit: TimeUnit, edges: list) -> coroutine:
     :param edges: List of all edges
     :return:
     """
+    thread_creation = list()
+    ignored_edges = list()  # Set of edges which have to be ignored, because they are on the first and last time unit
+    for edge in edges:
+        f, s = edge
+        if (isinstance(f, Operation) and f.thread_index > 0) or (isinstance(s, Operation) and s.thread_index > 0):
+            break
+        if isinstance(f, Operation) and (f.name == "pthread_create"):
+            thread_creation.append(True)
+        elif isinstance(f, Operation) and (f.name == "pthread_join"):
+            thread_creation.pop()
+        if not thread_creation:
+            ignored_edges.append(edge)
+
     for thread in time_unit:
-        for edge in edges:
+        for edge in (e for e in edges if e not in ignored_edges):
             if isinstance(edge.first, Operation) and edge.first.is_operation_of_thread(thread):
                 yield edge
             elif isinstance(edge.second, Operation) and edge.second.is_operation_of_thread(thread):

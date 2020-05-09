@@ -5,7 +5,6 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
-import config as c
 from helpers import get_time_units_graphs, expressions as e
 from itertools import combinations
 import logging
@@ -89,7 +88,8 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
         for thread_num in (mascm.threads.index(thread) for thread in unit):
             thread_edges = [edge for edge in edges if f"o{thread_num}" in str(edge)]
             if not thread_edges:
-                raise ValueError(f"Unexpected situation for thread no. {thread_num} in time unit {unit}")
+                logging.debug(f"Unexpected situation for thread no. {thread_num} in time unit {unit}")
+                continue
             subgraph = list()
             for edge in thread_edges:
                 if re.match(e.mutex_lock_edge_exp, str(edge)):
