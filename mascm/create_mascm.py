@@ -110,7 +110,7 @@ def operation_is_in_forward_relation(mascm, operation: Operation, check_thread: 
                 continue
             if not is_resource_shared(data[1], operation, mascm.resources):
                 continue
-            if check_thread and data[1].thread_index != operation.thread_index:
+            if check_thread and data[1].thread.index != operation.thread.index:
                 continue
             edge = Edge(data[1], operation)
             if (edge not in mascm.relations.forward) and \
@@ -134,7 +134,7 @@ def operation_is_in_backward_relation(mascm, operation: Operation, check_thread:
         if operation.name in (pair[0], __func_name0):
             backward_operations_handler[pair] = operation
         elif operation.name in (pair[1], __func_name1) and (pair in backward_operations_handler.keys()):
-            if check_thread and backward_operations_handler[pair].thread_index != operation.thread_index:
+            if check_thread and backward_operations_handler[pair].thread.index != operation.thread.index:
                 continue
             first_operation = backward_operations_handler[pair]
             # TODO Check it for this relation
@@ -171,7 +171,7 @@ def operation_is_in_symmetric_relation(mascm, operation: Operation, check_thread
                 continue
             if not is_resource_shared(data[1], operation, mascm.resources, True):
                 continue
-            if check_thread and data[1].thread_index != operation.thread_index:
+            if check_thread and data[1].thread.index != operation.thread.index:
                 continue
             edge = Edge(data[1], operation)
             if (edge not in mascm.relations.symmetric) and not \
@@ -207,7 +207,7 @@ def add_operation_to_mascm(mascm, node: Node, thread: Thread, function: str) -> 
     :param thread: Current thread obj
     :param function: Current function
     """
-    op = Operation(node, thread, thread.index, function)
+    op = Operation(node, thread, function)
     operation_is_in_forward_relation(mascm, op)
     operation_is_in_backward_relation(mascm, op)
     operation_is_in_symmetric_relation(mascm, op)
@@ -1131,7 +1131,7 @@ def create_edges(mascm):
 
     for i, o in enumerate(mascm.operations):
         prev_op = mascm.o[i-1]
-        if i and (not prev_op.is_return) and (prev_op.thread_index == o.thread_index):
+        if i and (not prev_op.is_return) and (prev_op.thread.index == o.thread.index):
             # Cannot link current action with return (return action are linked later)
             add_edge_to_mascm(mascm, Edge(mascm.o[i - 1], o))
 
@@ -1203,7 +1203,7 @@ def create_edges(mascm):
         elif o.is_return and (o.function != c.main_function_name):
             # Link return with operation in operation in parent function if it is not return from main
             for op in mascm.o[i+1:]:
-                if (op.function != o.function) and (op.thread_index == o.thread_index):
+                if (op.function != o.function) and (op.thread.index == o.thread.index):
                     add_edge_to_mascm(mascm, Edge(o, op))
                     break
         elif o.name == "pthread_mutex_lock":

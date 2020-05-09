@@ -5,12 +5,12 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
+from collections import defaultdict
 from helpers import get_time_units_graphs, expressions as e
 from itertools import combinations
 import logging
 from mascm import MultithreadedApplicationSourceCodeModel as MASCM, Operation
 import re
-from typing import Optional
 from types import coroutine
 
 
@@ -90,11 +90,11 @@ def prepare_ignored_edges(thread_index: int, edges: list) -> list:
     ignored_edges = list()
     for edge in edges:
         f, s = edge
-        if (isinstance(f, Operation) and f.thread_index > thread_index) or \
-                (isinstance(s, Operation) and s.thread_index > thread_index):
+        if (isinstance(f, Operation) and f.thread.index > thread_index) or \
+                (isinstance(s, Operation) and s.thread.index > thread_index):
             break
-        elif (isinstance(f, Operation) and f.thread_index < thread_index) or \
-                (isinstance(s, Operation) and s.thread_index < thread_index):
+        elif (isinstance(f, Operation) and f.thread.index < thread_index) or \
+                (isinstance(s, Operation) and s.thread.index < thread_index):
             continue
         if isinstance(f, Operation) and (f.name == "pthread_create"):
             thread_creation.append(True)
@@ -107,22 +107,22 @@ def prepare_ignored_edges(thread_index: int, edges: list) -> list:
 
 def detect_race_condition(mascm: MASCM) -> coroutine:
     """ Function is responsible for detecting race conditions using MASCM """
-    time_units = [unit for unit in mascm.time_units if len(unit) > 1]  # Do not check units with one thread only
+    # Do not check units with one thread only
+    # Also remove redundant time units
+    cond = lambda unit, tu, i: (unit not in tu[:i]) and (len(unit) > 1)
+    time_units = [unit for i, unit in enumerate(mascm.time_units) if cond(unit, mascm.time_units, i)]
     if not time_units:
         return None
 
     graphs = get_time_units_graphs(time_units, mascm.edges)  # Build full graphs for every time unit
-    threads_to_find_ignored_edges = []  # Default t0 should be here
-    subgraphs = list()
+    subgraphs = defaultdict(list)
     for unit in time_units:
         edges = graphs[str(unit)]
-        for thread_num, thread in zip((mascm.threads.index(thread) for thread in unit), unit):
+        for thread_num in (mascm.threads.index(thread) for thread in unit):
             thread_edges = [edge for edge in edges if f"o{thread_num}" in str(edge)]
             if not thread_edges:
                 logging.debug(f"Unexpected situation for thread no. {thread_num} in time unit {unit}")
                 continue
-            if thread not in threads_to_find_ignored_edges:
-                threads_to_find_ignored_edges.append(thread)
 
             subgraph = list()
             for edge in thread_edges:
@@ -134,24 +134,29 @@ def detect_race_condition(mascm: MASCM) -> coroutine:
                     subgraph.append(edge)
                 elif re.match(e.usage_edge_exp, str(edge)):
                     subgraph.append(edge)
-            subgraphs.append(subgraph)
+            subgraphs[str(unit)].append(subgraph)
 
     reported_op = list()
-    for subgraphs_pair, threads_pair in zip(combinations(subgraphs, 2), combinations(threads_to_find_ignored_edges, 2)):
-        s1, s2 = subgraphs_pair
-        t1, t2 = threads_pair
-        ignored_edges = []
-        if t1.depth < t2.depth:
-            ignored_edges = prepare_ignored_edges(t1.index, mascm.edges)
-        elif t1.depth == t2.depth:
-            logging.debug(f"Comparing threads t1({t1}) and t2({t2}) with equal depth!")
-        else:
-            logging.critical(f"Unexpected situation t1({t1}) has greater depth than t2({t2})!")
-        comparator = GraphComparator(s1, s2, ignored_edges)
-        if not comparator.can_be_compared():
-            logging.debug(f"Skipping compare of pair: {s1}, {s2}")
-            continue
-        for op in comparator.locate_race_condition():
-            if op not in reported_op:
-                reported_op.append(op)
-                yield op
+    for _, tu_subraphs in subgraphs.items():
+        for s1, s2 in combinations(tu_subraphs, 2):
+            # Dirty hack to get threads of indexes
+            s1_thread = s1[0][1].thread if isinstance(s1[0][1], Operation) else s1[0][0].thread
+            s2_thread = s2[0][1].thread if isinstance(s2[0][1], Operation) else s2[0][0].thread
+            if s1_thread == s2_thread:
+                continue
+            ignored_edges = []
+            if s1_thread.depth < s2_thread.depth:
+                ignored_edges = prepare_ignored_edges(s1_thread.index, mascm.edges)
+            elif s1_thread.depth == s2_thread.depth:
+                logging.debug(f"Comparing threads t1({s1_thread}) and t2({s2_thread}) with equal depth!")
+            else:
+                ignored_edges = prepare_ignored_edges(s2_thread.index, mascm.edges)
+
+            comparator = GraphComparator(s1, s2, ignored_edges)
+            if not comparator.can_be_compared():
+                logging.debug(f"Skipping compare of pair: {s1}, {s2}")
+                continue
+            for op in comparator.locate_race_condition():
+                if op not in reported_op:
+                    reported_op.append(op)
+                    yield op

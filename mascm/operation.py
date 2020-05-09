@@ -17,16 +17,14 @@ class Operation:
     """Operation class"""
     __dependency_operation_types = (If,)
 
-    def __init__(self, node: Node, thread, thread_index: int, function: str):
+    def __init__(self, node: Node, thread, function: str):
         """Ctor
         :param node: Node obj
         :param thread: Thread object
-        :param thread_index: Thread index in the mascm
         :param function name in which operation is called
         """
         self.__node = node
         self.__thread = thread
-        self.__thread_index = thread_index
         self.__thread.add_operation(self)
         self.__operation_number = self.__thread.num_of_operations()
         self.__name = ""
@@ -62,9 +60,9 @@ class Operation:
                 self.__args.append(Resource(arg))
 
     @property
-    def thread_index(self) -> int:
-        """ Thread index """
-        return self.__thread_index
+    def thread(self):
+        """ Thread getter """
+        return self.__thread
 
     @property
     def index(self):
@@ -201,7 +199,7 @@ class Operation:
         return self.create_usage_edge(resource)
 
     def __eq__(self, other):
-        return self.__thread_index == other.__thread_index and self.__operation_number == other.__operation_number
+        return self.__thread.index == other.__thread.index and self.__operation_number == other.__operation_number
 
     def __repr__(self):
-        return "o{},{}".format(self.__thread_index, self.__operation_number)
+        return "o{},{}".format(self.__thread.index, self.__operation_number)

@@ -4,7 +4,6 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
 from mascm.operation import Operation
-from mascm.time_unit import TimeUnit
 from pycparser.c_ast import ExprList
 from typing import Optional
 
