@@ -1071,19 +1071,39 @@ def create_time_units(mascm):
     threads = deepcopy(mascm.threads)
     threads = sorted(threads, key=lambda thread: thread.depth, reverse=True)
     units = list()
+    from collections import defaultdict
+    tu_to_split = defaultdict(list)
     is_always_active = list()
     last_deep = None
+
     for t in threads:
         is_create = False
         for o in t.operations:
             if o.name == "pthread_create":
                 is_create = True
+                tu_to_split[str(t)].append(True)
             elif o.name == "pthread_join":
                 is_create = False
+                if tu_to_split:
+                    tu_to_split[str(t)].pop()
+                    tu_to_split[str(t)].append(list(o.args[0].names)[0])
             elif is_create:  # If thread has a operation between create and join
                 units[-1].append(t)
                 is_always_active.append(t)
                 break
+
+        if tu_to_split[str(t)]: # If there is
+            tu_s = str(tu_to_split[str(t)])
+            tu_s2 = str(list(t.name for t in units[-1]))
+            if tu_s == tu_s2:
+                tu = units.pop()
+                for t4ntu in tu:
+                    new = TimeUnit()
+                    new.append(t4ntu)
+                    units.append(new)
+            del tu_to_split[str(t)]
+        else:
+            del tu_to_split[str(t)]
 
         if last_deep != t.depth:
             units.append(TimeUnit())
@@ -1097,7 +1117,10 @@ def create_time_units(mascm):
 
     first_part = deepcopy(units)
     first_part.reverse()
-    first_part.pop()
+    last_unit = first_part.pop()
+    while last_unit and first_part and (len(last_unit) == len(first_part[-1])) and \
+            (last_unit[-1].depth == first_part[-1][-1].depth):
+        first_part.pop()
 
     for unit in first_part + units:
         mascm.time_units.append(sorted(unit, key=lambda thread: thread.index))

@@ -61,6 +61,11 @@ class Thread:
         """
         return self.__operations
 
+    @property
+    def name(self):
+        """ Thread name getter """
+        return self.__name
+
     def __repr__(self) -> str:
         return f"t{self.__thread_index}"
 
