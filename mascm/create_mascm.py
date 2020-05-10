@@ -832,9 +832,14 @@ def parse_func_call(mascm, node: FuncCall, thread: Thread, functions_definition:
         function_call_stack.remove(func_name)
     else:
         logging.debug(f"When parsing a FuncCall, undefined function '{func_name}' was encountered.")
-        _, calls = parse_expr_list(mascm, node.args, thread, functions_definition, function)
+        names, calls = parse_expr_list(mascm, node.args, thread, functions_definition, function)
         functions_call.extend(calls)
-        add_operation_to_mascm(mascm, node, thread, function)
+        o = add_operation_to_mascm(mascm, node, thread, function)
+        for name in names:
+            for shared_resource in mascm.resources:
+                if name in shared_resource:
+                    o.add_use_resource(shared_resource)
+                    break
     return functions_call
 
 

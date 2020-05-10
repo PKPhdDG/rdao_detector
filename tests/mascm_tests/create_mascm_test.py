@@ -554,10 +554,10 @@ class CreateMamTest(unittest.TestCase, TestBase):
                          "resources=[r1, r2], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o0,7, o0,8, o1,1, o1,2, "\
                          "o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, o1,9, o1,10, o1,11, o1,12, o1,13], mutexes=[], edges=[" \
                          "(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (o0,4, o0,5), (o0,5, o0,6), (o0,6, o0,7), " \
-                         "(r1, o0,7), (o0,7, o0,8), (o1,1, o1,2), (o1,2, o1,3), (o1,3, o1,4), (o1,4, o1,5), " \
-                         "(o1,5, o1,7), (o1,5, o1,6), (o1,6, o1,11), (o1,7, o1,8), (o1,8, o1,9), (r2, o1,9), " \
-                         "(o1,9, o1,10), (o1,10, o1,11), (o1,11, o1,10), (o1,11, o1,12), (o1,12, r1), (o1,12, o1,13)],"\
-                         " relations=(forward=[], backward=[], symmetric=[]))"
+                         "(r1, o0,7), (o0,7, o0,8), (o1,1, o1,2), (o1,2, o1,3), (r2, o1,3), (o1,3, o1,4), " \
+                         "(o1,4, o1,5), (o1,5, o1,7), (o1,5, o1,6), (o1,6, o1,11), (o1,7, o1,8), (o1,8, o1,9), " \
+                         "(r2, o1,9), (o1,9, o1,10), (o1,10, o1,11), (o1,11, o1,10), (o1,11, o1,12), (o1,12, r1), " \
+                         "(o1,12, o1,13)], relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "recursion2.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
@@ -592,12 +592,12 @@ class CreateMamTest(unittest.TestCase, TestBase):
                          "o0,10, o0,11, o1,1, o1,2, o1,3, o1,4, o1,5, o1,6, o1,7, o1,8, o2,1, o2,2, o2,3, o2,4, o2,5, "\
                          "o2,6, o2,7, o2,8, o2,9, o2,10], mutexes=[(m, PMN)], edges=[(o0,1, o0,2), (o0,2, o0,3), " \
                          "(o0,3, o0,4), (o0,4, o0,5), (o0,5, o0,6), (o0,6, o0,7), (o0,7, o0,8), (o0,8, r1), " \
-                         "(o0,8, o0,9), (o0,9, o0,10), (o0,10, o0,11), (q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), " \
-                         "(o1,3, r1), (o1,3, o1,4), (o1,4, r1), (o1,4, o1,5), (o1,5, r1), (o1,5, o1,6), (o1,6, o1,7), "\
-                         "(o1,7, q1), (o1,7, o1,8), (o2,1, o2,2), (q1, o2,2), (o2,2, o2,3), (o2,3, o2,4), " \
-                         "(o2,4, o2,9), (o2,4, o2,5), (o2,5, o2,6), (o2,6, r1), (o2,6, o2,7), (o2,7, r1), " \
-                         "(o2,7, o2,8), (o2,8, o2,4), (o2,8, o2,9), (o2,9, q1), (o2,9, o2,10)], " \
-                         "relations=(forward=[], backward=[(o1,3, o2,7)], symmetric=[]))"
+                         "(o0,8, o0,9), (r1, o0,9), (o0,9, o0,10), (o0,10, r1), (o0,10, o0,11), (q1, o1,1), " \
+                         "(o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), (o1,3, o1,4), (o1,4, r1), (o1,4, o1,5), (o1,5, r1), "\
+                         "(o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o1,7, q1), (o1,7, o1,8), (o2,1, o2,2), (q1, o2,2), "\
+                         "(o2,2, o2,3), (o2,3, o2,4), (o2,4, o2,9), (o2,4, o2,5), (o2,5, o2,6), (o2,6, r1), " \
+                         "(o2,6, o2,7), (o2,7, r1), (o2,7, o2,8), (o2,8, o2,4), (o2,8, o2,9), (o2,9, q1), " \
+                         "(o2,9, o2,10)], relations=(forward=[], backward=[(o1,3, o2,7)], symmetric=[]))"
         c.relations["backward"].append(('malloc', '++'))
         file_to_parse = "order_violation1.c"
         file_path = join(self.source_path_prefix, file_to_parse)
@@ -616,12 +616,13 @@ class CreateMamTest(unittest.TestCase, TestBase):
                          "o3,9], mutexes=[(m, PMN)], edges=[(o0,1, o0,2), (o0,2, o0,3), (o0,3, o0,4), (o0,4, o0,5), " \
                          "(o0,5, o0,6), (o0,6, o0,7), (o0,7, o0,8), (o0,8, o0,9), (o0,9, o0,10), (o0,10, o0,11), " \
                          "(q1, o1,1), (o1,1, o1,2), (o1,2, o1,3), (o1,3, r1), (o1,3, o1,4), (o1,4, r1), (o1,4, o1,5), "\
-                         "(o1,5, r1), (o1,5, o1,6), (o1,6, o1,7), (o1,7, q1), (o1,7, o1,8), (o2,1, o2,2), (q1, o2,2), "\
-                         "(o2,2, o2,3), (o2,3, o2,4), (o2,4, o2,9), (o2,4, o2,5), (o2,5, o2,6), (o2,6, r1), " \
-                         "(o2,6, o2,7), (o2,7, r1), (o2,7, o2,8), (o2,8, o2,4), (o2,8, o2,9), (o2,9, q1), " \
-                         "(o2,9, o2,10), (q1, o3,1), (o3,1, o3,2), (o3,2, o3,3), (o3,3, r1), (o3,3, o3,4), " \
-                         "(o3,4, r1), (o3,4, o3,5), (o3,5, o3,6), (o3,6, r1), (o3,6, o3,7), (o3,7, o3,8), " \
-                         "(o3,8, q1), (o3,8, o3,9)], relations=(forward=[], backward=[(o1,3, o2,7)], symmetric=[]))"
+                         "(o1,5, r1), (o1,5, o1,6), (r1, o1,6), (o1,6, o1,7), (o1,7, q1), (o1,7, o1,8), (o2,1, o2,2), "\
+                         "(q1, o2,2), (o2,2, o2,3), (o2,3, o2,4), (o2,4, o2,9), (o2,4, o2,5), (o2,5, o2,6), " \
+                         "(o2,6, r1), (o2,6, o2,7), (o2,7, r1), (o2,7, o2,8), (o2,8, o2,4), (o2,8, o2,9), (o2,9, q1), "\
+                         "(o2,9, o2,10), (q1, o3,1), (o3,1, o3,2), (o3,2, o3,3), (o3,3, r1), (o3,3, o3,4), (o3,4, r1),"\
+                         " (o3,4, o3,5), (r1, o3,5), (o3,5, o3,6), (o3,6, r1), (o3,6, o3,7), (o3,7, r1), (o3,7, o3,8),"\
+                         " (o3,8, q1), (o3,8, o3,9)], relations=(forward=[(o1,3, o3,7)], backward=[(o1,3, o2,7)], " \
+                         "symmetric=[]))"
         c.relations["backward"].append(('malloc', '++'))
         file_to_parse = "order_violation2.c"
         file_path = join(self.source_path_prefix, file_to_parse)

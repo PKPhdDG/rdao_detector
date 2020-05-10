@@ -48,10 +48,10 @@ class DetectOrderViolationTest(unittest.TestCase, TestBase):
 
         self.assertEqual(2, len(result))
 
-        self.assertEqual(mascm.operations[7], result[0][0])
-        self.assertEqual(mascm.operations[21], result[0][1])
+        self.assertEqual(mascm.operations[13], result[0][0])
+        self.assertEqual(mascm.operations[35], result[0][1])
         self.assertEqual(mascm.resources[0], result[0][2])
 
-        self.assertEqual(mascm.operations[7], result[1][0])
-        self.assertEqual(mascm.operations[15], result[1][1])
+        self.assertEqual(mascm.operations[13], result[1][0])
+        self.assertEqual(mascm.operations[25], result[1][1])
         self.assertEqual(mascm.resources[0], result[1][2])
