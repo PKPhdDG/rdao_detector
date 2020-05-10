@@ -27,10 +27,10 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
         self.assertEqual(DeadlockType.exclusion_lock, result[0][0], "Incorrect deadlock type")
         self.assertEqual(1, len(result), "Unexpected number of results.")
         self.assertEqual(2, len(result[0][1]), "Unexpected edges in the result.")
-        self.assertEqual(mascm.edges[6], result[0][1][0][0])
-        self.assertEqual(mascm.edges[8], result[0][1][0][1])
-        self.assertEqual(mascm.edges[19], result[0][1][1][0])
-        self.assertEqual(mascm.edges[21], result[0][1][1][1])
+        self.assertEqual(mascm.edges[10], result[0][1][0][0])
+        self.assertEqual(mascm.edges[12], result[0][1][0][1])
+        self.assertEqual(mascm.edges[26], result[0][1][1][0])
+        self.assertEqual(mascm.edges[28], result[0][1][1][1])
 
     def test_deadlock2(self):
         file_to_parse = "deadlock2.c"
@@ -46,24 +46,24 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
 
         # First pair
         self.assertEqual(DeadlockType.exclusion_lock, result[0][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[6], result[0][1][0][0])
-        self.assertEqual(mascm.edges[8], result[0][1][0][1])
-        self.assertEqual(mascm.edges[25], result[0][1][1][0])
-        self.assertEqual(mascm.edges[27], result[0][1][1][1])
+        self.assertEqual(mascm.edges[10], result[0][1][0][0])
+        self.assertEqual(mascm.edges[12], result[0][1][0][1])
+        self.assertEqual(mascm.edges[32], result[0][1][1][0])
+        self.assertEqual(mascm.edges[34], result[0][1][1][1])
 
         # Second pair
         self.assertEqual(DeadlockType.exclusion_lock, result[1][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[6], result[1][1][0][0])
-        self.assertEqual(mascm.edges[10], result[1][1][0][1])
-        self.assertEqual(mascm.edges[23], result[1][1][1][0])
-        self.assertEqual(mascm.edges[27], result[1][1][1][1])
+        self.assertEqual(mascm.edges[10], result[1][1][0][0])
+        self.assertEqual(mascm.edges[14], result[1][1][0][1])
+        self.assertEqual(mascm.edges[30], result[1][1][1][0])
+        self.assertEqual(mascm.edges[34], result[1][1][1][1])
 
         # Third pair
         self.assertEqual(DeadlockType.exclusion_lock, result[2][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[8], result[2][1][0][0])
-        self.assertEqual(mascm.edges[10], result[2][1][0][1])
-        self.assertEqual(mascm.edges[23], result[2][1][1][0])
-        self.assertEqual(mascm.edges[25], result[2][1][1][1])
+        self.assertEqual(mascm.edges[12], result[2][1][0][0])
+        self.assertEqual(mascm.edges[14], result[2][1][0][1])
+        self.assertEqual(mascm.edges[30], result[2][1][1][0])
+        self.assertEqual(mascm.edges[32], result[2][1][1][1])
 
     def test_deadlock3(self):
         file_to_parse = "deadlock3.c"
@@ -74,7 +74,7 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
         result = list(detect_deadlock(mascm))
         self.assertEqual(1, len(result), "Unexpected number of results.")
         self.assertEqual(DeadlockType.missing_unlock, result[0][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[8], result[0][1][0][0])
+        self.assertEqual(mascm.edges[12], result[0][1][0][0])
 
     def test_deadlock4(self):
         file_to_parse = "deadlock4.c"
@@ -87,11 +87,11 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
 
         # First case
         self.assertEqual(DeadlockType.missing_unlock, result[0][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[8], result[0][1][0][0])
+        self.assertEqual(mascm.edges[12], result[0][1][0][0])
 
         # Second case
         self.assertEqual(DeadlockType.missing_unlock, result[1][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[21], result[1][1][0][0])
+        self.assertEqual(mascm.edges[28], result[1][1][0][0])
 
     def test_deadlock_mix(self):
         file_to_parse = "deadlock_mix.c"
@@ -104,14 +104,14 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
 
         # Mutual exclusion
         self.assertEqual(DeadlockType.exclusion_lock, result[0][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[6], result[0][1][0][0])
-        self.assertEqual(mascm.edges[8], result[0][1][0][1])
-        self.assertEqual(mascm.edges[21], result[0][1][1][0])
-        self.assertEqual(mascm.edges[23], result[0][1][1][1])
+        self.assertEqual(mascm.edges[10], result[0][1][0][0])
+        self.assertEqual(mascm.edges[12], result[0][1][0][1])
+        self.assertEqual(mascm.edges[28], result[0][1][1][0])
+        self.assertEqual(mascm.edges[30], result[0][1][1][1])
 
         # Missing unlock
         self.assertEqual(DeadlockType.missing_unlock, result[1][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[8], result[1][1][0][0])
+        self.assertEqual(mascm.edges[12], result[1][1][0][0])
 
     def test_deadlock_double_lock_for_loop(self):
         file_to_parse = "deadlock_double_lock_for_loop.c"
@@ -124,6 +124,7 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
 
         # Double lock
         self.assertEqual(DeadlockType.double_lock, result[0][0], "Incorrect deadlock type")
+        self.assertEqual(mascm.edges[11], result[0][1][0][0])
 
     def test_deadlock_double_lock_while_loop(self):
         file_to_parse = "deadlock_double_lock_while_loop.c"
@@ -136,7 +137,7 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
 
         # Double lock
         self.assertEqual(DeadlockType.double_lock, result[0][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[7], result[0][1][0][0])
+        self.assertEqual(mascm.edges[12], result[0][1][0][0])
 
     def test_deadlock_double_lock_do_while_loop(self):
         file_to_parse = "deadlock_double_lock_while_loop.c"
@@ -149,7 +150,7 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
 
         # Double lock
         self.assertEqual(DeadlockType.double_lock, result[0][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[7], result[0][1][0][0])
+        self.assertEqual(mascm.edges[12], result[0][1][0][0])
 
     def test_deadlock_double1(self):
         file_to_parse = "deadlock_double_lock1.c"
@@ -162,8 +163,8 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
 
         # Double lock
         self.assertEqual(DeadlockType.double_lock, result[0][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[6], result[0][1][0][0])
-        self.assertEqual(mascm.edges[8], result[0][1][0][1])
+        self.assertEqual(mascm.edges[8], result[0][1][0][0])
+        self.assertEqual(mascm.edges[10], result[0][1][0][1])
 
     def test_no_deadlock1(self):
         file_to_parse = "no_deadlock1.c"

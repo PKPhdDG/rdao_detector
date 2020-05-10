@@ -96,9 +96,9 @@ def double_locks(mutex_collections: Iterable) -> coroutine:
     """ Function is responsible for detect double locks """
     pairs = collect_mutexes_indexes(mutex_collections)
     for index, edge in (pair for pair in pairs if pair[0] > 0):
-        if edge.second.is_multiple_called:
+        if edge.second.is_loop_body_operation:
             release_edge = next((pair[1] for pair in pairs if pair[0] == -index))
-            if not release_edge.first.is_multiple_called:
+            if not release_edge.first.is_loop_body_operation:
                 yield [edge]  # To be compatible with output mechanism
     mutex_numbers = list((index for index, _ in pairs))
     mutex_indices = list((i for i, _ in enumerate(mutex_numbers)))
