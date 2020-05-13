@@ -202,6 +202,32 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
         result = list(detect_deadlock(mascm))
         self.assertListEqual([], result)
 
+    def test_recursion_deadlock1(self):
+        file_to_parse = "recursion_deadlock1.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            mascm = create_mascm(deque([ast]))
+        result = list(detect_deadlock(mascm))
+        self.assertEqual(2, len(result), "Unexpected number of results.")
+
+        self.assertEqual(DeadlockType.incorrect_lock_type, result[0][0], "Incorrect deadlock type")
+        self.assertEqual(mascm.edges[17], result[0][1][0][0])
+        self.assertEqual(mascm.edges[10], result[0][1][0][1])
+
+        self.assertEqual(DeadlockType.incorrect_lock_type, result[1][0], "Incorrect deadlock type")
+        self.assertEqual(mascm.edges[20], result[1][1][0][0])
+        self.assertEqual(mascm.edges[10], result[1][1][0][1])
+
+    def test_no_recursion_deadlock1(self):
+        file_to_parse = "no_recursion_deadlock1.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            mascm = create_mascm(deque([ast]))
+        result = list(detect_deadlock(mascm))
+        self.assertEqual([], result)
+
 
 if "__main__" == __name__:
     unittest.main()
