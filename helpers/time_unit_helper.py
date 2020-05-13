@@ -20,6 +20,7 @@ def get_time_unit_edges(time_unit: TimeUnit, edges: list) -> coroutine:
     :param edges: List of all edges
     :return:
     """
+
     for thread in time_unit:
         for edge in edges:
             if isinstance(edge.first, Operation) and edge.first.is_operation_of_thread(thread):

@@ -17,8 +17,8 @@ import unittest
 
 
 class DetectOrderViolationTest(unittest.TestCase, TestBase):
-    def setUp(self) -> None:
-        super(DetectOrderViolationTest, self).setUp()
+    def tearDown(self) -> None:
+        super(DetectOrderViolationTest, self).tearDown()
         c.relations["forward"] = []
         c.relations["backward"] = []
         c.relations["symmetric"] = []
@@ -33,8 +33,8 @@ class DetectOrderViolationTest(unittest.TestCase, TestBase):
         result = list(detect_order_violation(mascm))
 
         self.assertEqual(1, len(result))
-        self.assertEqual(mascm.operations[8], result[0][0])
-        self.assertEqual(mascm.operations[16], result[0][1])
+        self.assertEqual(mascm.operations[13], result[0][0])
+        self.assertEqual(mascm.operations[25], result[0][1])
         self.assertEqual(mascm.resources[0], result[0][2])
 
     def test_order_violation2(self):
@@ -48,10 +48,10 @@ class DetectOrderViolationTest(unittest.TestCase, TestBase):
 
         self.assertEqual(2, len(result))
 
-        self.assertEqual(mascm.operations[7], result[0][0])
-        self.assertEqual(mascm.operations[21], result[0][1])
+        self.assertEqual(mascm.operations[13], result[0][0])
+        self.assertEqual(mascm.operations[35], result[0][1])
         self.assertEqual(mascm.resources[0], result[0][2])
 
-        self.assertEqual(mascm.operations[7], result[1][0])
-        self.assertEqual(mascm.operations[15], result[1][1])
+        self.assertEqual(mascm.operations[13], result[1][0])
+        self.assertEqual(mascm.operations[25], result[1][1])
         self.assertEqual(mascm.resources[0], result[1][2])

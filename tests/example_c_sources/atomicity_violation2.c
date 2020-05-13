@@ -33,6 +33,7 @@ void* change_interest(void *args) {
     interest_rate = 5;
     display_account_info();
     pthread_mutex_unlock(&n);
+    return NULL;
 }
 
 int main() {

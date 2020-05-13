@@ -3,6 +3,7 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
+import logging
 from pycparser.c_ast import FuncDef
 
 
@@ -23,3 +24,13 @@ class Function:
     @property
     def name(self):
         return self.__node.decl.name
+
+    @property
+    def function_args(self) -> list:
+        args = list()
+        if not self.node.decl.type.args:
+            return args
+
+        for arg in self.node.decl.type.args:
+            args.append(arg.name)
+        return args

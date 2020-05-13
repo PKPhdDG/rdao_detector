@@ -9,6 +9,7 @@ import re
 
 usage_edge_exp = re.compile(r"\(o\d+,\d+, r\d+\)")
 dependency_edge_exp = re.compile(r"\(r\d+, o\d+,\d+\)")
+transition_edge_exp = re.compile(r"\(o\d+,\d+, o\d+,\d+\)")
 mutex_exp = re.compile(r"q\d+")
 mutex_lock_edge_exp = re.compile(r"\(q\d+, o\d+,\d+\)")
 mutex_unlock_edge_exp = re.compile(r"\(o\d+,\d+, q\d+\)")

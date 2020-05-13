@@ -11,6 +11,7 @@ class MultithreadedApplicationSourceCodeModel(namedtuple(
     """General class of multithreaded application source code model
     """
     mutex_attrs = defaultdict()
+    local_resources = list()
 
     def __repr__(self):
         result = super(MultithreadedApplicationSourceCodeModel, self).__repr__()

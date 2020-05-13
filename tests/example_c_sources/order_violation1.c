@@ -11,6 +11,7 @@ void* create_account(void *args) {
     **account = 0;
     printf("Account created. Current balance: %d\r\n", **account);
     pthread_mutex_unlock(&m);
+    return NULL;
 }
 
 void* deposit(void *args) {

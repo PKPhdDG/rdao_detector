@@ -4,34 +4,37 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
 import config as c
-from helpers.mascm_helper import extract_resource_name
 import logging
+from helpers.exceptions import MASCMException
 from mascm.edge import Edge
+from mascm.lock import Lock
 from mascm.resource import Resource
 from pycparser.c_ast import *
+from typing import Optional
 
 
 class Operation:
     """Operation class"""
     __dependency_operation_types = (If,)
 
-    def __init__(self, node: Node, thread, thread_index: int, called_in_loop: bool):
+    def __init__(self, node: Node, thread, function: str):
         """Ctor
         :param node: Node obj
         :param thread: Thread object
-        :param thread_index: Thread index in the mascm
-        :param called_in_loop: Boolean value  which is True if operation is part of loop body
+        :param function name in which operation is called
         """
         self.__node = node
         self.__thread = thread
-        self.__thread_index = thread_index
         self.__thread.add_operation(self)
         self.__operation_number = self.__thread.num_of_operations()
         self.__name = ""
         self.__args = list()
         self.__ignored_arg_types = (Constant,)
-        self.__is_last_action = False
-        self.is_multiple_called = called_in_loop  # Used generally for pthread_mutex_lock/unlock
+        self.__is_return = False
+        self.__function = function
+        self.__is_loop_body_operation = False  # Used generally for pthread_mutex_lock/unlock
+        self.__is_if_else_block_operation = False
+        self.__related_mutex = None
         if isinstance(self.__node, FuncCall):
             self.__name = self.__node.name.name
             if self.__node.args is not None:
@@ -41,7 +44,7 @@ class Operation:
             self.__add_resources([self.__node.expr])
         elif isinstance(self.__node, Return):
             self.__name = "return"
-            self.__is_last_action = True
+            self.__is_return = True
         elif isinstance(self.__node, If):
             self.__name = "if"
 
@@ -57,9 +60,9 @@ class Operation:
                 self.__args.append(Resource(arg))
 
     @property
-    def thread_index(self) -> int:
-        """ Thread index """
-        return self.__thread_index
+    def thread(self):
+        """ Thread getter """
+        return self.__thread
 
     @property
     def index(self):
@@ -87,23 +90,79 @@ class Operation:
         """
         return self.__node
 
-    def is_last_action(self) -> bool:
+    @property
+    def function(self) -> str:
+        """ Function name str """
+        return self.__function
+
+    @property
+    def is_return(self) -> bool:
         """ If this is return operation this method return true
+        """
+        return self.__is_return
+
+    @property
+    def use_resources(self) -> bool:
+        """ Operation use some resources """
+        return bool(self.__args)
+
+    @property
+    def is_if_else_block_operation(self) -> bool:
+        """ Getter
         :return: Boolean value
         """
-        return self.__is_last_action
+        return self.__is_if_else_block_operation
+
+    @is_if_else_block_operation.setter
+    def is_if_else_block_operation(self, value: bool):
+        """Setter
+        :param value: Boolean value
+        """
+        logging.debug(f"Setting new value for is_if_else_bock_operation: {value}")
+        self.__is_if_else_block_operation = value
+
+    @property
+    def is_loop_body_operation(self) -> bool:
+        """ Getter
+        :return: Boolean value
+        """
+        return self.__is_loop_body_operation
+
+    @is_loop_body_operation.setter
+    def is_loop_body_operation(self, value: bool):
+        """ Setter
+        :param value: Boolean value
+        """
+        self.__is_loop_body_operation = value
+
+    @property
+    def related_mutex(self) -> Lock:
+        """ Getter
+        :return: Boolean value
+        """
+        return self.__related_mutex
+
+    @related_mutex.setter
+    def related_mutex(self, value: Lock):
+        """ Setter
+        :param value: Boolean value
+        """
+        if self.__related_mutex is not None:
+            raise MASCMException("Trying link mutex and operation which locks other mutex")
+        logging.debug(f"Setting new value for related_mutex: {value}")
+        self.__related_mutex = value
 
     def add_use_resource(self, resource: Resource) -> None:
         """ Method add resource to resource list """
         self.__args.append(resource)
 
-    def has_func_use_the_resource(self, resource: Resource) -> bool:
+    def use_the_resource(self, resource: Resource) -> bool:
         """ Method check given resource is used by operation
         :param resource: Resource object
         :return: Boolean value
         """
         for arg in self.__args:
-            if resource.has_name(arg.name):
+            if resource.has_names(arg.names):
                 return True
             else:
                 if not isinstance(arg, self.__ignored_arg_types):
@@ -122,16 +181,25 @@ class Operation:
         """ Method create dependency edge """
         return Edge(resource, self)
 
-    def create_edge_with_resource(self, resource: Resource) -> Edge:
+    def create_edge_with_resource(self, resource: Resource) -> Optional[Edge]:
         """ Method create correct edge for relation operation - edge """
         if isinstance(self.__node, FuncCall) and (self.name in c.function_using_resources):
             return self.create_dependency_edge(resource)
         elif isinstance(self.__node, self.__dependency_operation_types):
             return self.create_dependency_edge(resource)
         elif isinstance(self.__node, FuncCall) and (self.name in ('memcpy', 'memset')) \
-                and resource.has_name(self.__args[1].name):
+                and resource.has_names(self.__args[1].names):
             return self.create_dependency_edge(resource)
+        elif isinstance(self.__node, ID):
+            return self.create_dependency_edge(resource)
+        elif isinstance(self.__node, BinaryOp):
+            return self.create_dependency_edge(resource)
+        elif self.name == '&':
+            return None
         return self.create_usage_edge(resource)
 
+    def __eq__(self, other):
+        return self.__thread.index == other.__thread.index and self.__operation_number == other.__operation_number
+
     def __repr__(self):
-        return "o{},{}".format(self.__thread_index, self.__operation_number)
+        return "o{},{}".format(self.__thread.index, self.__operation_number)

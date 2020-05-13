@@ -10,9 +10,9 @@ class TimeUnit(UserList):
     """Time unit class"""
     __number = 0
 
-    def __init__(self, number: int):
+    def __init__(self):
         super(TimeUnit, self).__init__()
-        self.__number = number
+        self.number = 0
 
     def __add__(self, other: int) -> int:
-        return self.__number + other
+        return self.number + other

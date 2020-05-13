@@ -5,10 +5,10 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
-from helpers import DeadlockType, get_time_units_graphs, expressions as e
+from helpers import DeadlockType, get_time_units_graphs, expressions as e, LockType
 from itertools import combinations
 import logging
-from mascm import MultithreadedApplicationSourceCodeModel as MASCM
+from mascm import MultithreadedApplicationSourceCodeModel as MASCM, Thread
 import re
 from typing import Iterable, Sequence
 from types import coroutine
@@ -29,7 +29,7 @@ def collect_mutexes_indexes(edges: Iterable) -> Sequence:
     return collection
 
 
-def is_used_single_mutex(collection: Iterable) -> bool:
+def is_used_single_mutex(collection: Sequence) -> bool:
     """ Function check there is used single mutex
     :param collection: List of mutex indexes
     :return: Boolean value
@@ -45,7 +45,7 @@ def get_all_pairs_indexes(collection: Iterable) -> Sequence:
     return list(combinations(collection, 2))
 
 
-def mutually_exclusive_pairs_of_mutex(first: Iterable, second: Iterable) -> coroutine:
+def mutually_exclusive_pairs_of_mutex(first: Sequence, second: Sequence) -> coroutine:
     """ Function check there is no mutually exclusive pairs of mutexes """
     f_pairs = collect_mutexes_indexes(first)
     s_pairs = collect_mutexes_indexes(second)
@@ -83,7 +83,7 @@ def mutually_exclusive_pairs_of_mutex(first: Iterable, second: Iterable) -> coro
         yield p1_pair, p2_pair
 
 
-def missing_unlock(mutex_collections: Iterable) -> coroutine:
+def missing_unlock(mutex_collections: Sequence) -> coroutine:
     """ Function check there is no missing unlocks """
     pairs = collect_mutexes_indexes(mutex_collections)
     only_indexes = list((index for index, _ in pairs))
@@ -92,13 +92,13 @@ def missing_unlock(mutex_collections: Iterable) -> coroutine:
             yield mutex_collections[i]
 
 
-def double_locks(mutex_collections: Iterable) -> coroutine:
+def double_locks(mutex_collections: Sequence) -> coroutine:
     """ Function is responsible for detect double locks """
     pairs = collect_mutexes_indexes(mutex_collections)
     for index, edge in (pair for pair in pairs if pair[0] > 0):
-        if edge.second.is_multiple_called:
+        if edge.second.is_loop_body_operation:
             release_edge = next((pair[1] for pair in pairs if pair[0] == -index))
-            if not release_edge.first.is_multiple_called:
+            if not release_edge.first.is_loop_body_operation:
                 yield [edge]  # To be compatible with output mechanism
     mutex_numbers = list((index for index, _ in pairs))
     mutex_indices = list((i for i, _ in enumerate(mutex_numbers)))
@@ -113,10 +113,43 @@ def double_locks(mutex_collections: Iterable) -> coroutine:
             yield mutex_collections[index], mutex_collections[other_nums[r]]
 
 
-def recursion_locks(mutex_collections: Iterable) -> coroutine:
+def recursion_locks(thread: Thread, edges: list) -> coroutine:
     """ Function is responsible for detect not PMR locks in recursion function """
-    logging.critical("recursion locks not implemented yet!")
-    yield None
+    results = list()
+    for operation in thread.operations:
+        try:
+            op_edges = list(edge for edge in edges if (re.match(e.transition_edge_exp, str(edge))) and
+                            (edge.first == operation))
+        except StopIteration:
+            continue
+
+        if len(op_edges) < 2:  # There is no pair which contains return operation in recursion function
+            continue
+
+        for edge1, edge2 in combinations(op_edges, 2):
+            e1_index, e2_index = edges.index(edge1), edges.index(edge2)
+            if e2_index - e1_index != 1:  # They are not neighbour edges, This is not recursion
+                continue
+            # First edge should has direction to lower index, second to higher
+            if (edge1.first.index < edge1.second.index) or (edge2.first.index > edge2.second.index):
+                continue
+
+            so_index = thread.operations.index(edge1.second)
+            fo_index = thread.operations.index(edge1.first)
+
+            # Between recursion call and return should be operation locking correct mutex
+            for o in thread.operations[so_index:fo_index]:
+                try:
+                    lock_edge = next(edge for edge in edges if (re.match(e.mutex_lock_edge_exp, str(edge))) and
+                                     (edge.second == o))
+                except StopIteration:
+                    continue
+                if lock_edge.first.type != LockType.PMR:
+                    results.append((edge1, lock_edge))
+
+    if len(results) > 1:  # Correct recursion contains more than 1 reported element, in other case it is loop
+        for result in results:
+            yield result
 
 
 def detect_deadlock(mascm: MASCM) -> coroutine:
@@ -156,4 +189,6 @@ def detect_deadlock(mascm: MASCM) -> coroutine:
         for pair in double_locks(mutex_collection):
             yield DeadlockType.double_lock, [pair]
 
-    next(recursion_locks(mutex_collections))
+    for thread in mascm.threads:
+        for pair in recursion_locks(thread, mascm.edges):
+            yield DeadlockType.incorrect_lock_type, [pair]

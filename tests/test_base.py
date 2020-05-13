@@ -10,6 +10,7 @@ import logging
 from os.path import join
 
 logging.disable()
+# logging.basicConfig(level=logging.CRITICAL)
 
 
 class TestBase:
