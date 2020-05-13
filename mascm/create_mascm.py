@@ -251,7 +251,7 @@ def parse_array_ref(mascm, node: ArrayRef, thread: Thread, functions_definition:
     if isinstance(name, ID):
         name, _ = parse_id(mascm, name, None)
     else:
-        logging.critical(f"When parsing a do-while cond, an unsupported item of type '{type(name)}' was encountered.")
+        logging.critical(f"When parsing a array ref, an unsupported item of type '{type(name)}' was encountered.")
     return name
 
 
@@ -307,6 +307,8 @@ def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, functions_definiti
     resource = None
     if isinstance(cond, ID):
         _, resource = parse_id(mascm, cond, None)
+    elif isinstance(cond, BinaryOp):
+        functions_call.extend(parse_binary_op(mascm, cond, thread, functions_definition, function))
     else:
         logging.critical(f"When parsing a do-while cond, an unsupported item of type '{type(cond)}' was encountered.")
 
@@ -351,7 +353,7 @@ def parse_for_loop(mascm, node: For, thread: Thread, functions_definition: dict,
         cond_op = add_operation_to_mascm(mascm, cond, thread, function)
         parse_id(mascm, cond, cond_op)
     elif isinstance(cond, BinaryOp):
-        parse_binary_op(mascm, cond, thread, functions_definition, function)
+        functions_call.extend(parse_binary_op(mascm, cond, thread, functions_definition, function))
     else:
         logging.critical(f"When parsing a for cond, an unsupported item of type '{type(cond)}' was encountered.")
 
@@ -969,6 +971,9 @@ def parse_compound_statement(mascm, node: Compound, thread: Thread, functions_de
             functions_call.extend(parse_do_while_loop(mascm, item, thread, functions_definition, function))
         elif isinstance(item, For):
             functions_call.extend(parse_for_loop(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, ExprList):
+            _, fc = parse_expr_list(mascm, item, thread, functions_definition, function)
+            functions_call.extend(fc)
         else:
             logging.critical(f"When parsing a compound, an unsupported item of type '{type(item)}' was encountered.")
     return functions_call
