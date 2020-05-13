@@ -7,7 +7,7 @@ __version__ = "0.4"
 
 import argparse
 import config as c
-from helpers import lock_types_str, deadlock_causes_str
+from helpers import DeadlockType, lock_types_str, deadlock_causes_str
 from helpers.rdao_helper import get_operation_from_edge, get_operation_name_from_edge, get_resource_name_from_edge
 from itertools import chain
 import logging
@@ -76,12 +76,24 @@ def main():
 
     print("Deadlocks:")
     for cause, edges in detect_deadlock(mascm):
-        print(f"\tDeadlock detected involving a set of locks: {set((edge.first for edge in chain(*edges)))}")
+        if DeadlockType.incorrect_lock_type != cause:
+            print(f"\tDeadlock detected involving a set of locks: {set((edge.first for edge in chain(*edges)))}")
+        else:
+            print(f"\tDeadlock detected involving incorrect type of lock in recursion.")
+
         print("\t\tDeadlock cause:", deadlock_causes_str[cause])
-        print("\tLocking operations can be found in:")
-        for edge in chain(*edges):
-            print(f"\t\t{edge.second.node.coord}", end=" ")
-            print(f"using mutex variable {edge.first.name} of type {lock_types_str[edge.first.type]}")
+
+        if DeadlockType.incorrect_lock_type != cause:
+            print("\tLocking operations can be found in:")
+            for edge in chain(*edges):
+                print(f"\t\t{edge.second.node.coord}", end=" ")
+                print(f"using mutex variable {edge.first.name} of type {lock_types_str[edge.first.type]}")
+        else:
+            edge1, edge2 = chain(*edges)
+            print(f"\tReturn operation in {edge1.first.node.coord} returning to {edge1.second.node.coord}")
+            print(f"\tCause re-lock of {edge2.first.name} by operation in {edge2.second.node.coord}")
+            print(f"\t\tInvolved mutex has type {lock_types_str[edge2.first.type]}")
+
     print("="*60)
 
     print("Atomicity violations:")

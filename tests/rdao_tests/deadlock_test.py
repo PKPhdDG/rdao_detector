@@ -137,7 +137,7 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
 
         # Double lock
         self.assertEqual(DeadlockType.double_lock, result[0][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[12], result[0][1][0][0])
+        self.assertEqual(mascm.edges[11], result[0][1][0][0])
 
     def test_deadlock_double_lock_do_while_loop(self):
         file_to_parse = "deadlock_double_lock_while_loop.c"
@@ -150,7 +150,7 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
 
         # Double lock
         self.assertEqual(DeadlockType.double_lock, result[0][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[12], result[0][1][0][0])
+        self.assertEqual(mascm.edges[11], result[0][1][0][0])
 
     def test_deadlock_double1(self):
         file_to_parse = "deadlock_double_lock1.c"
