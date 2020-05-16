@@ -9,8 +9,8 @@ from helpers.path import get_project_path
 import logging
 from os.path import join
 
-logging.disable()
-# logging.basicConfig(level=logging.CRITICAL)
+# logging.disable()
+logging.basicConfig(level=logging.CRITICAL)
 
 
 class TestBase:
