@@ -1193,7 +1193,7 @@ def create_edges(mascm):
             # Linking last operation of for/while loop with first
             next_op = mascm.o[i+1] if len(mascm.o) > i+1 else None
             if is_for_while_loop and o.is_loop_body_operation and \
-                    ((next_op is None) or (not next_op.is_loop_body_operation)):
+                    ((next_op is None) or (not next_op.is_loop_body_operation)) and not isinstance(o.node, Break):
                 for op in mascm.o[i-1:0:-1]:
                     # Backward search first operation of loop for creating correct return edge
                     if isinstance(op.node, While) or isinstance(op.node, For):
@@ -1215,6 +1215,9 @@ def create_edges(mascm):
                 last_edge = mascm.edges.pop()
                 for op in mascm.o[i+1:]:
                     if not op.is_if_else_block_operation:
+                        # For case when If/else try create edge to operation after loop body
+                        if last_edge.first.is_loop_body_operation and not op.is_loop_body_operation:
+                            break
                         add_edge_to_mascm(mascm, Edge(last_edge.first, op))
                         break
             elif is_else:
