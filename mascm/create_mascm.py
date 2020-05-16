@@ -307,7 +307,7 @@ def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, functions_definiti
     global __is_loop_body
     __is_loop_body.append(True)
     functions_call = list()
-    add_operation_to_mascm(mascm, node, thread, function)
+    do_operation = add_operation_to_mascm(mascm, node, thread, function)
     stmt = node.stmt
     if isinstance(stmt, Compound):
         functions_call.extend(parse_compound_statement(mascm, stmt, thread, functions_definition, function))
@@ -326,11 +326,12 @@ def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, functions_definiti
     while_operation = add_operation_to_mascm(mascm, node, thread, function)
     if resource:
         while_operation.add_use_resource(resource)
-    o_index = mascm.o.index(while_operation)
-    for o in mascm.o[:o_index:-1]:
+
+    do_index = mascm.o.index(do_operation)
+    while_index = mascm.o.index(while_operation)
+    for o in mascm.o[do_index:while_index]:
         o.is_loop_body_operation = __is_loop_body[-1]
-        if o.node == while_operation.node:
-            break
+    while_operation.is_loop_body_operation = __is_loop_body[-1]
 
     __is_loop_body.pop()
     return functions_call
