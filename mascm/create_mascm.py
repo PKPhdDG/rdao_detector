@@ -229,6 +229,17 @@ def add_resource_to_mascm(mascm, node: Node, names: Optional[set] = None) -> Non
     mascm.r.append(r)
 
 
+def parse_break(mascm, node: Break, thread: Thread, function: str) -> None:
+    """ Function parse Break node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: Break node object
+    :param thread: Current thread
+    :param function: Current function
+    """
+    add_operation_to_mascm(mascm, node, thread, function)
+
+
 def parse_typename(node: Typename) -> None:
     """ Function parse Typename node
     :param node: Typename node
@@ -411,6 +422,10 @@ def parse_if_statement(mascm, node: If, thread: Thread, functions_definition: di
             functions_call.extend(parse_return(mascm, op, thread, functions_definition, function))
         elif isinstance(op, Compound):
             functions_call.extend(parse_compound_statement(mascm, op, thread, functions_definition, function))
+        elif isinstance(op, FuncCall):
+            functions_call.extend(parse_func_call(mascm, op, thread, functions_definition, function))
+        elif isinstance(op, Break):
+            parse_break(mascm, op, thread, function)
         else:
             logging.critical(f"When parsing an if true, an unsupported item of type '{type(cond)}' was encountered.")
 
@@ -421,6 +436,10 @@ def parse_if_statement(mascm, node: If, thread: Thread, functions_definition: di
             functions_call.extend(parse_return(mascm, op, thread, functions_definition, function))
         elif isinstance(op, Compound):
             functions_call.extend(parse_compound_statement(mascm, op, thread, functions_definition, function))
+        elif isinstance(op, FuncCall):
+            functions_call.extend(parse_func_call(mascm, op, thread, functions_definition, function))
+        elif isinstance(op, Break):
+            parse_break(mascm, op, thread, function)
         else:
             logging.critical(f"When parsing an if false, an unsupported item of type '{type(cond)}' was encountered.")
 
@@ -974,6 +993,8 @@ def parse_compound_statement(mascm, node: Compound, thread: Thread, functions_de
         elif isinstance(item, ExprList):
             _, fc = parse_expr_list(mascm, item, thread, functions_definition, function)
             functions_call.extend(fc)
+        elif isinstance(item, Break):
+            parse_break(mascm, item, thread, function)
         else:
             logging.critical(f"When parsing a compound, an unsupported item of type '{type(item)}' was encountered.")
     return functions_call
@@ -1166,7 +1187,8 @@ def create_edges(mascm):
         prev_op = mascm.o[i-1]
         if i and (not prev_op.is_return) and (prev_op.thread.index == o.thread.index):
             # Cannot link current action with return (return action are linked later)
-            add_edge_to_mascm(mascm, Edge(mascm.o[i - 1], o))
+            if not isinstance(prev_op.node, Break):
+                add_edge_to_mascm(mascm, Edge(mascm.o[i - 1], o))
 
             # Linking last operation of for/while loop with first
             next_op = mascm.o[i+1] if len(mascm.o) > i+1 else None
@@ -1187,7 +1209,7 @@ def create_edges(mascm):
                     add_edge_to_mascm(mascm, Edge(o, op))
                     is_else = True
                     break
-            if not is_else and there_was_if:
+            if not is_else and there_was_if and not isinstance(prev_op.node, Break):
                 # Last operation in if statement should be linked with first operation after else block
                 there_was_if.pop()
                 last_edge = mascm.edges.pop()
@@ -1197,13 +1219,15 @@ def create_edges(mascm):
                         break
             elif is_else:
                 there_was_if.append(True)
-            else:
+            elif not isinstance(prev_op.node, Break):
                 # Last operation in if statement should be linked with first operation after else block
                 last_edge = mascm.edges[-1]
                 for op in mascm.o[i+1:]:
                     if not op.is_if_else_block_operation:
                         add_edge_to_mascm(mascm, Edge(last_edge.second, op))
                         break
+            else:
+                logging.debug(f"Skipping link the last operation of if statement {o.name} with firs operation after it")
 
         elif isinstance(o.node, While) or isinstance(o.node, For):
             # TODO Except while/for node edge should go to condition node
@@ -1217,6 +1241,14 @@ def create_edges(mascm):
                 if op.node == o.node:
                     add_edge_to_mascm(mascm, Edge(o, op))
                     break
+        elif isinstance(o.node, Break):
+            for op in mascm.operations[i+1:]:  # Searching first operation after loop
+                if op.is_loop_body_operation:
+                    continue
+                else:
+                    break
+            add_edge_to_mascm(mascm, Edge(o, op))
+            continue
         elif o.is_return and o.function in recursion_function:  # Detecting recursion
             first_op = None
             o_subset = mascm.o[:i]
@@ -1245,6 +1277,8 @@ def create_edges(mascm):
         elif o.name == "pthread_mutex_unlock":
             add_edge_to_mascm(mascm, Edge(o, o.related_mutex))
             continue  # There is no need check usage/dependencies edge
+        else:
+            logging.debug(f"Unknown operation occurs {o.name}: {o}")
 
         add_usage_dependencies_edge(mascm, o)
 
