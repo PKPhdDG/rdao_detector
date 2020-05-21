@@ -883,6 +883,32 @@ class CreateMamTest(unittest.TestCase, TestBase):
         self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
+    def test_struct_usage(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0], time_units=[[t0]], resources=[], " \
+                         "operations=[o0,1, o0,2, o0,3], mutexes=[], edges=[(o0,1, o0,2), (o0,2, o0,3)], " \
+                         "relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "struct_example.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))
+
+    def test_struct_usage2(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0], time_units=[[t0]], resources=[r1], " \
+                         "operations=[o0,1, o0,2], mutexes=[], edges=[(r1, o0,1), (o0,1, o0,2)], " \
+                         "relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "struct_example2.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))
+
 
 if "__main__" == __name__:
     unittest.main()

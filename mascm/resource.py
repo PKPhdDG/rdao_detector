@@ -5,7 +5,7 @@ __version__ = "0.4"
 
 from helpers.exceptions import MASCMException
 from helpers.mascm_helper import extract_resource_name
-from pycparser.c_ast import Node
+from pycparser.c_ast import Node, StructRef
 from typing import Optional
 
 
@@ -20,6 +20,8 @@ class Resource:
         self.__names = {extract_resource_name(node)}
         if names is not None:
             self.__names.update(names)
+
+        self.__fields = []  # For structures
         self.__num = num
 
     def add_name(self, name: str):

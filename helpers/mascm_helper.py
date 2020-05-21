@@ -22,6 +22,8 @@ def extract_resource_name(node) -> str:
             return ""
         elif isinstance(node, Constant):
             return ""
+        elif isinstance(node, StructRef):
+            return extract_resource_name(node.name)
         else:
             logging.warning(f"Trying extract name from node: {node}")
             return node.lvalue.expr.name

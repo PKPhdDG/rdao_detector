@@ -760,6 +760,24 @@ def parse_constant(node: Constant) -> str:
     return node.value
 
 
+def parse_struct_ref(mascm, node: StructRef, thread: Thread, functions_definition: dict, function: str) -> Optional[str]:
+    """ Function parse StructRef node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: ExprList node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: Shared resource name or None
+    """
+    resource_name = parse_id(mascm, node.name, None)
+    field_name = parse_id(mascm, node.field, None)
+    for shared_resource in mascm.r:
+        if resource_name in shared_resource:
+            return resource_name
+    return None
+
+
 def parse_expr_list(mascm, node: ExprList, thread: Thread, functions_definition: dict, function: str) -> tuple:
     """ Function parse ExprList node
 
@@ -795,9 +813,12 @@ def parse_expr_list(mascm, node: ExprList, thread: Thread, functions_definition:
             name, fc = parse_cast(mascm, expr, thread, functions_definition, function)
             functions_call.extend(fc)
             expr_names.append(name)
+        elif isinstance(expr, StructRef):
+            expr_names.append(parse_struct_ref(mascm, expr, thread, functions_definition, function))
         else:
             msg = f"When parsing an expressions, an unsupported item of type '{type(expr)}' was encountered."
             logging.critical(msg)
+
     return expr_names, functions_call
 
 
@@ -896,6 +917,33 @@ def parse_return(mascm, node: Return, thread: Thread, functions_definition: dict
     return functions_call
 
 
+def parse_init_list(mascm, node: InitList, thread: Thread, functions_definition: dict, function: str) -> tuple:
+    """ Function parse InitList node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: Decl node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List names of resources and list with function calls
+    """
+    functions_call = list()
+    names = list()
+    for expr in node.exprs:
+        if isinstance(expr, Constant):
+            parse_constant(expr)  # Adding constant values as resource in init list has no sense?
+        elif isinstance(expr, UnaryOp):
+            name, fc = parse_unary_op(mascm, expr, thread, functions_definition, function)
+            functions_call.extend(fc)
+            names.append(name)
+        elif isinstance(expr, FuncCall):
+            functions_call.extend(parse_func_call(mascm, expr, thread, functions_definition, function))
+        else:
+            logging.critical(f"When parsing a init list, an unsupported item of type '{type(expr)}' was encountered.")
+
+    return names, functions_call
+
+
 def parse_decl(mascm, node: Decl, thread: Thread, functions_definition: dict, function: str) -> tuple:
     """ Function parse Decl node
 
@@ -920,6 +968,15 @@ def parse_decl(mascm, node: Decl, thread: Thread, functions_definition: dict, fu
     elif isinstance(init, Cast):
         name, fc = parse_cast(mascm, init, thread, functions_definition, function)
         functions_call.extend(fc)
+    elif isinstance(init, InitList):
+        names, fc = parse_init_list(mascm, init, thread, functions_definition, function)
+        functions_call.extend(fc)
+        if len(names) == 1:
+            name = names[0]
+        elif not names:
+            pass
+        else:
+            logging.critical(f"When parsing a declaration an init list returned more than one name of resource.")
     elif init is None:
         logging.debug("Handled declaration without initialisation.")
     else:

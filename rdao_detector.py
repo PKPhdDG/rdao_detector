@@ -38,7 +38,7 @@ def functions_pair(arg) -> tuple:
 parser = argparse.ArgumentParser(description='Detect RDAO Bugs')
 parser.add_argument('path', type=str, help="Paths to source code")
 parser.add_argument(
-    '--log-level', choices=(logging.DEBUG, logging.INFO, logging.WARN, logging.ERROR, logging.CRITICAL),
+    '--log-level', type=int, choices=(logging.DEBUG, logging.INFO, logging.WARN, logging.ERROR, logging.CRITICAL),
     default=logging.INFO
 )
 parser.add_argument(
