@@ -41,7 +41,7 @@ class Lock:
         """
         self.__type = lock_strings[type_str]
 
-    def model_repr(self):
+    def model_repr(self) -> str:
         """ Function build string for model representation """
         type_str = str(self.type).split(".")[1]
         return f"({self.name}, {type_str})"
