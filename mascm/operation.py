@@ -56,6 +56,10 @@ class Operation:
             if isinstance(arg, BinaryOp):
                 self.__args.append(Resource(arg.left))
                 self.__args.append(Resource(arg.right))
+            elif isinstance(arg, StructRef):
+                r = Resource(arg)
+                r.add_field(arg.field.name)
+                self.__args.append(r)
             else:
                 self.__args.append(Resource(arg))
 

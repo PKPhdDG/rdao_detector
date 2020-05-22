@@ -3,9 +3,10 @@ __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
+from sortedcontainers import SortedSet
 from helpers.exceptions import MASCMException
-from helpers.mascm_helper import extract_resource_name
-from pycparser.c_ast import Node, StructRef
+from helpers.mascm_helper import extract_resource_name, extract_resource_type
+from pycparser.c_ast import *
 from typing import Optional
 
 
@@ -21,8 +22,10 @@ class Resource:
         if names is not None:
             self.__names.update(names)
 
-        self.__fields = []  # For structures
         self.__num = num
+
+        self.__type, self.__is_struct = extract_resource_type(node)
+        self.__fields = []  # For structure
 
     def add_name(self, name: str):
         """ Add resource name or resource alias
@@ -53,10 +56,19 @@ class Resource:
         """
         return self.__names
 
-    # @property
-    # def name(self) -> str:
-    #     """ Getter return name if resource is argument """
-    #     return next(iter(self.__names))
+    def add_fields(self, node: Struct):
+        """ Method add fields from Struct node """
+        for decl in node.decls:
+            self.__fields.append(decl.name)
+
+    def add_field(self, name: str):
+        """ Method to add single field name """
+        self.__fields.append(name)
+
+    @property
+    def is_struct(self) -> bool:
+        """ To check resource is struct """
+        return self.__is_struct
 
     @property
     def names(self) -> set:
@@ -67,6 +79,22 @@ class Resource:
     def node(self) -> Node:
         """ Node obj getter """
         return self.__node
+
+    @property
+    def type(self) -> str:
+        """ Type name """
+        return self.__type
+
+    def model_repr(self) -> str:
+        """ Return model representation """
+        template = "{names}"
+        if not self.__fields:
+            return "{" + template.format(names=", ".join(SortedSet(self.__names))) + "}"
+        n = self.names
+        for name in self.names:
+            for field in self.__fields:
+                n.add(f"{name}.{field}")
+        return "{" + template.format(names=", ".join(SortedSet(self.__names))) + "}"
 
     def __hash__(self):
         return hash(self.__node)
@@ -80,4 +108,11 @@ class Resource:
         return f"r{self.__num}"
 
     def __contains__(self, item):
-        return item in self.__names
+        if item is None:
+            return False
+
+        if '.' not in item:
+            return item in self.__names
+
+        name, field = item.split('.')
+        return (name in self.__names) and (field in self.__fields)

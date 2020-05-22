@@ -225,7 +225,18 @@ def add_resource_to_mascm(mascm, node: Node, names: Optional[set] = None) -> Non
     # Constant objects not declared by user does not contains shared values
     if isinstance(node, Constant):
         return
+
+    if isinstance(node, Decl) and hasattr(node, 'type') and isinstance(node.type, Struct):
+        logging.debug(f"Struct definition occurs: {node}")
+        return
+
     r = Resource(node, len(mascm.r) + 1, names)
+    if r.is_struct:
+        for decl in mascm.struct_defs:
+            if r.type == decl.name:
+                r.add_fields(decl)
+                break
+
     mascm.r.append(r)
 
 
@@ -760,7 +771,7 @@ def parse_constant(node: Constant) -> str:
     return node.value
 
 
-def parse_struct_ref(mascm, node: StructRef, thread: Thread, functions_definition: dict, function: str) -> Optional[str]:
+def parse_struct_ref(mascm, node: StructRef, thread: Thread, functions_definition: dict, function: str) -> str:
     """ Function parse StructRef node
 
     :param mascm: MultithreadedApplicationSourceCodeModel object
@@ -770,12 +781,9 @@ def parse_struct_ref(mascm, node: StructRef, thread: Thread, functions_definitio
     :param function: Current function
     :return: Shared resource name or None
     """
-    resource_name = parse_id(mascm, node.name, None)
-    field_name = parse_id(mascm, node.field, None)
-    for shared_resource in mascm.r:
-        if resource_name in shared_resource:
-            return resource_name
-    return None
+    resource_name, _ = parse_id(mascm, node.name, None)
+    field_name, _ = parse_id(mascm, node.field, None)
+    return f"{resource_name}.{field_name}"
 
 
 def parse_expr_list(mascm, node: ExprList, thread: Thread, functions_definition: dict, function: str) -> tuple:
@@ -1359,9 +1367,11 @@ def parse_global_trees(mascm, asts: deque) -> dict:
             if isinstance(node, Typedef) or isinstance(node, FuncDecl) \
                     or (hasattr(node, 'storage') and "extern" in node.storage):
                 continue
-            elif isinstance(node, Decl) and isinstance(node.type.type, IdentifierType)\
-                    and ("pthread_mutex_t" in node.type.type.names):
+            elif isinstance(node, Decl) and (not isinstance(node.type, Struct)) and \
+                    isinstance(node.type.type, IdentifierType) and ("pthread_mutex_t" in node.type.type.names):
                 add_mutex_to_mascm(mascm, node)
+            elif isinstance(node, Decl) and isinstance(node.type, Struct):
+                mascm.struct_defs.append(node.type)
             elif isinstance(node, FuncDef):
                 func = Function(node)
                 functions_definition[func.name] = func
@@ -1370,6 +1380,9 @@ def parse_global_trees(mascm, asts: deque) -> dict:
                     ((isinstance(node.type, TypeDecl) and isinstance(node.type.type, IdentifierType)) or
                      (isinstance(node.type, PtrDecl) and isinstance(node.type.type, TypeDecl) and
                       isinstance(node.type.type.type, IdentifierType))):
+                add_resource_to_mascm(mascm, node)
+            elif isinstance(node, Decl) and hasattr(node, 'type') and isinstance(node.type, TypeDecl) and \
+                    isinstance(node.type.type, Struct):
                 add_resource_to_mascm(mascm, node)
             elif isinstance(node, Decl) and isinstance(node.type, FuncDecl):
                 expected_definitions.append(node)
