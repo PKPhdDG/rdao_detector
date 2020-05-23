@@ -1035,12 +1035,16 @@ def parse_case(mascm, node: Case, thread: Thread, functions_definition: dict, fu
     :return: List with function calls
     """
     functions_call = list()
-    add_operation_to_mascm(mascm, node, thread, function)
+    o = add_operation_to_mascm(mascm, node, thread, function)
+    o.switch_parent_operation = next(o for o in reversed(mascm.operations) if isinstance(o.node, Switch))
+
     for stmt in node.stmts:
         if isinstance(stmt, FuncCall):
             functions_call.extend(parse_func_call(mascm, stmt, thread, functions_definition, function))
         elif isinstance(stmt, Break):
             parse_break(mascm, stmt, thread, function)
+        elif isinstance(stmt, Switch):
+            functions_call.extend(parse_switch(mascm, stmt, thread, functions_definition, function))
         else:
             logging.critical(f"When parsing a case stmt, an unsupported item of type '{type(stmt)}' was encountered.")
 
@@ -1058,12 +1062,17 @@ def parse_default(mascm, node: Default, thread: Thread, functions_definition: di
     :return: List with function calls
     """
     functions_call = list()
-    add_operation_to_mascm(mascm, node, thread, function)
+    o = add_operation_to_mascm(mascm, node, thread, function)
+    o.switch_parent_operation = next(o for o in reversed(mascm.operations) if isinstance(o.node, Switch))
+
     for stmt in node.stmts:
         if isinstance(stmt, FuncCall):
             functions_call.extend(parse_func_call(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, Switch):
+            functions_call.extend(parse_switch(mascm, stmt, thread, functions_definition, function))
         else:
-            logging.critical(f"When parsing a case stmt, an unsupported item of type '{type(stmt)}' was encountered.")
+            msg = f"When parsing a default stmt, an unsupported item of type '{type(stmt)}' was encountered."
+            logging.critical(msg)
 
     return functions_call
 
@@ -1095,7 +1104,7 @@ def parse_switch(mascm, node: Switch, thread: Thread, functions_definition: dict
     # Mark all operations added later as switch_case_operations
     switch_index = mascm.operations.index(o)
     for op in mascm.operations[:switch_index:-1]:
-        if op.is_switch_case_operation:
+        if op == o:
             break
         op.is_switch_case_operation = True
 
@@ -1398,7 +1407,7 @@ def create_edges(mascm):
             for op in mascm.o[i+1:]:
                 if not op.is_switch_case_operation:
                     break
-                if isinstance(op.node, Case) or isinstance(op.node, Default):
+                if op.is_case and (op.switch_parent_operation == o):
                     add_edge_to_mascm(mascm, Edge(o, op))
             continue
         elif isinstance(o.node, Break):

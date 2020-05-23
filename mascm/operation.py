@@ -37,6 +37,8 @@ class Operation:
         self.__is_switch_case_operation = False
         self.__related_mutex = None
         self.__is_switch = False
+        self.__is_case = False
+        self.__switch_parent_operation = None  # It could be useful for nested switch
         if isinstance(self.__node, FuncCall):
             self.__name = self.__node.name.name
             if self.__node.args is not None:
@@ -51,6 +53,8 @@ class Operation:
             self.__name = "if"
         elif isinstance(self.__node, Switch):
             self.__is_switch = True
+        elif isinstance(self.__node, Case) or isinstance(self.__node, Default):
+            self.__is_case = True
 
     def __add_resources(self, resources: list) -> None:
         """ Method extract from objects resources
@@ -181,6 +185,34 @@ class Operation:
             raise MASCMException("Trying link mutex and operation which locks other mutex")
         logging.debug(f"Setting new value for related_mutex: {value}")
         self.__related_mutex = value
+
+    @property
+    def is_case(self) -> bool:
+        """ True if it is case or default node operation, False in other case
+        :return: Boolean value
+        """
+        return self.__is_case
+
+    @property
+    def switch_parent_operation(self):
+        """ Get parent object
+        :return: Operation object
+        """
+        if not self.__is_case:
+            raise MASCMException("Cannot get switch parent operation for operation which is not case or default!")
+        return self.__switch_parent_operation
+
+    @switch_parent_operation.setter
+    def switch_parent_operation(self, parent):
+        """ Setter. If function has a parent it is silently skipped
+        Skipping avoid problems with overwriting parent for nested switch
+
+        :param parent: Parent operation witch switch node!
+        """
+        if not self.__is_case:
+            raise MASCMException("Cannot set switch parent operation for operation which is not case or default!")
+        if self.__switch_parent_operation is None:
+            self.__switch_parent_operation = parent
 
     def add_use_resource(self, resource: Resource) -> None:
         """ Method add resource to resource list """
