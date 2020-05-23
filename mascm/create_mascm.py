@@ -1047,6 +1047,27 @@ def parse_case(mascm, node: Case, thread: Thread, functions_definition: dict, fu
     return functions_call
 
 
+def parse_default(mascm, node: Default, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse Default node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: Default node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
+    functions_call = list()
+    add_operation_to_mascm(mascm, node, thread, function)
+    for stmt in node.stmts:
+        if isinstance(stmt, FuncCall):
+            functions_call.extend(parse_func_call(mascm, stmt, thread, functions_definition, function))
+        else:
+            logging.critical(f"When parsing a case stmt, an unsupported item of type '{type(stmt)}' was encountered.")
+
+    return functions_call
+
+
 def parse_switch(mascm, node: Switch, thread: Thread, functions_definition: dict, function: str) -> list:
     """ Function parse Switch node
 
@@ -1122,6 +1143,8 @@ def parse_compound(mascm, node: Compound, thread: Thread, functions_definition: 
             functions_call.extend(parse_switch(mascm, item, thread, functions_definition, function))
         elif isinstance(item, Case):
             functions_call.extend(parse_case(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, Default):
+            functions_call.extend(parse_default(mascm, item, thread, functions_definition, function))
         else:
             logging.critical(f"When parsing a compound, an unsupported item of type '{type(item)}' was encountered.")
     return functions_call
@@ -1375,7 +1398,7 @@ def create_edges(mascm):
             for op in mascm.o[i+1:]:
                 if not op.is_switch_case_operation:
                     break
-                if isinstance(op.node, Case):
+                if isinstance(op.node, Case) or isinstance(op.node, Default):
                     add_edge_to_mascm(mascm, Edge(o, op))
             continue
         elif isinstance(o.node, Break):
