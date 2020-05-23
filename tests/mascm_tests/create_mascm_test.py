@@ -843,6 +843,36 @@ class CreateMamTest(unittest.TestCase, TestBase):
         self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
+    def test_parse_while_loop_with_break5(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0], time_units=[[t0]], " \
+                         "resources=[], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o0,7, o0,8], mutexes=[], "\
+                         "edges=[(o0,1, o0,2), (o0,2, o0,8), (o0,2, o0,3), (o0,3, o0,5), (o0,3, o0,4), (o0,4, o0,8), "\
+                         "(o0,5, o0,6), (o0,6, o0,7), (o0,7, o0,2), (o0,7, o0,8)], " \
+                         "relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "while_loop_with_break5.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))
+
+    def test_parse_while_loop_with_break6(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0], time_units=[[t0]], " \
+                         "resources=[{i}], operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o0,7], mutexes=[], "\
+                         "edges=[(o0,1, o0,7), (r1, o0,1), (o0,1, o0,2), (o0,2, o0,4), (o0,2, o0,3), (o0,3, o0,7), "\
+                         "(o0,4, o0,5), (o0,5, r1), (o0,5, o0,6), (o0,6, o0,1), (r1, o0,6), (o0,6, o0,7)], " \
+                         "relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "while_loop_with_break6.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))
+
     def test_parse_do_while_loop_with_break1(self):
         expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0], time_units=[[t0]], resources=[], " \
                          "operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o0,7, o0,8, o0,9, o0,10], mutexes=[],"\
@@ -1016,7 +1046,6 @@ class CreateMamTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
 
-        self._print_nodes(result.o)
         self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 

@@ -240,6 +240,68 @@ def add_resource_to_mascm(mascm, node: Node, names: Optional[set] = None) -> Non
     mascm.r.append(r)
 
 
+def parse_list_of_operations(mascm, nodes: list, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse list of nodes
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param nodes: list of nodes
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
+    functions_call = list()
+    for item in nodes:
+        if isinstance(item, Decl):
+            _, fc = parse_decl(mascm, item, thread, functions_definition, function)
+            functions_call.extend(fc)
+        elif isinstance(item, UnaryOp):
+            _, fc = parse_unary_op(mascm, item, thread, functions_definition, function)
+            functions_call.extend(fc)
+        elif isinstance(item, FuncCall):
+            functions_call.extend(parse_func_call(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, Assignment):
+            functions_call.extend(parse_assignment(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, Return):
+            functions_call.extend(parse_return(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, If):
+            functions_call.extend(parse_if_statement(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, While):
+            functions_call.extend(parse_while_loop(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, DoWhile):
+            functions_call.extend(parse_do_while_loop(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, For):
+            functions_call.extend(parse_for_loop(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, ExprList):
+            _, fc = parse_expr_list(mascm, item, thread, functions_definition, function)
+            functions_call.extend(fc)
+        elif isinstance(item, Break):
+            parse_break(mascm, item, thread, function)
+        elif isinstance(item, Switch):
+            functions_call.extend(parse_switch(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, Case):
+            functions_call.extend(parse_case(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, Default):
+            functions_call.extend(parse_default(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, Compound):
+            functions_call.extend(parse_compound(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, Cast):
+            _, fc = parse_cast(mascm, item, thread, functions_definition, function)
+            functions_call.extend(fc)
+        elif isinstance(item, BinaryOp):
+            functions_call.extend(parse_binary_op(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, Constant):
+            parse_constant(item)
+        elif isinstance(item, ID):
+            parse_id(mascm, item, None)
+        elif isinstance(item, EmptyStatement):
+            logging.debug(f"Empty statement occurs when parsing {function}")
+        else:
+            logging.critical(f"When parsing an operations, an unsupported item of type '{type(item)}' was encountered.")
+
+    return functions_call
+
+
 def parse_break(mascm, node: Break, thread: Thread, function: str) -> None:
     """ Function parse Break node
 
@@ -323,7 +385,7 @@ def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, functions_definiti
     if isinstance(stmt, Compound):
         functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
     else:
-        logging.critical(f"When parsing a do-while body, an unsupported item of type '{type(stmt)}' was encountered.")
+        functions_call.extend(parse_list_of_operations(mascm, [stmt], thread, functions_definition, function))
 
     cond = node.cond
     resource = None
@@ -383,14 +445,8 @@ def parse_for_loop(mascm, node: For, thread: Thread, functions_definition: dict,
     stmt = node.stmt
     if isinstance(stmt, Compound):
         functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
-    elif isinstance(stmt, EmptyStatement):
-        logging.debug("Function has an empty body.")
-    elif isinstance(stmt, FuncCall):
-        functions_call.extend(parse_func_call(mascm, stmt, thread, functions_definition, function))
-    elif isinstance(stmt, Assignment):
-        functions_call.extend(parse_assignment(mascm, stmt, thread, functions_definition, function))
     else:
-        logging.critical(f"When parsing a for body, an unsupported item of type '{type(stmt)}' was encountered.")
+        functions_call.extend(parse_list_of_operations(mascm, [stmt], thread, functions_definition, function))
 
     n = node.next
     if isinstance(n, UnaryOp):
@@ -430,30 +486,18 @@ def parse_if_statement(mascm, node: If, thread: Thread, functions_definition: di
     if_o = add_operation_to_mascm(mascm, node, thread, function)
     if hasattr(node, 'iftrue') and (node.iftrue is not None):
         op = node.iftrue
-        if isinstance(op, Return):
-            functions_call.extend(parse_return(mascm, op, thread, functions_definition, function))
-        elif isinstance(op, Compound):
+        if isinstance(op, Compound):
             functions_call.extend(parse_compound(mascm, op, thread, functions_definition, function))
-        elif isinstance(op, FuncCall):
-            functions_call.extend(parse_func_call(mascm, op, thread, functions_definition, function))
-        elif isinstance(op, Break):
-            parse_break(mascm, op, thread, function)
         else:
-            logging.critical(f"When parsing an if true, an unsupported item of type '{type(cond)}' was encountered.")
+            functions_call.extend(parse_list_of_operations(mascm, [op], thread, functions_definition, function))
 
     if hasattr(node, 'iffalse') and (node.iffalse is not None):
         add_operation_to_mascm(mascm, node, thread, function)
         op = node.iffalse
-        if isinstance(op, Return):
-            functions_call.extend(parse_return(mascm, op, thread, functions_definition, function))
-        elif isinstance(op, Compound):
+        if isinstance(op, Compound):
             functions_call.extend(parse_compound(mascm, op, thread, functions_definition, function))
-        elif isinstance(op, FuncCall):
-            functions_call.extend(parse_func_call(mascm, op, thread, functions_definition, function))
-        elif isinstance(op, Break):
-            parse_break(mascm, op, thread, function)
         else:
-            logging.critical(f"When parsing an if false, an unsupported item of type '{type(cond)}' was encountered.")
+            functions_call.extend(parse_list_of_operations(mascm, [op], thread, functions_definition, function))
 
     # Mechanism for detecting where if/else is finished
     if_o_index = mascm.operations.index(if_o)
@@ -478,7 +522,7 @@ def parse_pthread_mutex_lock(mascm, node: FuncCall, thread: Thread, function: st
         if mutex_name == m.name:
             lock = m
     if lock is None:
-        raise RuntimeError(f"Cannot find mutex: {mutex_name}")
+        raise MASCMException(f"Cannot find mutex: {mutex_name}")
     operation = add_operation_to_mascm(mascm, node, thread, function)
     operation.related_mutex = lock
     return operation
@@ -500,7 +544,7 @@ def parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread, function: 
         if mutex_name == m.name:
             lock = m
     if lock is None:
-        raise RuntimeError(f"Cannot find mutex: {mutex_name}")
+        raise MASCMException(f"Cannot find mutex: {mutex_name}")
     operation = add_operation_to_mascm(mascm, node, thread, function)
     operation.related_mutex = lock
     return operation
@@ -591,7 +635,7 @@ def parse_pthread_mutexattr_settype(mascm, node: FuncCall, thread: Thread, funct
     :param function: Current function
     :return: List with function calls
     """
-    args, calls = parse_expr_list(mascm, node.args,thread, functions_definition, function)
+    args, calls = parse_expr_list(mascm, node.args, thread, functions_definition, function)
     # TODO Check this args can be used
     attrs_name = node.args.exprs[0].expr.name
     attrs_type = node.args.exprs[1].name
@@ -609,7 +653,7 @@ def parse_pthread_mutex_init(mascm, node: FuncCall, thread: Thread, functions_de
     :param functions_definition: Dict with user functions definition
     :param function: Current function
     """
-    args, calls = parse_expr_list(mascm, node.args,thread, functions_definition, function)
+    args, calls = parse_expr_list(mascm, node.args, thread, functions_definition, function)
     # TODO Check this args can be used
     mutex = node.args.exprs[0].expr.name
     attrs_identifier = node.args.exprs[1].expr.name
@@ -630,19 +674,7 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, functions_definiti
     """
     functions_call = list()
     resource_name = extract_resource_name(node)  # If lvalue is ID of shared resource than it will be reported
-    rvalue = node.rvalue
-    if isinstance(rvalue, FuncCall):
-        functions_call.extend(parse_func_call(mascm, rvalue, thread, functions_definition, function))
-    elif isinstance(rvalue, Constant):
-        parse_constant(rvalue)
-    elif isinstance(rvalue, Cast):
-        _, fc = parse_cast(mascm, rvalue, thread, functions_definition, function)
-        functions_call.extend(fc)
-    elif isinstance(rvalue, BinaryOp):
-        functions_call.extend(parse_binary_op(mascm, rvalue, thread, functions_definition, function))
-    else:
-        msg = f"When parsing a assignment rvalue, an unsupported item of type '{type(rvalue)}' was encountered."
-        logging.critical(msg)
+    functions_call.extend(parse_list_of_operations(mascm, [node.rvalue], thread, functions_definition, function))
 
     resource = None
     for shared_resource in mascm.r:
@@ -653,7 +685,7 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, functions_definiti
         add_operation_to_mascm(mascm, node, thread, function)
         return functions_call
 
-    # Dirty hack to link malloc and other function with correct resource
+    # Dirty hack to link malloc and other memory allocation functions with correct resource
     prev_op = mascm.operations[-1]
     if isinstance(node, Assignment) and (resource_name in resource) and (prev_op.name in memory_allocation_ops):
         prev_op.add_use_resource(resource)
@@ -683,18 +715,8 @@ def parse_binary_op(mascm, node: BinaryOp, thread: Thread, functions_definition:
             _, resource = parse_id(mascm, item, None)
             if resource:
                 resources.append(resource)
-        elif isinstance(item, Constant):
-            parse_constant(item)
-        elif isinstance(item, FuncCall):
-            functions_call.extend(parse_func_call(mascm, item, thread, functions_definition, function))
-        elif isinstance(item, UnaryOp):
-            _, fc = parse_unary_op(mascm, item, thread, functions_definition, function)
-            functions_call.extend(fc)
-        elif isinstance(item, BinaryOp):
-            functions_call.extend(parse_binary_op(mascm, item, thread, functions_definition, function))
         else:
-            msg = f"When parsing a binary operator, an unsupported item of type '{type(item)}' was encountered."
-            logging.critical(msg)
+            functions_call.extend(parse_list_of_operations(mascm, [item], thread, functions_definition, function))
 
     if skip_add_operation:
         return functions_call
@@ -739,9 +761,6 @@ def parse_unary_op(mascm, node: UnaryOp, thread: Thread, functions_definition: d
         else:
             msg = f"When parsing an unary operator &, an unsupported item of type '{type(expr)}' was encountered."
             logging.critical(msg)
-    elif isinstance(expr, FuncCall):
-        logging.debug(f"Encountered FuncCall node: {expr}")
-        functions_call.extend(parse_func_call(mascm, expr, thread, functions_definition, function))
     elif isinstance(expr, ArrayRef):
         logging.debug(f"Encountered ArrayRef node: {expr}")
         name = parse_array_ref(mascm, expr, thread, functions_definition, function)
@@ -757,7 +776,7 @@ def parse_unary_op(mascm, node: UnaryOp, thread: Thread, functions_definition: d
         o = add_operation_to_mascm(mascm, node, thread, function)
         name, _ = parse_id(mascm, expr.expr, o)
     else:
-        logging.critical(f"When parsing an unary operator, an unsupported item of type '{type(expr)}' was encountered.")
+        functions_call.extend(parse_list_of_operations(mascm, [expr], thread, functions_definition, function))
     return name, functions_call
 
 
@@ -882,7 +901,7 @@ def parse_func_call(mascm, node: FuncCall, thread: Thread, functions_definition:
         functions_call.extend(result)
         function_call_stack.remove(func_name)
     else:
-        logging.debug(f"When parsing a FuncCall, undefined function '{func_name}' was encountered.")
+        logging.info(f"When parsing a FuncCall, undefined function '{func_name}' was encountered.")
         names, calls = parse_expr_list(mascm, node.args, thread, functions_definition, function)
         functions_call.extend(calls)
         o = add_operation_to_mascm(mascm, node, thread, function)
@@ -906,20 +925,7 @@ def parse_return(mascm, node: Return, thread: Thread, functions_definition: dict
     """
     logging.debug("Parse Return")
     functions_call = list()
-    expr = node.expr
-    if isinstance(expr, Constant):
-        parse_constant(expr)
-    elif isinstance(expr, ID):
-        parse_id(mascm, expr, None)
-    elif isinstance(expr, BinaryOp):
-        functions_call.extend(parse_binary_op(mascm, expr, thread, functions_definition, function))
-    elif isinstance(expr, FuncCall):
-        functions_call.extend(parse_func_call(mascm, expr, thread, functions_definition, function))
-    elif isinstance(expr, Cast):
-        _, fc = parse_cast(mascm, expr, thread, functions_definition, function)
-        functions_call.extend(fc)
-    else:
-        logging.critical(f"When parsing a return, an unsupported item of type '{type(expr)}' was encountered.")
+    functions_call.extend(parse_list_of_operations(mascm, [node.expr], thread, functions_definition, function))
 
     add_operation_to_mascm(mascm, node, thread, function)
     return functions_call
@@ -937,17 +943,14 @@ def parse_init_list(mascm, node: InitList, thread: Thread, functions_definition:
     """
     functions_call = list()
     names = list()
+
     for expr in node.exprs:
-        if isinstance(expr, Constant):
-            parse_constant(expr)  # Adding constant values as resource in init list has no sense?
-        elif isinstance(expr, UnaryOp):
+        if isinstance(expr, UnaryOp):
             name, fc = parse_unary_op(mascm, expr, thread, functions_definition, function)
             functions_call.extend(fc)
             names.append(name)
-        elif isinstance(expr, FuncCall):
-            functions_call.extend(parse_func_call(mascm, expr, thread, functions_definition, function))
         else:
-            logging.critical(f"When parsing a init list, an unsupported item of type '{type(expr)}' was encountered.")
+            functions_call.extend(parse_list_of_operations(mascm, [expr], thread, functions_definition, function))
 
     return names, functions_call
 
@@ -966,11 +969,7 @@ def parse_decl(mascm, node: Decl, thread: Thread, functions_definition: dict, fu
     functions_call = list()
     init = node.init
     name = None
-    if isinstance(init, FuncCall):
-        functions_call.extend(parse_func_call(mascm, init, thread, functions_definition, function))
-    elif isinstance(init, Constant):
-        parse_constant(init)
-    elif isinstance(init, UnaryOp):
+    if isinstance(init, UnaryOp):
         name, fc = parse_unary_op(mascm, init, thread, functions_definition, function)
         functions_call.extend(fc)
     elif isinstance(init, Cast):
@@ -988,7 +987,7 @@ def parse_decl(mascm, node: Decl, thread: Thread, functions_definition: dict, fu
     elif init is None:
         logging.debug("Handled declaration without initialisation.")
     else:
-        logging.critical(f"When parsing a declaration, an unsupported item of type '{type(init)}' was encountered.")
+        functions_call.extend(parse_list_of_operations(mascm, [init], thread, functions_definition, function))
 
     try:
         shared_resource = next(r for r in mascm.resources if name in r)
@@ -1034,38 +1033,9 @@ def parse_case(mascm, node: Case, thread: Thread, functions_definition: dict, fu
     :param function: Current function
     :return: List with function calls
     """
-    functions_call = list()
     o = add_operation_to_mascm(mascm, node, thread, function)
     o.switch_parent_operation = next(o for o in reversed(mascm.operations) if isinstance(o.node, Switch))
-
-    for stmt in node.stmts:
-        if isinstance(stmt, FuncCall):
-            functions_call.extend(parse_func_call(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, Break):
-            parse_break(mascm, stmt, thread, function)
-        elif isinstance(stmt, Switch):
-            functions_call.extend(parse_switch(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, Compound):
-            functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, Assignment):
-            functions_call.extend(parse_assignment(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, Return):
-            functions_call.extend(parse_return(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, If):
-            functions_call.extend(parse_if_statement(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, While):
-            functions_call.extend(parse_while_loop(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, DoWhile):
-            functions_call.extend(parse_do_while_loop(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, For):
-            functions_call.extend(parse_for_loop(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, ExprList):
-            _, fc = parse_expr_list(mascm, stmt, thread, functions_definition, function)
-            functions_call.extend(fc)
-        else:
-            logging.critical(f"When parsing a case stmt, an unsupported item of type '{type(stmt)}' was encountered.")
-
-    return functions_call
+    return parse_list_of_operations(mascm, node.stmts, thread, functions_definition, function)
 
 
 def parse_default(mascm, node: Default, thread: Thread, functions_definition: dict, function: str) -> list:
@@ -1078,37 +1048,10 @@ def parse_default(mascm, node: Default, thread: Thread, functions_definition: di
     :param function: Current function
     :return: List with function calls
     """
-    functions_call = list()
     o = add_operation_to_mascm(mascm, node, thread, function)
     o.switch_parent_operation = next(o for o in reversed(mascm.operations) if isinstance(o.node, Switch))
 
-    for stmt in node.stmts:
-        if isinstance(stmt, FuncCall):
-            functions_call.extend(parse_func_call(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, Switch):
-            functions_call.extend(parse_switch(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, Compound):
-            functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, Assignment):
-            functions_call.extend(parse_assignment(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, Return):
-            functions_call.extend(parse_return(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, If):
-            functions_call.extend(parse_if_statement(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, While):
-            functions_call.extend(parse_while_loop(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, DoWhile):
-            functions_call.extend(parse_do_while_loop(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, For):
-            functions_call.extend(parse_for_loop(mascm, stmt, thread, functions_definition, function))
-        elif isinstance(stmt, ExprList):
-            _, fc = parse_expr_list(mascm, stmt, thread, functions_definition, function)
-            functions_call.extend(fc)
-        else:
-            msg = f"When parsing a default stmt, an unsupported item of type '{type(stmt)}' was encountered."
-            logging.critical(msg)
-
-    return functions_call
+    return parse_list_of_operations(mascm, node.stmts, thread, functions_definition, function)
 
 
 def parse_switch(mascm, node: Switch, thread: Thread, functions_definition: dict, function: str) -> list:
@@ -1155,42 +1098,7 @@ def parse_compound(mascm, node: Compound, thread: Thread, functions_definition: 
     :param function: Current function
     :return: List with function calls
     """
-    functions_call = list()
-    for item in node.block_items:
-        if isinstance(item, Decl):
-            _, fc = parse_decl(mascm, item, thread, functions_definition, function)
-            functions_call.extend(fc)
-        elif isinstance(item, UnaryOp):
-            _, fc = parse_unary_op(mascm, item, thread, functions_definition, function)
-            functions_call.extend(fc)
-        elif isinstance(item, FuncCall):
-            functions_call.extend(parse_func_call(mascm, item, thread, functions_definition, function))
-        elif isinstance(item, Assignment):
-            functions_call.extend(parse_assignment(mascm, item, thread, functions_definition, function))
-        elif isinstance(item, Return):
-            functions_call.extend(parse_return(mascm, item, thread, functions_definition, function))
-        elif isinstance(item, If):
-            functions_call.extend(parse_if_statement(mascm, item, thread, functions_definition, function))
-        elif isinstance(item, While):
-            functions_call.extend(parse_while_loop(mascm, item, thread, functions_definition, function))
-        elif isinstance(item, DoWhile):
-            functions_call.extend(parse_do_while_loop(mascm, item, thread, functions_definition, function))
-        elif isinstance(item, For):
-            functions_call.extend(parse_for_loop(mascm, item, thread, functions_definition, function))
-        elif isinstance(item, ExprList):
-            _, fc = parse_expr_list(mascm, item, thread, functions_definition, function)
-            functions_call.extend(fc)
-        elif isinstance(item, Break):
-            parse_break(mascm, item, thread, function)
-        elif isinstance(item, Switch):
-            functions_call.extend(parse_switch(mascm, item, thread, functions_definition, function))
-        elif isinstance(item, Case):
-            functions_call.extend(parse_case(mascm, item, thread, functions_definition, function))
-        elif isinstance(item, Default):
-            functions_call.extend(parse_default(mascm, item, thread, functions_definition, function))
-        else:
-            logging.critical(f"When parsing a compound, an unsupported item of type '{type(item)}' was encountered.")
-    return functions_call
+    return parse_list_of_operations(mascm, node.block_items, thread, functions_definition, function)
 
 
 def parse_while_loop(mascm, node: While, thread: Thread, functions_definition: dict, function: str) -> list:
@@ -1210,6 +1118,9 @@ def parse_while_loop(mascm, node: While, thread: Thread, functions_definition: d
     cond = node.cond
     if isinstance(cond, BinaryOp):
         functions_call.extend(parse_binary_op(mascm, cond, thread, functions_definition, function))
+    elif isinstance(cond, ID):
+        _, resource = parse_id(mascm, cond, None)
+        o.add_use_resource(resource)
     else:
         logging.critical(f"When parsing a while condition, an unsupported item of type '{type(cond)}' was encountered.")
 
@@ -1387,7 +1298,7 @@ def create_edges(mascm):
             next_op = mascm.o[i+1] if len(mascm.o) > i+1 else None
             if is_for_while_loop and o.is_loop_body_operation and \
                     ((next_op is None) or (not next_op.is_loop_body_operation)) and not isinstance(o.node, Break):
-                for op in mascm.o[i-1:0:-1]:
+                for op in reversed(mascm.o[:i-1]):
                     # Backward search first operation of loop for creating correct return edge
                     if isinstance(op.node, While) or isinstance(op.node, For):
                         add_edge_to_mascm(mascm, Edge(o, op))

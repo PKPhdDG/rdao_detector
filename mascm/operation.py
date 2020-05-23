@@ -252,9 +252,7 @@ class Operation:
         elif isinstance(self.__node, FuncCall) and (self.name in ('memcpy', 'memset')) \
                 and resource.has_names(self.__args[1].names):
             return self.create_dependency_edge(resource)
-        elif isinstance(self.__node, ID):
-            return self.create_dependency_edge(resource)
-        elif isinstance(self.__node, BinaryOp):
+        elif isinstance(self.__node, (ID, BinaryOp, While)):
             return self.create_dependency_edge(resource)
         elif self.name == '&':
             return None
