@@ -1045,6 +1045,8 @@ def parse_case(mascm, node: Case, thread: Thread, functions_definition: dict, fu
             parse_break(mascm, stmt, thread, function)
         elif isinstance(stmt, Switch):
             functions_call.extend(parse_switch(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, Compound):
+            functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
         else:
             logging.critical(f"When parsing a case stmt, an unsupported item of type '{type(stmt)}' was encountered.")
 
@@ -1070,6 +1072,8 @@ def parse_default(mascm, node: Default, thread: Thread, functions_definition: di
             functions_call.extend(parse_func_call(mascm, stmt, thread, functions_definition, function))
         elif isinstance(stmt, Switch):
             functions_call.extend(parse_switch(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, Compound):
+            functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
         else:
             msg = f"When parsing a default stmt, an unsupported item of type '{type(stmt)}' was encountered."
             logging.critical(msg)
