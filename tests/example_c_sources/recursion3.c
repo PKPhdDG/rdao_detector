@@ -27,12 +27,15 @@ int main() {
 
 int sum(int n) {
     pthread_mutex_lock(&m);
-    if (n != 0)
-        // sum() function calls itself
-        return n + sum(n-1);
-    else
+    if (n != 0) {
+        int val = n + sum(n-1);
+        pthread_mutex_unlock(&m);
+        return val;
+    }
+    else {
+        pthread_mutex_unlock(&m);
         return n;
-    pthread_mutex_unlock(&m);
+    }
 }
 
 void *thread(void *args)

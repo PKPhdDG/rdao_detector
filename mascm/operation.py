@@ -34,7 +34,11 @@ class Operation:
         self.__function = function
         self.__is_loop_body_operation = False  # Used generally for pthread_mutex_lock/unlock
         self.__is_if_else_block_operation = False
+        self.__is_switch_case_operation = False
         self.__related_mutex = None
+        self.__is_switch = False
+        self.__is_case = False
+        self.__switch_parent_operation = None  # It could be useful for nested switch
         if isinstance(self.__node, FuncCall):
             self.__name = self.__node.name.name
             if self.__node.args is not None:
@@ -47,6 +51,10 @@ class Operation:
             self.__is_return = True
         elif isinstance(self.__node, If):
             self.__name = "if"
+        elif isinstance(self.__node, Switch):
+            self.__is_switch = True
+        elif isinstance(self.__node, Case) or isinstance(self.__node, Default):
+            self.__is_case = True
 
     def __add_resources(self, resources: list) -> None:
         """ Method extract from objects resources
@@ -106,6 +114,14 @@ class Operation:
         return self.__is_return
 
     @property
+    def is_switch(self) -> bool:
+        """ If operation is switch node than its True, other case is False
+        :return: Boolean value
+        """
+        return self.__is_switch
+
+
+    @property
     def use_resources(self) -> bool:
         """ Operation use some resources """
         return bool(self.__args)
@@ -140,6 +156,20 @@ class Operation:
         self.__is_loop_body_operation = value
 
     @property
+    def is_switch_case_operation(self):
+        """ Getter
+        :return: Boolean value
+        """
+        return self.__is_switch_case_operation
+
+    @is_switch_case_operation.setter
+    def is_switch_case_operation(self, value: bool):
+        """ Setter
+        :param value: Boolean value
+        """
+        self.__is_switch_case_operation = value
+
+    @property
     def related_mutex(self) -> Lock:
         """ Getter
         :return: Boolean value
@@ -155,6 +185,34 @@ class Operation:
             raise MASCMException("Trying link mutex and operation which locks other mutex")
         logging.debug(f"Setting new value for related_mutex: {value}")
         self.__related_mutex = value
+
+    @property
+    def is_case(self) -> bool:
+        """ True if it is case or default node operation, False in other case
+        :return: Boolean value
+        """
+        return self.__is_case
+
+    @property
+    def switch_parent_operation(self):
+        """ Get parent object
+        :return: Operation object
+        """
+        if not self.__is_case:
+            raise MASCMException("Cannot get switch parent operation for operation which is not case or default!")
+        return self.__switch_parent_operation
+
+    @switch_parent_operation.setter
+    def switch_parent_operation(self, parent):
+        """ Setter. If function has a parent it is silently skipped
+        Skipping avoid problems with overwriting parent for nested switch
+
+        :param parent: Parent operation witch switch node!
+        """
+        if not self.__is_case:
+            raise MASCMException("Cannot set switch parent operation for operation which is not case or default!")
+        if self.__switch_parent_operation is None:
+            self.__switch_parent_operation = parent
 
     def add_use_resource(self, resource: Resource) -> None:
         """ Method add resource to resource list """
@@ -194,9 +252,7 @@ class Operation:
         elif isinstance(self.__node, FuncCall) and (self.name in ('memcpy', 'memset')) \
                 and resource.has_names(self.__args[1].names):
             return self.create_dependency_edge(resource)
-        elif isinstance(self.__node, ID):
-            return self.create_dependency_edge(resource)
-        elif isinstance(self.__node, BinaryOp):
+        elif isinstance(self.__node, (ID, BinaryOp, While)):
             return self.create_dependency_edge(resource)
         elif self.name == '&':
             return None
