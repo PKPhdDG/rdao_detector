@@ -476,7 +476,7 @@ def parse_if_statement(mascm, node: If, thread: Thread, functions_definition: di
     functions_call = list()
     cond = node.cond
     if isinstance(cond, BinaryOp):
-        functions_call.extend(parse_binary_op(mascm, cond, thread, functions_definition, function, True))
+        functions_call.extend(parse_binary_op(mascm, cond, thread, functions_definition, function))
     elif isinstance(cond, ID):
         o = add_operation_to_mascm(mascm, cond, thread, function)
         parse_id(mascm, cond, o)
@@ -696,8 +696,7 @@ def parse_assignment(mascm, node: Assignment, thread: Thread, functions_definiti
     return functions_call
 
 
-def parse_binary_op(mascm, node: BinaryOp, thread: Thread, functions_definition: dict, function: str,
-                    skip_add_operation: bool = False) -> list:
+def parse_binary_op(mascm, node: BinaryOp, thread: Thread, functions_definition: dict, function: str) -> list:
     """ Function parse BinaryOp node
 
     :param mascm: MultithreadedApplicationSourceCodeModel object
@@ -717,9 +716,6 @@ def parse_binary_op(mascm, node: BinaryOp, thread: Thread, functions_definition:
                 resources.append(resource)
         else:
             functions_call.extend(parse_list_of_operations(mascm, [item], thread, functions_definition, function))
-
-    if skip_add_operation:
-        return functions_call
 
     o = add_operation_to_mascm(mascm, node, thread, function)
     for resource in resources:
@@ -925,6 +921,7 @@ def parse_return(mascm, node: Return, thread: Thread, functions_definition: dict
     """
     logging.debug("Parse Return")
     functions_call = list()
+    # TODO Check return shared value should be reported
     functions_call.extend(parse_list_of_operations(mascm, [node.expr], thread, functions_definition, function))
 
     add_operation_to_mascm(mascm, node, thread, function)

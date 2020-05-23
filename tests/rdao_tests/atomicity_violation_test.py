@@ -71,8 +71,8 @@ class DetectAtomicityViolationTest(unittest.TestCase, TestBase):
         self.assertEqual(1, len(result))
         # First thread
         self.assertEqual(mascm.edges[18], result[0][0][0])
-        self.assertEqual(mascm.edges[34], result[0][0][1])
-        self.assertEqual(mascm.edges[49], result[0][0][2])
+        self.assertEqual(mascm.edges[36], result[0][0][1])
+        self.assertEqual(mascm.edges[51], result[0][0][2])
 
     def test_atomicity_violation4(self):
         file_to_parse = "atomicity_violation4.c"

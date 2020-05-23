@@ -212,11 +212,11 @@ class DetectDeadlockTest(unittest.TestCase, TestBase):
         self.assertEqual(2, len(result), "Unexpected number of results.")
 
         self.assertEqual(DeadlockType.incorrect_lock_type, result[0][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[17], result[0][1][0][0])
+        self.assertEqual(mascm.edges[19], result[0][1][0][0])
         self.assertEqual(mascm.edges[10], result[0][1][0][1])
 
         self.assertEqual(DeadlockType.incorrect_lock_type, result[1][0], "Incorrect deadlock type")
-        self.assertEqual(mascm.edges[20], result[1][1][0][0])
+        self.assertEqual(mascm.edges[22], result[1][1][0][0])
         self.assertEqual(mascm.edges[10], result[1][1][0][1])
 
     def test_no_recursion_deadlock1(self):
