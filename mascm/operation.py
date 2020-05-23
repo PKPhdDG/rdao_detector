@@ -34,7 +34,9 @@ class Operation:
         self.__function = function
         self.__is_loop_body_operation = False  # Used generally for pthread_mutex_lock/unlock
         self.__is_if_else_block_operation = False
+        self.__is_switch_case_operation = False
         self.__related_mutex = None
+        self.__is_switch = False
         if isinstance(self.__node, FuncCall):
             self.__name = self.__node.name.name
             if self.__node.args is not None:
@@ -47,6 +49,8 @@ class Operation:
             self.__is_return = True
         elif isinstance(self.__node, If):
             self.__name = "if"
+        elif isinstance(self.__node, Switch):
+            self.__is_switch = True
 
     def __add_resources(self, resources: list) -> None:
         """ Method extract from objects resources
@@ -106,6 +110,14 @@ class Operation:
         return self.__is_return
 
     @property
+    def is_switch(self) -> bool:
+        """ If operation is switch node than its True, other case is False
+        :return: Boolean value
+        """
+        return self.__is_switch
+
+
+    @property
     def use_resources(self) -> bool:
         """ Operation use some resources """
         return bool(self.__args)
@@ -138,6 +150,20 @@ class Operation:
         :param value: Boolean value
         """
         self.__is_loop_body_operation = value
+
+    @property
+    def is_switch_case_operation(self):
+        """ Getter
+        :return: Boolean value
+        """
+        return self.__is_switch_case_operation
+
+    @is_switch_case_operation.setter
+    def is_switch_case_operation(self, value: bool):
+        """ Setter
+        :param value: Boolean value
+        """
+        self.__is_switch_case_operation = value
 
     @property
     def related_mutex(self) -> Lock:

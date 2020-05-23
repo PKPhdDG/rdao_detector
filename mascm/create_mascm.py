@@ -321,7 +321,7 @@ def parse_do_while_loop(mascm, node: DoWhile, thread: Thread, functions_definiti
     do_operation = add_operation_to_mascm(mascm, node, thread, function)
     stmt = node.stmt
     if isinstance(stmt, Compound):
-        functions_call.extend(parse_compound_statement(mascm, stmt, thread, functions_definition, function))
+        functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
     else:
         logging.critical(f"When parsing a do-while body, an unsupported item of type '{type(stmt)}' was encountered.")
 
@@ -382,7 +382,7 @@ def parse_for_loop(mascm, node: For, thread: Thread, functions_definition: dict,
 
     stmt = node.stmt
     if isinstance(stmt, Compound):
-        functions_call.extend(parse_compound_statement(mascm, stmt, thread, functions_definition, function))
+        functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
     elif isinstance(stmt, EmptyStatement):
         logging.debug("Function has an empty body.")
     elif isinstance(stmt, FuncCall):
@@ -433,7 +433,7 @@ def parse_if_statement(mascm, node: If, thread: Thread, functions_definition: di
         if isinstance(op, Return):
             functions_call.extend(parse_return(mascm, op, thread, functions_definition, function))
         elif isinstance(op, Compound):
-            functions_call.extend(parse_compound_statement(mascm, op, thread, functions_definition, function))
+            functions_call.extend(parse_compound(mascm, op, thread, functions_definition, function))
         elif isinstance(op, FuncCall):
             functions_call.extend(parse_func_call(mascm, op, thread, functions_definition, function))
         elif isinstance(op, Break):
@@ -447,7 +447,7 @@ def parse_if_statement(mascm, node: If, thread: Thread, functions_definition: di
         if isinstance(op, Return):
             functions_call.extend(parse_return(mascm, op, thread, functions_definition, function))
         elif isinstance(op, Compound):
-            functions_call.extend(parse_compound_statement(mascm, op, thread, functions_definition, function))
+            functions_call.extend(parse_compound(mascm, op, thread, functions_definition, function))
         elif isinstance(op, FuncCall):
             functions_call.extend(parse_func_call(mascm, op, thread, functions_definition, function))
         elif isinstance(op, Break):
@@ -1024,7 +1024,64 @@ def parse_decl_list(mascm, node: DeclList, thread: Thread, functions_definition:
     return functions_call
 
 
-def parse_compound_statement(mascm, node: Compound, thread: Thread, functions_definition: dict, function: str) -> list:
+def parse_case(mascm, node: Case, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse Case node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: Case node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
+    functions_call = list()
+    add_operation_to_mascm(mascm, node, thread, function)
+    for stmt in node.stmts:
+        if isinstance(stmt, FuncCall):
+            functions_call.extend(parse_func_call(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, Break):
+            parse_break(mascm, stmt, thread, function)
+        else:
+            logging.critical(f"When parsing a case stmt, an unsupported item of type '{type(stmt)}' was encountered.")
+
+    return functions_call
+
+
+def parse_switch(mascm, node: Switch, thread: Thread, functions_definition: dict, function: str) -> list:
+    """ Function parse Switch node
+
+    :param mascm: MultithreadedApplicationSourceCodeModel object
+    :param node: Switch node object
+    :param thread: Current thread
+    :param functions_definition: Dict with user functions definition
+    :param function: Current function
+    :return: List with function calls
+    """
+    functions_call = list()
+    cond = node.cond
+    o = add_operation_to_mascm(mascm, node, thread, function)
+    if isinstance(cond, ID):
+        parse_id(mascm, cond, o)
+    else:
+        logging.critical(f"When parsing a switch cond, an unsupported item of type '{type(cond)}' was encountered.")
+
+    stmt = node.stmt
+    if isinstance(stmt, Compound):
+        functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
+    else:
+        logging.critical(f"When parsing a switch stmt, an unsupported item of type '{type(stmt)}' was encountered.")
+
+    # Mark all operations added later as switch_case_operations
+    switch_index = mascm.operations.index(o)
+    for op in mascm.operations[:switch_index:-1]:
+        if op.is_switch_case_operation:
+            break
+        op.is_switch_case_operation = True
+
+    return functions_call
+
+
+def parse_compound(mascm, node: Compound, thread: Thread, functions_definition: dict, function: str) -> list:
     """ Function parse Compound node
 
     :param mascm: MultithreadedApplicationSourceCodeModel object
@@ -1061,6 +1118,10 @@ def parse_compound_statement(mascm, node: Compound, thread: Thread, functions_de
             functions_call.extend(fc)
         elif isinstance(item, Break):
             parse_break(mascm, item, thread, function)
+        elif isinstance(item, Switch):
+            functions_call.extend(parse_switch(mascm, item, thread, functions_definition, function))
+        elif isinstance(item, Case):
+            functions_call.extend(parse_case(mascm, item, thread, functions_definition, function))
         else:
             logging.critical(f"When parsing a compound, an unsupported item of type '{type(item)}' was encountered.")
     return functions_call
@@ -1088,7 +1149,7 @@ def parse_while_loop(mascm, node: While, thread: Thread, functions_definition: d
 
     stmt = node.stmt
     if isinstance(stmt, Compound):
-        functions_call.extend(parse_compound_statement(mascm, stmt, thread, functions_definition, function))
+        functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
     else:
         logging.critical(f"When parsing a while body, an unsupported item of type '{type(cond)}' was encountered.")
     o_index = mascm.o.index(o)
@@ -1111,7 +1172,7 @@ def parse_function_definition(mascm, node: Function, thread: Thread, functions_d
     functions_call = list()
     if isinstance(node.body, Compound):
         logging.debug("Parsing function node nody.")
-        functions_call.extend(parse_compound_statement(mascm, node.body, thread, functions_definition, function))
+        functions_call.extend(parse_compound(mascm, node.body, thread, functions_definition, function))
     else:
         logging.critical("Function node has body if unknown instance.")
         raise MASCMException(f"Unknown function body type: {type(node.body)}")
@@ -1251,7 +1312,7 @@ def create_edges(mascm):
 
     for i, o in enumerate(mascm.operations):
         prev_op = mascm.o[i-1]
-        if i and (not prev_op.is_return) and (prev_op.thread.index == o.thread.index):
+        if i and (not prev_op.is_return) and (not prev_op.is_switch) and (prev_op.thread.index == o.thread.index):
             # Cannot link current action with return (return action are linked later)
             if not isinstance(prev_op.node, Break):
                 add_edge_to_mascm(mascm, Edge(mascm.o[i - 1], o))
@@ -1310,9 +1371,24 @@ def create_edges(mascm):
                 if op.node == o.node:
                     add_edge_to_mascm(mascm, Edge(o, op))
                     break
+        elif isinstance(o.node, Switch):
+            for op in mascm.o[i+1:]:
+                if not op.is_switch_case_operation:
+                    break
+                if isinstance(op.node, Case):
+                    add_edge_to_mascm(mascm, Edge(o, op))
+            continue
         elif isinstance(o.node, Break):
+            attr_name = ""
+            if o.is_loop_body_operation:
+                attr_name = 'is_loop_body_operation'
+            elif o.is_switch_case_operation:
+                attr_name = 'is_switch_case_operation'
+            else:
+                logging.critical(f"Cannot determine correct attribute for operation {o}")
+                raise AttributeError(f"Cannot determine correct attribute for operation {o}")
             for op in mascm.operations[i+1:]:  # Searching first operation after loop
-                if op.is_loop_body_operation:
+                if getattr(op, attr_name):
                     continue
                 else:
                     break
