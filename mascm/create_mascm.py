@@ -1047,6 +1047,21 @@ def parse_case(mascm, node: Case, thread: Thread, functions_definition: dict, fu
             functions_call.extend(parse_switch(mascm, stmt, thread, functions_definition, function))
         elif isinstance(stmt, Compound):
             functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, Assignment):
+            functions_call.extend(parse_assignment(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, Return):
+            functions_call.extend(parse_return(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, If):
+            functions_call.extend(parse_if_statement(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, While):
+            functions_call.extend(parse_while_loop(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, DoWhile):
+            functions_call.extend(parse_do_while_loop(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, For):
+            functions_call.extend(parse_for_loop(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, ExprList):
+            _, fc = parse_expr_list(mascm, stmt, thread, functions_definition, function)
+            functions_call.extend(fc)
         else:
             logging.critical(f"When parsing a case stmt, an unsupported item of type '{type(stmt)}' was encountered.")
 
@@ -1074,6 +1089,21 @@ def parse_default(mascm, node: Default, thread: Thread, functions_definition: di
             functions_call.extend(parse_switch(mascm, stmt, thread, functions_definition, function))
         elif isinstance(stmt, Compound):
             functions_call.extend(parse_compound(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, Assignment):
+            functions_call.extend(parse_assignment(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, Return):
+            functions_call.extend(parse_return(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, If):
+            functions_call.extend(parse_if_statement(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, While):
+            functions_call.extend(parse_while_loop(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, DoWhile):
+            functions_call.extend(parse_do_while_loop(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, For):
+            functions_call.extend(parse_for_loop(mascm, stmt, thread, functions_definition, function))
+        elif isinstance(stmt, ExprList):
+            _, fc = parse_expr_list(mascm, stmt, thread, functions_definition, function)
+            functions_call.extend(fc)
         else:
             msg = f"When parsing a default stmt, an unsupported item of type '{type(stmt)}' was encountered."
             logging.critical(msg)

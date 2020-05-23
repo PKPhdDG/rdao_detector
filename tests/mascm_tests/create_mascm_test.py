@@ -958,7 +958,6 @@ class CreateMamTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
 
-        self._print_nodes(result.o)
         self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
@@ -979,7 +978,6 @@ class CreateMamTest(unittest.TestCase, TestBase):
             ast = parse_file(pure_file_path)
             result = create_mascm(deque([ast]))
 
-        self._print_nodes(result.o)
         self.__test_thread_nesting(result.threads)
         self.assertEqual(expected_mascm, str(result))
 
@@ -995,6 +993,24 @@ class CreateMamTest(unittest.TestCase, TestBase):
                          "(o0,19, o0,20), (o0,19, o0,22), (o0,20, o0,21), (o0,21, o0,22), (o0,22, o0,23), " \
                          "(o0,23, o0,24), (o0,24, o0,25)], relations=(forward=[], backward=[], symmetric=[]))"
         file_to_parse = "switch_case4.c"
+        file_path = join(self.source_path_prefix, file_to_parse)
+        with purify(file_path) as pure_file_path:
+            ast = parse_file(pure_file_path)
+            result = create_mascm(deque([ast]))
+
+        self.__test_thread_nesting(result.threads)
+        self.assertEqual(expected_mascm, str(result))
+
+    def test_switch_case5(self):
+        expected_mascm = "MultithreadedApplicationSourceCodeModel(threads=[t0], time_units=[[t0]], resources=[], " \
+                         "operations=[o0,1, o0,2, o0,3, o0,4, o0,5, o0,6, o0,7, o0,8, o0,9, o0,10, o0,11, o0,12, " \
+                         "o0,13, o0,14, o0,15, o0,16, o0,17, o0,18], mutexes=[], edges=[(o0,1, o0,2), (o0,2, o0,3), " \
+                         "(o0,3, o0,4), (o0,3, o0,6), (o0,3, o0,7), (o0,3, o0,13), (o0,4, o0,5), (o0,5, o0,18), " \
+                         "(o0,6, o0,7), (o0,7, o0,8), (o0,8, o0,10), (o0,8, o0,9), (o0,9, o0,12), (o0,10, o0,11), " \
+                         "(o0,11, o0,12), (o0,12, o0,18), (o0,13, o0,14), (o0,14, o0,16), (o0,14, o0,15), " \
+                         "(o0,15, o0,18), (o0,16, o0,17), (o0,17, o0,18)], " \
+                         "relations=(forward=[], backward=[], symmetric=[]))"
+        file_to_parse = "switch_case5.c"
         file_path = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
             ast = parse_file(pure_file_path)
