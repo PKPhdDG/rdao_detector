@@ -32,8 +32,10 @@ class MultithreadedApplicationSourceCodeModel(namedtuple(
 
     def __repr__(self):
         result = super(MultithreadedApplicationSourceCodeModel, self).__repr__()
-        result = self.__prepare_visual_fix(result, "mutexes", self.mutexes)
-        result = self.__prepare_visual_fix(result, "resources", self.resources)
+        if self.mutexes:
+            result = self.__prepare_visual_fix(result, "mutexes", self.mutexes)
+        if self.resources:
+            result = self.__prepare_visual_fix(result, "resources", self.resources)
         return result
 
     def __getattr__(self, item: str):

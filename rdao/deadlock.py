@@ -123,11 +123,17 @@ def recursion_locks(thread: Thread, edges: list) -> coroutine:
         except StopIteration:
             continue
 
-        if len(op_edges) < 2:  # There is no pair which contains return operation in recursion function
+        # There is no pair which contains return operation in recursion function
+        if len(op_edges) < 2:
             continue
 
         for edge1, edge2 in combinations(op_edges, 2):
             e1_index, e2_index = edges.index(edge1), edges.index(edge2)
+
+            # Pair has operations of two different threads
+            if (edge1.first.thread != edge1.second.thread) or (edge2.first.thread != edge2.second.thread):
+                continue
+
             if e2_index - e1_index != 1:  # They are not neighbour edges, This is not recursion
                 continue
             # First edge should has direction to lower index, second to higher

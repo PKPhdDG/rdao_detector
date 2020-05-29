@@ -1,9 +1,0 @@
-[submodule "csources/Chat-Server"]
-	path = csources/Chat-Server
-	url = https://github.com/yorickdewid/Chat-Server.git
-[submodule "csources/game-of-life"]
-	path = csources/game-of-life
-	url = https://github.com/nana1904/game-of-life.git
-[submodule "csources/multithreaded-sudoku"]
-	path = csources/multithreaded-sudoku
-	url = https://github.com/cfperea/multithreaded-sudoku.git
