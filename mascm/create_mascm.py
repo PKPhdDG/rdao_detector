@@ -521,7 +521,6 @@ def parse_pthread_mutex_lock(mascm, node: FuncCall, thread: Thread, function: st
     for m in mascm.q:
         if mutex_name == m.name:
             lock = m
-            break
     if lock is None:
         raise MASCMException(f"Cannot find mutex: {mutex_name}")
     operation = add_operation_to_mascm(mascm, node, thread, function)
@@ -544,7 +543,6 @@ def parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread, function: 
     for m in mascm.q:
         if mutex_name == m.name:
             lock = m
-            break
     if lock is None:
         raise MASCMException(f"Cannot find mutex: {mutex_name}")
     operation = add_operation_to_mascm(mascm, node, thread, function)
@@ -863,9 +861,9 @@ def parse_func_call(mascm, node: FuncCall, thread: Thread, functions_definition:
         functions_call.extend(parse_pthread_create(mascm, node, thread, functions_definition, function))
     elif func_name == "pthread_join":
         functions_call.extend(parse_pthread_join(mascm, node, thread, functions_definition, function))
-    elif func_name in ("pthread_mutex_lock", "sem_wait"):
+    elif func_name == "pthread_mutex_lock":
         parse_pthread_mutex_lock(mascm, node, thread, function)
-    elif func_name == ("pthread_mutex_unlock", "sem_post"):
+    elif func_name == "pthread_mutex_unlock":
         parse_pthread_mutex_unlock(mascm, node, thread, function)
     elif func_name == "pthread_mutexattr_settype":
         functions_call.extend(parse_pthread_mutexattr_settype(mascm, node, thread, functions_definition, function))
@@ -1420,8 +1418,7 @@ def parse_global_trees(mascm, asts: deque) -> dict:
                     or (hasattr(node, 'storage') and "extern" in node.storage):
                 continue
             elif isinstance(node, Decl) and (not isinstance(node.type, Struct)) and \
-                    isinstance(node.type.type, IdentifierType) and (("pthread_mutex_t" in node.type.type.names) or
-                                                                    ("sem_t" in node.type.type.names)):
+                    isinstance(node.type.type, IdentifierType) and ("pthread_mutex_t" in node.type.type.names):
                 add_mutex_to_mascm(mascm, node)
             elif isinstance(node, Decl) and isinstance(node.type, Struct):
                 mascm.struct_defs.append(node.type)
