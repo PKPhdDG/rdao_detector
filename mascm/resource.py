@@ -6,6 +6,7 @@ __version__ = "0.4"
 from sortedcontainers import SortedSet
 from helpers.exceptions import MASCMException
 from helpers.mascm_helper import extract_resource_name, extract_resource_type
+import logging
 from pycparser.c_ast import *
 from typing import Optional
 
@@ -113,6 +114,9 @@ class Resource:
 
         if '.' not in item:
             return item in self.__names
-
-        name, field = item.split('.')
+        try:
+            name, field = item.split('.')
+        except ValueError:
+            logging.debug(f"Cannot split: {item}")
+            return False
         return (name in self.__names) and (field in self.__fields)
