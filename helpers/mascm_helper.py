@@ -12,6 +12,8 @@ def extract_resource_name(node) -> str:
     try:
         if isinstance(node, (ID, Decl)) and node.name is not None:
             return node.name
+        elif isinstance(node, UnaryOp):
+            return extract_resource_name(node.expr)
         elif isinstance(node, ArrayRef):
             return extract_resource_name(node.name)
         elif hasattr(node, 'lvalue'):
@@ -19,6 +21,12 @@ def extract_resource_name(node) -> str:
         elif hasattr(node, 'expr') and isinstance(node.expr, (ArrayRef, ID, UnaryOp)):
             return extract_resource_name(node.expr)
         elif hasattr(node, 'expr') and isinstance(node.expr, Typename):
+            return ""
+        elif isinstance(node, Typename):
+            return extract_resource_name(node.type)
+        elif isinstance(node, PtrDecl):
+            return extract_resource_name(node.type)
+        elif isinstance(node, TypeDecl):
             return ""
         elif isinstance(node, Constant):
             return ""

@@ -296,6 +296,10 @@ def parse_list_of_operations(mascm, nodes: list, thread: Thread, functions_defin
             parse_id(mascm, item, None)
         elif isinstance(item, EmptyStatement):
             logging.debug(f"Empty statement occurs when parsing {function}")
+        elif isinstance(item, StructRef):
+            parse_struct_ref(mascm, item, thread, functions_definition, function)
+        elif item is None:
+            logging.debug(f"Application meet empty return when parsing {function}!")
         else:
             logging.critical(f"When parsing an operations, an unsupported item of type '{type(item)}' was encountered.")
 
@@ -1417,9 +1421,11 @@ def parse_global_trees(mascm, asts: deque) -> dict:
             if isinstance(node, Typedef) or isinstance(node, FuncDecl) \
                     or (hasattr(node, 'storage') and "extern" in node.storage):
                 continue
-            elif isinstance(node, Decl) and (not isinstance(node.type, Struct)) and \
+            elif isinstance(node, Decl) and (not isinstance(node.type, (Struct, Enum))) and \
                     isinstance(node.type.type, IdentifierType) and ("pthread_mutex_t" in node.type.type.names):
                 add_mutex_to_mascm(mascm, node)
+            elif isinstance(node, Decl) and isinstance(node.type, Enum):
+                logging.debug(f"Found enumeration declaration: {node}")
             elif isinstance(node, Decl) and isinstance(node.type, Struct):
                 mascm.struct_defs.append(node.type)
             elif isinstance(node, FuncDef):
