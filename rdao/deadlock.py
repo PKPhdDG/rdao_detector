@@ -55,10 +55,10 @@ def mutually_exclusive_pairs_of_mutex(first: Sequence, second: Sequence) -> coro
     first_locking_pairs = get_all_pairs_indexes((index for index, _ in f_pairs if index > 0))
     second_locking_pairs = get_all_pairs_indexes((index for index, _ in s_pairs if index > 0))
 
-    conflicted_pairs = set()
+    conflicted_pairs = list()
     for pair in first_locking_pairs:
         if (pair[1], pair[0]) in second_locking_pairs:
-            conflicted_pairs.add(pair)
+            conflicted_pairs.append(pair)
     for pair in conflicted_pairs:
         p1_pair = list()
         p2_pair = list()
