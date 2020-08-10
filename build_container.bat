@@ -1,1 +1,1 @@
-docker build -t purize_container .
+docker build -t rdao .

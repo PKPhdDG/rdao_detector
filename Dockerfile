@@ -1,5 +1,8 @@
-FROM gcc
+FROM python:3.8
 
 WORKDIR /app
+ADD ./ /app/
 
-CMD echo "Run purize_c.sh with arguments eg: purize_in_container.bat ./purize_c.sh main.c"
+RUN pip install -r requirements.txt
+
+CMD python -m unittest discover tests
