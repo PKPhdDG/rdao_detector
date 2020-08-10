@@ -46,6 +46,7 @@ def detect_violation(first: list, second: list, relation: list) -> list:
     """ Function is responsible for detect """
     EDGE_POS = 3
     f_op, s_op = relation
+
     def is_in_the_section(op, collection):
         return collection[0] == op
     critical_sections_operations = group_operations_by_critical_section(first)
@@ -73,10 +74,12 @@ def detect_violation(first: list, second: list, relation: list) -> list:
 
     shared_resource = split_sections[0][1]
     for edge in second:
-        if re.match(e.usage_edge_exp, str(edge)) and (edge.second == shared_resource):
+        if re.match(e.usage_edge_exp, str(edge)) and (edge.second == shared_resource) and edge.first.name:  # Checking name is needed to distinguish user function call and language built-in function
             operations_atomicity_violated.append(edge)
-        elif re.match(e.dependency_edge_exp, str(edge)) and (edge.first == shared_resource):
+        elif re.match(e.dependency_edge_exp, str(edge)) and (edge.first == shared_resource) and edge.second.name:  # Checking name is needed to distinguish user function call and language built-in function
             operations_atomicity_violated.append(edge)
+    if len(operations_atomicity_violated) <= 2:  # If there is pair of operations and no operations violating empty list is returned
+        return []
     return operations_atomicity_violated
 
 

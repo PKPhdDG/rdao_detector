@@ -6,9 +6,9 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
 from helpers import DeadlockType, get_time_units_graphs, expressions as e, LockType
-from itertools import combinations
+from itertools import combinations, chain
 import logging
-from mascm import MultithreadedApplicationSourceCodeModel as MASCM, Thread
+from mascm import MultithreadedApplicationSourceCodeModel as MASCM, Thread, Lock
 import re
 from typing import Iterable, Sequence
 from types import coroutine
@@ -42,6 +42,20 @@ def get_all_pairs_indexes(collection: Iterable) -> Sequence:
     :param collection: Collection of elements
     :return: List with pairs
     """
+    collection = list(collection)
+
+    # Searching every pair of locks
+    locks = set()
+    for index, value in enumerate(collection):
+        if (value > 0) and (index + 1 < len(collection)) and (collection[index+1] > 0):
+            locks.add((value, collection[index+1]))
+
+    # Build real chain of locking operation from found pairs
+    collection = list()
+    for n in chain(*locks):
+        if n not in collection:
+            collection.append(n)
+    # Return all locks combinations which can cause deadlock
     return list(combinations(collection, 2))
 
 
@@ -52,8 +66,8 @@ def mutually_exclusive_pairs_of_mutex(first: Sequence, second: Sequence) -> coro
     if is_used_single_mutex(f_pairs) or is_used_single_mutex(s_pairs):
         return
 
-    first_locking_pairs = get_all_pairs_indexes((index for index, _ in f_pairs if index > 0))
-    second_locking_pairs = get_all_pairs_indexes((index for index, _ in s_pairs if index > 0))
+    first_locking_pairs = get_all_pairs_indexes((index for index, _ in f_pairs if index))
+    second_locking_pairs = get_all_pairs_indexes((index for index, _ in s_pairs if index))
 
     conflicted_pairs = list()
     for pair in first_locking_pairs:
@@ -80,7 +94,8 @@ def mutually_exclusive_pairs_of_mutex(first: Sequence, second: Sequence) -> coro
             if is_first and (pair[0] == p2[0]):
                 p2_pair.append(p2[1])
                 break
-        if (p1_pair[0] == p1_pair[1]) or (p2_pair[0] == p2_pair[1]):
+        if (isinstance(p1_pair[0], Lock) and p1_pair[0].compare(p1_pair[1])) or \
+                (isinstance(p2_pair[0], Lock) and p2_pair[0].compare(p2_pair[1])):
             continue
         yield p1_pair, p2_pair
 
@@ -111,7 +126,8 @@ def double_locks(mutex_collections: Sequence) -> coroutine:
         _, *other_nums = mutex_numbers[index:]
         r = other_nums.index(num)
         num_slices = other_nums[:r]
-        if -num not in num_slices:
+        # Second condition is checked because sometimes deadlock is reported for set which contain only 1 element
+        if (-num not in num_slices) and (len(mutex_collections[other_nums[r]]) > 1):  # Second condition need tests
             yield mutex_collections[index], mutex_collections[other_nums[r]]
 
 

@@ -88,11 +88,12 @@ def main():
             for edge in chain(*edges):
                 print(f"\t\t{edge.second.node.coord}", end=" ")
                 print(f"using mutex variable {edge.first.name} of type {lock_types_str[edge.first.type]}")
+            print()
         else:
             edge1, edge2 = chain(*edges)
             print(f"\tReturn operation in {edge1.first.node.coord} returning to {edge1.second.node.coord}")
             print(f"\tCause re-lock of {edge2.first.name} by operation in {edge2.second.node.coord}")
-            print(f"\t\tInvolved mutex has type {lock_types_str[edge2.first.type]}")
+            print(f"\t\tInvolved mutex has type {lock_types_str[edge2.first.type]}\n")
 
     print("="*60)
 
@@ -107,6 +108,7 @@ def main():
             for edge in rest:
                 print(f"\t\tViolation is cause by: {get_operation_name_from_edge(edge)}")
                 print(f"\t\tViolating operation is located in: {get_operation_from_edge(edge).node.coord}")
+            print()
     print("="*60)
 
     print("Order violations:")

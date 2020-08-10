@@ -46,5 +46,9 @@ class Lock:
         type_str = str(self.type).split(".")[1]
         return f"({self.name}, {type_str})"
 
+    def compare(self, other):
+        """ Function created for comparing because overriding __eq__ make Locks unhashable """
+        return (self.name == other.name) and (self.type == other.type) and (self.index == other.index)
+
     def __repr__(self):
         return f"q{self.__num}"
