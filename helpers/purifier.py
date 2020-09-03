@@ -38,6 +38,7 @@ def purify_file(path: str, headers: Iterable[str] = tuple()) -> str:
     o, e = Popen(' '.join(command), stdout=PIPE, stderr=PIPE, shell=True).communicate()
     if e:
         logging.critical(f"Critical error during purifizing file: {path}")
+        logging.critical(e)
         logging.critical("Terminating application")
         sys.exit(1)
     with open(output_file, "wb") as f:
