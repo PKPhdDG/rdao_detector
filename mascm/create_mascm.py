@@ -521,7 +521,11 @@ def parse_pthread_mutex_lock(mascm, node: FuncCall, thread: Thread, function: st
     :return: Operation object
     """
     lock = None
-    mutex_name = node.args.exprs[0].expr.name
+    try:
+        mutex_name = node.args.exprs[0].expr.name
+    except AttributeError as ae:
+        logging.warning(f"Exception during handling lock name: {ae}")
+        mutex_name = node.args.exprs[0].name.name
     for m in mascm.q:
         if mutex_name == m.name:
             lock = m
@@ -589,6 +593,10 @@ def parse_pthread_create(mascm, node: FuncCall, thread: Thread, functions_defini
     functions_call = list()
 
     args, calls = parse_expr_list(mascm, node.args, thread, functions_definition, function)
+    if len(args) == 3:  # Hotfix for histogram app
+        logging.warning("Unexpected numbers of arguments for pthread_create")
+        args = list(args)
+        args.insert(0, "Unknown name")
     functions_call.extend(calls)
     add_operation_to_mascm(mascm, node, thread, function)
     thread_function = args[2]
@@ -660,9 +668,14 @@ def parse_pthread_mutex_init(mascm, node: FuncCall, thread: Thread, functions_de
     args, calls = parse_expr_list(mascm, node.args, thread, functions_definition, function)
     # TODO Check this args can be used
     mutex = node.args.exprs[0].expr.name
-    attrs_identifier = node.args.exprs[1].expr.name
-    mascm.set_mutex_type(mutex, attrs_identifier)
-    add_operation_to_mascm(mascm, node, thread, function)
+    try:
+        attrs_identifier = node.args.exprs[1].expr.name
+    except AttributeError as ae:
+        logging.warning(f"Exception during checking mutex attributes: {ae}")
+        logging.warning("Work will be continued")
+    else:
+        mascm.set_mutex_type(mutex, attrs_identifier)
+        add_operation_to_mascm(mascm, node, thread, function)
     return calls
 
 
@@ -900,6 +913,8 @@ def parse_func_call(mascm, node: FuncCall, thread: Thread, functions_definition:
                                            func_name)
         functions_call.extend(result)
         function_call_stack.remove(func_name)
+    elif func_name == "assert":
+        logging.debug(f"Skipping assert operation called in {function} in {node.coord}")
     else:
         logging.info(f"When parsing a FuncCall, undefined function '{func_name}' was encountered.")
         names, calls = parse_expr_list(mascm, node.args, thread, functions_definition, function)
