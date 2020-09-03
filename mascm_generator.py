@@ -20,6 +20,7 @@ parser.add_argument(
     '--log-level', type=int, choices=(logging.DEBUG, logging.INFO, logging.WARN, logging.ERROR, logging.CRITICAL),
     default=logging.INFO
 )
+# TODO: Add parameter for compiler flags
 
 
 def create_ast(path: str) -> deque:
