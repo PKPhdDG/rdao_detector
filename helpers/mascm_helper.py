@@ -36,6 +36,9 @@ def extract_resource_name(node) -> str:
             return extract_resource_name(node.expr)
         elif isinstance(node, FuncCall):
             return ""
+        elif isinstance(node, ExprList):
+            for element in node:
+                return extract_resource_name(element)  # TODO handle situation with multiple resources
         else:
             logging.warning(f"Trying extract name from node: {node}")
             return node.lvalue.expr.name

@@ -62,8 +62,8 @@ class Operation:
         """
         for arg in resources:
             if isinstance(arg, BinaryOp):
-                self.__args.append(Resource(arg.left))
-                self.__args.append(Resource(arg.right))
+                self.__add_resources(arg.left)
+                self.__add_resources(arg.right)
             elif isinstance(arg, StructRef):
                 r = Resource(arg)
                 r.add_field(arg.field.name)

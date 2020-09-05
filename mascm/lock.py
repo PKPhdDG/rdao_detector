@@ -5,14 +5,26 @@ __version__ = "0.4"
 
 from helpers.lock_helper import lock_strings
 from helpers.lock_type import LockType
+import typing
 
 
 class Lock:
     """ Lock class """
-    def __init__(self, node, num):
+    def __init__(self, node, num, struct_name: typing.Optional[str] = None):
         self.__type = LockType.PMD
-        self.__name = node.type.declname
+        try:
+            self.__name = node.type.declname
+        except AttributeError:
+            self.__name = node.name
         self.__num = num
+        self.__struct_name = struct_name
+
+    @property
+    def struct_name(self) -> str:
+        """ Struct name getter
+        :return: str with struct name
+        """
+        return self.__struct_name
 
     @property
     def name(self) -> str:
