@@ -22,7 +22,7 @@ class Thread:
             name_obj = expr_list.exprs[0].expr.name
             if isinstance(name_obj, str):
                 self.__name = name_obj
-            if isinstance(name_obj, ArrayRef):
+            elif isinstance(name_obj, ArrayRef):
                 self.__name = f"{name_obj.name.name.name}.{name_obj.name.field.name}"
             else:
                 self.__name = name_obj.name
