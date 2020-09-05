@@ -30,7 +30,7 @@ def purify_file(path: str, headers: Iterable[str] = tuple()) -> str:
         raise IsADirectoryError(f"Given path is not a file: '{path}'")
     dir_path = get_project_path()
     output_file: str = f"{path}.pure"
-    command: list = [c.compiler_cmd, "-Wall", "-I", join(dir_path, "utils/fake_libc_include")]
+    command: list = [c.compiler_cmd, "-Wall -D_LINUX_", "-I", join(dir_path, "utils/fake_libc_include")]
     if headers:
         for header_path in headers:
             command.extend(["-I", header_path])

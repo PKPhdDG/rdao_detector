@@ -189,13 +189,14 @@ def add_edge_to_mascm(mascm, edge: Edge) -> None:
     mascm.f.append(edge)
 
 
-def add_mutex_to_mascm(mascm, node) -> None:
+def add_mutex_to_mascm(mascm, node, struct_name: Optional[str] = None) -> None:
     """ Add Lock object into MASCM's Q set
 
     :param mascm: MultithreadedApplicationSourceCodeModel object
     :param node: AST Node
+    :param struct_name: Name of struct if mutex is part of struct
     """
-    lock = Lock(node, len(mascm.q) + 1)
+    lock = Lock(node, len(mascm.q) + 1, struct_name)
     mascm.q.append(lock)
 
 
@@ -526,6 +527,8 @@ def parse_pthread_mutex_lock(mascm, node: FuncCall, thread: Thread, function: st
     except AttributeError as ae:
         logging.warning(f"Exception during handling lock name: {ae}")
         mutex_name = node.args.exprs[0].name.name
+    if hasattr(node.args.exprs[0], "field"):  # Dirty hack for searching mutex which is part of struct
+        mutex_name = node.args.exprs[0].field.name
     for m in mascm.q:
         if mutex_name == m.name:
             lock = m
@@ -547,7 +550,13 @@ def parse_pthread_mutex_unlock(mascm, node: FuncCall, thread: Thread, function: 
     :return: Operation object
     """
     lock = None
-    mutex_name = node.args.exprs[0].expr.name
+    try:
+        mutex_name = node.args.exprs[0].expr.name
+    except AttributeError as ae:
+        logging.warning(f"Exception during handling lock name: {ae}")
+        mutex_name = node.args.exprs[0].name.name
+    if hasattr(node.args.exprs[0], "field"):  # Dirty hack for searching mutex which is part of struct
+        mutex_name = node.args.exprs[0].field.name
     for m in mascm.q:
         if mutex_name == m.name:
             lock = m
@@ -1433,8 +1442,7 @@ def parse_global_trees(mascm, asts: deque) -> dict:
     functions_definition = dict()
     for ast in asts:
         for node in ast:
-            if isinstance(node, Typedef) or isinstance(node, FuncDecl) \
-                    or (hasattr(node, 'storage') and "extern" in node.storage):
+            if isinstance(node, FuncDecl) or (hasattr(node, 'storage') and "extern" in node.storage):
                 continue
             elif isinstance(node, Decl) and (not isinstance(node.type, (Struct, Enum))) and \
                     isinstance(node.type.type, IdentifierType) and ("pthread_mutex_t" in node.type.type.names):
@@ -1452,11 +1460,27 @@ def parse_global_trees(mascm, asts: deque) -> dict:
                      (isinstance(node.type, PtrDecl) and isinstance(node.type.type, TypeDecl) and
                       isinstance(node.type.type.type, IdentifierType))):
                 add_resource_to_mascm(mascm, node)
-            elif isinstance(node, Decl) and hasattr(node, 'type') and isinstance(node.type, TypeDecl) and \
+            elif isinstance(node, Decl) and hasattr(node, 'type') and isinstance(node.type, TypeDecl) and\
                     isinstance(node.type.type, Struct):
                 add_resource_to_mascm(mascm, node)
+                # Dirty fix for find mutex into struct
+                for field in node.type.type:
+                    if isinstance(field, Decl) and\
+                            (isinstance(field.type.type, IdentifierType) or isinstance(field.type.type.type, IdentifierType))\
+                            and ((hasattr(field.type.type, "names") and "pthread_mutex_t" in field.type.type.names) or
+                                 (hasattr(field.type.type, "type") and "pthread_mutex_t" in field.type.type.type.names)):  # Dirty hack do tectec pointer to mutex
+                        add_mutex_to_mascm(mascm, field, node.name)
+
             elif isinstance(node, Decl) and isinstance(node.type, FuncDecl):
                 expected_definitions.append(node)
+            elif isinstance(node, Typedef) and hasattr(node, 'type') and isinstance(node.type, TypeDecl) and\
+                    isinstance(node.type.type, Struct) and node.name == "thread_wrapper_arg_t":
+                for field in node.type.type:
+                    if isinstance(field, Decl) and \
+                            (isinstance(field.type.type, IdentifierType) or isinstance(field.type.type.type, IdentifierType))\
+                            and ((hasattr(field.type.type, "names") and "pthread_mutex_t" in field.type.type.names) or
+                                 (hasattr(field.type.type, "type") and "pthread_mutex_t" in field.type.type.type.names)):  # Dirty hack do tectec pointer to mutex
+                        add_mutex_to_mascm(mascm, field, node.name)
             else:
                 logging.debug(f"{node} is not expected")
     return functions_definition
