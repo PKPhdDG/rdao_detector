@@ -37,6 +37,7 @@ def functions_pair(arg) -> tuple:
 
 parser = argparse.ArgumentParser(description='Detect RDAO Bugs')
 parser.add_argument('path', type=str, help="Paths to source code")
+parser.add_argument('--cflags', type=str, default="", help="Compiler flags needed for compilation")
 parser.add_argument(
     '--log-level', type=int, choices=(logging.DEBUG, logging.INFO, logging.WARN, logging.ERROR, logging.CRITICAL),
     default=logging.INFO
@@ -62,8 +63,9 @@ def main():
     c.relations['backward'].extend(args.backward_rel_pairs)
     c.relations['symmetric'].extend(args.symmetric_rel_pairs)
     logging.basicConfig(filename=join(dirname(__file__), "rdao.log"), level=args.log_level)
-    mascm = create_mascm(create_ast(args.path))
+    mascm = create_mascm(create_ast(args.path, args.cflags))
 
+    reported_errors = 0
     print("Race conditions:")
     for edge in detect_race_condition(mascm):
         print(f"\tRace condition detected in element: {edge}")
@@ -72,8 +74,11 @@ def main():
         print("\tDetected race condition is linked with")
         print(f"\t\tresource: {get_resource_name_from_edge(edge)}")
         print(f"\t\tdeclared in {edge.second.node.coord}\n")
+        reported_errors += 1
+    print(f"Race condition was reported {reported_errors} times.")
     print("="*60)
 
+    reported_errors = 0
     print("Deadlocks:")
     for cause, edges in detect_deadlock(mascm):
         if DeadlockType.incorrect_lock_type != cause:
@@ -94,9 +99,11 @@ def main():
             print(f"\tReturn operation in {edge1.first.node.coord} returning to {edge1.second.node.coord}")
             print(f"\tCause re-lock of {edge2.first.name} by operation in {edge2.second.node.coord}")
             print(f"\t\tInvolved mutex has type {lock_types_str[edge2.first.type]}\n")
-
+        reported_errors += 1
+    print(f"Deadlock was reported {reported_errors} times.")
     print("="*60)
 
+    reported_errors = 0
     print("Atomicity violations:")
     for collection in detect_atomicity_violation(mascm):
         for f_edge, s_edge, *rest in collection:
@@ -109,8 +116,11 @@ def main():
                 print(f"\t\tViolation is cause by: {get_operation_name_from_edge(edge)}")
                 print(f"\t\tViolating operation is located in: {get_operation_from_edge(edge).node.coord}")
             print()
+        reported_errors += 1
+    print(f"Atomicity violation was reported {reported_errors} times.")
     print("="*60)
 
+    reported_errors = 0
     print("Order violations:")
     for op1, op2, resource in detect_order_violation(mascm):
         print(f"\tOrder violation detected for pair: {op1.name}, {op2.name}")
@@ -119,6 +129,8 @@ def main():
         print("\tDetected order violation is linked with ")
         print(f"\t\tresource: {resource.get_resource_names_set()}")
         print(f"\t\tdeclared in {resource.node.coord}\n")
+        reported_errors += 1
+    print(f"Order violation was reported {reported_errors} times.")
 
 
 if "__main__" == __name__:

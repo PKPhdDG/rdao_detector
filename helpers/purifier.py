@@ -18,11 +18,12 @@ import sys
 from typing import Iterable
 
 
-def purify_file(path: str, headers: Iterable[str] = tuple()) -> str:
+def purify_file(path: str, cflags: str = "", headers: Iterable[str] = tuple()) -> str:
     """ Function purify C file
     :param path: Path to C file
+    :param cflags: C compiler flags needed to compilation
     :param headers: Sequence with paths to headers
-    :return:  Path to pure C file
+    :return:  Path to pured C file
     """
     if not exists(path):
         raise FileNotFoundError(f"Given path does not exists: '{path}'")
@@ -30,7 +31,7 @@ def purify_file(path: str, headers: Iterable[str] = tuple()) -> str:
         raise IsADirectoryError(f"Given path is not a file: '{path}'")
     dir_path = get_project_path()
     output_file: str = f"{path}.pure"
-    command: list = [c.compiler_cmd, "-Wall -D_LINUX_", "-I", join(dir_path, "utils/fake_libc_include")]
+    command: list = [c.compiler_cmd, "-Wall", "-I", join(dir_path, "utils/fake_libc_include"), cflags]
     if headers:
         for header_path in headers:
             command.extend(["-I", header_path])
@@ -46,7 +47,14 @@ def purify_file(path: str, headers: Iterable[str] = tuple()) -> str:
     return output_file
 
 
-def purify_files(paths: Iterable[str], header_extensions: tuple = ("h",)) -> deque:
+def purify_files(paths: Iterable[str], cflags: str = "", header_extensions: tuple = ("h",)) -> deque:
+    """ Purify set of files
+
+    :param paths: Paths to C files
+    :param cflags: C compiler flags needed to compilation
+    :param header_extensions: Header files extensions
+    :return:  Paths to pured C files
+    """
     headers_dirs = set()
     source_files = list()
     pure_files = deque()
@@ -57,7 +65,7 @@ def purify_files(paths: Iterable[str], header_extensions: tuple = ("h",)) -> deq
         else:
             source_files.append(str(Path(file).absolute()))
     for file in source_files:
-        pure_files.append(purify_file(file, headers_dirs))
+        pure_files.append(purify_file(file, cflags, headers_dirs))
     return pure_files
 
 
