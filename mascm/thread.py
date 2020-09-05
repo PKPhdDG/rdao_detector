@@ -4,7 +4,7 @@ __license__ = "GNU/GPLv3"
 __version__ = "0.4"
 
 from mascm.operation import Operation
-from pycparser.c_ast import ExprList
+from pycparser.c_ast import ExprList, ArrayRef
 from typing import Optional
 
 
@@ -20,7 +20,12 @@ class Thread:
         self.__name = "t0"
         if expr_list is not None:
             name_obj = expr_list.exprs[0].expr.name
-            self.__name = name_obj if isinstance(name_obj, str) else name_obj.name
+            if isinstance(name_obj, str):
+                self.__name = name_obj
+            if isinstance(name_obj, ArrayRef):
+                self.__name = f"{name_obj.name.name.name}.{name_obj.name.field.name}"
+            else:
+                self.__name = name_obj.name
 
         self.__args = expr_list
         self.__operations = list()
