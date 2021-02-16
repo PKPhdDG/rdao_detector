@@ -145,6 +145,7 @@ def recursion_locks(thread: Thread, edges: list) -> coroutine:
         if len(op_edges) < 2:
             continue
 
+        logging.debug("Checking combinations")
         for edge1, edge2 in combinations(op_edges, 2):
             e1_index, e2_index = edges.index(edge1), edges.index(edge2)
 
@@ -162,6 +163,7 @@ def recursion_locks(thread: Thread, edges: list) -> coroutine:
             fo_index = thread.operations.index(edge1.first)
 
             # Between recursion call and return should be operation locking correct mutex
+            logging.debug("Checking mutexes are locked again")
             for o in thread.operations[so_index:fo_index]:
                 try:
                     lock_edge = next(edge for edge in edges if (re.match(e.mutex_lock_edge_exp, str(edge))) and
@@ -171,6 +173,7 @@ def recursion_locks(thread: Thread, edges: list) -> coroutine:
                 if lock_edge.first.type != LockType.PMR:
                     results.append((edge1, lock_edge))
 
+    logging.debug(f"Number of results: {len(results)}")
     if len(results) > 1:  # Correct recursion contains more than 1 reported element, in other case it is loop
         for result in results:
             yield result
@@ -178,6 +181,7 @@ def recursion_locks(thread: Thread, edges: list) -> coroutine:
 
 def detect_deadlock(mascm: MASCM) -> coroutine:
     """ Function is responsible for detecting deadlocks using MASCM """
+    logging.debug("Start detecting deadlocks")
     time_units = mascm.time_units
 
     graphs = get_time_units_graphs(time_units, mascm.edges)  # Build full graphs for every time unit
@@ -201,18 +205,22 @@ def detect_deadlock(mascm: MASCM) -> coroutine:
                 mutex_collections.append(collection)
 
     if time_units:
+        logging.debug("Start detecting mutually exclusive pairs of mutex")
         for s1, s2 in combinations(mutex_collections, 2):
             for pair in mutually_exclusive_pairs_of_mutex(s1, s2):
                 yield DeadlockType.exclusion_lock, pair
 
+        logging.debug("Start detecting missing unlock")
         for mutex_collection in mutex_collections:
             for edge in missing_unlock(mutex_collection):
                 yield DeadlockType.missing_unlock, [[edge]]
 
+    logging.debug("Start detecting double locks")
     for mutex_collection in mutex_collections:
         for pair in double_locks(mutex_collection):
             yield DeadlockType.double_lock, [pair]
 
+    logging.debug("Start detecting recursion locks")
     for thread in mascm.threads:
         for pair in recursion_locks(thread, mascm.edges):
             yield DeadlockType.incorrect_lock_type, [pair]

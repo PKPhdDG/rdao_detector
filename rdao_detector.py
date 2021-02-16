@@ -7,6 +7,7 @@ __version__ = "0.4"
 
 import argparse
 import config as c
+from contextlib import contextmanager
 from helpers import DeadlockType, lock_types_str, deadlock_causes_str
 from helpers.rdao_helper import get_operation_from_edge, get_operation_name_from_edge, get_resource_name_from_edge
 from itertools import chain
@@ -14,6 +15,27 @@ import logging
 from mascm_generator import create_ast, create_mascm
 from os.path import join, dirname
 from rdao import detect_atomicity_violation, detect_deadlock, detect_order_violation, detect_race_condition
+import time
+import tracemalloc
+
+
+@contextmanager
+def resource_usage(doit):
+    """ Measure time and memory usage """
+    if doit:
+        tracemalloc.start()
+        start = time.time()
+        yield
+        end = time.time()
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        print("=" * 60)
+        print("Resource usage:")
+        print("\tCurrent memory usage is {:.2f}MB".format(current / 10 ** 6))
+        print("\tPeak was {:.2f}MB".format(peak / 10 ** 6))
+        print("\tTime: {:.2f}s".format(end - start))
+    else:
+        yield
 
 
 def functions_pair(arg) -> tuple:
@@ -52,13 +74,13 @@ parser.add_argument(
     '--symmetric-rel-pairs', type=functions_pair, help="Pairs of functions with symmetric relation", default="",
     nargs="+"
 )
+parser.add_argument('-r', '--resource-usage', action='store_true', help="Show resources usage")
 parser.add_argument('--version', action='version', version=f"%(prog)s {__version__}")
 
 
-def main():
+def main(args):
     """ Main function
     """
-    args = parser.parse_args()
     c.relations['forward'].extend(args.forward_rel_pairs)
     c.relations['backward'].extend(args.backward_rel_pairs)
     c.relations['symmetric'].extend(args.symmetric_rel_pairs)
@@ -134,4 +156,7 @@ def main():
 
 
 if "__main__" == __name__:
-    main()
+    args = parser.parse_args()
+    with resource_usage(args.resource_usage):
+        main(args)
+
