@@ -127,7 +127,8 @@ def double_locks(mutex_collections: Sequence) -> coroutine:
         r = other_nums.index(num)
         num_slices = other_nums[:r]
         # Second condition is checked because sometimes deadlock is reported for set which contain only 1 element
-        if (-num not in num_slices) and (len(mutex_collections[other_nums[r]]) > 1):  # Second condition need tests
+        if (-num not in num_slices) and (len(mutex_collections[other_nums[r]]) > 1) and \
+                isinstance(mutex_collections[index].first, Lock):  # Second condition need tests
             yield mutex_collections[index], mutex_collections[other_nums[r]]
 
 
