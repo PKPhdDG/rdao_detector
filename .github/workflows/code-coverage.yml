@@ -19,7 +19,7 @@ jobs:
               coverage report -m
               coverage xml
           - name: Python Coverage
-            uses: orgoro/coverage/v1
+          - uses: orgoro/coverage/v1
             with:
                 coverageFile: coverage.xml
                 token: ${{ secrets.GITHUB_TOKEN }}
