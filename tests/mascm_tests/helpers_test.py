@@ -19,7 +19,7 @@ class HelpersTest(unittest.TestCase):
     multiple_files_app_path_prefix = join(source_path_prefix, "multiple_files_apps")
 
     def test_purify_file_with_path_to_file(self):
-        expected_file_size: int = 5408 if c.OS == "Windows" else 5175
+        expected_file_size: int = 5408 if c.OS == "Windows" else 5246
         file_to_parse: str = "single_thread_for_loop.c"
         file_path: str = join(self.source_path_prefix, file_to_parse)
         pure_file_path: str = purify_file(file_path)
@@ -29,7 +29,7 @@ class HelpersTest(unittest.TestCase):
         remove(pure_file_path)
 
     def test_purify_with_path_to_file(self):
-        expected_file_size: int = 5408 if c.OS == "Windows" else 5175
+        expected_file_size: int = 5408 if c.OS == "Windows" else 5246
         file_to_parse: str = "single_thread_for_loop.c"
         file_path: str = join(self.source_path_prefix, file_to_parse)
         with purify(file_path) as pure_file_path:
