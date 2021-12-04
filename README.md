@@ -1,6 +1,5 @@
 # Race condition/Deadlock/Atomicity violation/Order violation Detector 
-[![Build Status](https://travis-ci.com/PKPhdDG/rdao_detector.svg?branch=master)](https://travis-ci.com/PKPhdDG/rdao_detector)
-[![Tests](https://github.com/PKPhdDG/rdao_detector/actions/workflows/python-app.yml/badge.svg)](https://github.com/PKPhdDG/rdao_detector/actions/workflows/python-app.yml)
+[![Static analysis](https://github.com/PKPhdDG/rdao_detector/actions/workflows/static-analysis.yml/badge.svg)](https://github.com/PKPhdDG/rdao_detector/actions/workflows/static-analysis.yml)
 
 This simple application convert C source code to Multithreaded Application Source Code Model via AST, and using MASCM detecting RDAO bugs.
 
