@@ -1,25 +1,32 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Code coverage
+name: 'Code coverage'
 
 on:
-    pull_request:
-        branches:
-            - master
-            - main
+  pull_request:
+    branches:
+      - master
+      - main
 
 jobs:
-    coverage:
-        runs-on: ubuntu-latest
-        steps:
-          - name: Test with coverage
-            run: |
-              coverage run -m unittest discover tests
-              coverage report -m
-              coverage xml
-          - name: Python Coverage
-          - uses: orgoro/coverage/v1
-            with:
-                coverageFile: coverage.xml
-                token: ${{ secrets.GITHUB_TOKEN }}
+  coverage:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Test with coverage
+      run: |
+        coverage run -m unittest discover tests
+        coverage report -m
+        coverage xml
+    - name: Python Cov
+      uses: orgoro/coverage/v1
+      with:
+        coverageFile: coverage.xml
+        token: ${{ secrets.GITHUB_TOKEN }}
