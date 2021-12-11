@@ -3,7 +3,7 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.4"
+__version__ = "1.1"
 
 from copy import copy
 from collections import defaultdict
@@ -28,7 +28,10 @@ def group_operations_by_critical_section(graph: list) -> dict:
             critical_sections_stack.append(edge.first)
             continue
         elif re.match(e.mutex_unlock_edge_exp, str(edge)):
-            critical_sections_stack.remove(edge.second)
+            try:
+                critical_sections_stack.remove(edge.second)
+            except ValueError:
+                logging.warning(f'Stack state: {critical_sections_stack} does not contains second element of {edge}')
             continue
         if critical_sections_stack:
             if re.match(e.usage_edge_exp, str(edge)):

@@ -1,7 +1,7 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.4"
+__version__ = "1.1"
 
 import logging
 from pycparser.c_ast import FuncDef

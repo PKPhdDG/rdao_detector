@@ -3,10 +3,11 @@
 __author__ = "Damian Giebas"
 __email__ = "damian.giebas@gmail.com"
 __license__ = "GNU/GPLv3"
-__version__ = "0.4"
+__version__ = "1.1"
 
 import argparse
 from collections import deque
+from helpers.common import functions_pair, resource_usage
 from helpers.path import collect_c_project_files
 from helpers.purifier import purify_file, purify_files
 import logging
@@ -21,7 +22,17 @@ parser.add_argument(
     '--log-level', type=int, choices=(logging.DEBUG, logging.INFO, logging.WARN, logging.ERROR, logging.CRITICAL),
     default=logging.INFO
 )
-# TODO: Add parameter for compiler flags
+parser.add_argument(
+    '--forward-rel-pairs', type=functions_pair, help="Pairs of functions with forwards relation", default="", nargs="+"
+)
+parser.add_argument(
+    '--backward-rel-pairs', type=functions_pair, help="Pairs of functions with backward relation", default="", nargs="+"
+)
+parser.add_argument(
+    '--symmetric-rel-pairs', type=functions_pair, help="Pairs of functions with symmetric relation", default="",
+    nargs="+"
+)
+parser.add_argument('-r', '--resource-usage', action='store_true', help="Show resources usage")
 
 
 def create_ast(path: str, cflags: str = "") -> deque:
@@ -43,14 +54,15 @@ def create_ast(path: str, cflags: str = "") -> deque:
     return ast
 
 
-def main() -> None:
+def main(args) -> None:
     """ Main function
     """
-    args = parser.parse_args()
     logging.basicConfig(filename=join(dirname(__file__), "mascm_generator.log"), level=args.log_level)
     mascm = create_mascm(create_ast(args.path, args.cflags))
     print(mascm)
 
 
 if "__main__" == __name__:
-    main()
+    args = parser.parse_args()
+    with resource_usage(args.resource_usage):
+        main(args)
