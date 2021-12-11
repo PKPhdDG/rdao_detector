@@ -114,7 +114,10 @@ def double_locks(mutex_collections: Sequence) -> coroutine:
     pairs = collect_mutexes_indexes(mutex_collections)
     for index, edge in (pair for pair in pairs if pair[0] > 0):
         if edge.second.is_loop_body_operation:
-            release_edge = next((pair[1] for pair in pairs if pair[0] == -index))
+            try:
+                release_edge = next((pair[1] for pair in pairs if pair[0] == -index))
+            except StopIteration as ex:
+                logging.info(f'Could not found unlock operation for locked mutex {pairs}')
             if not release_edge.first.is_loop_body_operation:
                 yield [edge]  # To be compatible with output mechanism
     mutex_numbers = list((index for index, _ in pairs))
