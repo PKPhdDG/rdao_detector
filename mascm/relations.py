@@ -8,10 +8,13 @@ class Relations:
     """Class is container of relations"""
     __slots__ = ('forward', 'backward', 'symmetric')
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.backward = []
         self.forward = []
         self.symmetric = []
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                getattr(self, key).extend(value)
 
     def __repr__(self):
         return f"(forward={self.forward}, backward={self.backward}, symmetric={self.symmetric})"

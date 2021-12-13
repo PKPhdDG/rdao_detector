@@ -7,6 +7,7 @@ __version__ = "1.1"
 
 import argparse
 from collections import deque
+import config as c
 from helpers.common import functions_pair, resource_usage
 from helpers.path import collect_c_project_files
 from helpers.purifier import purify_file, purify_files
@@ -57,6 +58,9 @@ def create_ast(path: str, cflags: str = "") -> deque:
 def main(args) -> None:
     """ Main function
     """
+    c.relations['forward'].extend(args.forward_rel_pairs)
+    c.relations['backward'].extend(args.backward_rel_pairs)
+    c.relations['symmetric'].extend(args.symmetric_rel_pairs)
     logging.basicConfig(filename=join(dirname(__file__), "mascm_generator.log"), level=args.log_level)
     mascm = create_mascm(create_ast(args.path, args.cflags))
     print(mascm)
